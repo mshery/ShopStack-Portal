@@ -1,0 +1,376 @@
+---
+# Cursor Frontend Rules
+# This file defines mandatory frontend development rules for React + Vite + Zustand projects.
+# Cursor AI (and all developers) must always enforce these rules.
+alwaysApply: true
+---
+
+CURSOR RULES — Frontend Development
+
+## 🚨 CRITICAL: Always Build After Any Changes
+
+**MANDATORY**: After ANY code changes, you MUST:
+npm install
+npm run lint
+npm run build
+npm run dev
+
+React + Vite Engineering Rules
+
+Edition: React + Zustand (with ViewModel, Null-Safety & Memoization)
+
+Purpose: Ensure stability, performance, and production safety.
+
+Mental laws:
+
+Prevent fragile UI
+
+Prevent over-engineering
+
+Keep velocity high as the app grows
+
+Make code easy to delete
+
+Make UI impossible to crash
+
+If a decision is unclear, default to these rules.
+
+0) THE PRIME DIRECTIVE
+
+Code must be easier to DELETE than to WRITE.
+
+If removing a feature requires touching many files, understanding hidden behavior, or breaks unrelated screens → the design is wrong.
+
+1) UI IS NOT ALLOWED TO THINK
+
+UI renders. UI does not decide.
+
+Responsibilities:
+
+Layout
+
+Rendering
+
+Styling
+
+Trivial presentation branching
+
+Forbidden:
+
+Business logic
+
+Side effects
+
+API calls
+
+Retries
+
+Data fetching
+
+Non-trivial derivation
+
+❌ WRONG
+
+if (user.isPremium) {
+  await upgradeUser()
+}
+
+
+✅ CORRECT
+
+<button disabled={!vm.canUpgrade} onClick={actions.upgrade} />
+
+
+If a component contains behavior-changing if/else, it is not UI.
+
+2) DATA FLOWS IN ONE DIRECTION ONLY
+
+Flow:
+API → Normalizer → Store → Screen Hook → Page → Component
+
+Never reverse the flow:
+
+❌ Component → API
+❌ Page → API
+❌ Store → UI
+❌ UI mutating state shape
+
+Reverse flows multiply bugs.
+
+3) ALL EXTERNAL DATA IS HOSTILE
+
+If it can be null, it WILL be null.
+
+APIs lie. Backends change. Fields disappear.
+
+RULE: Normalize once at the boundary.
+After normalization, downstream code should not require defensive checks.
+
+4) NULL-SAFETY RULE (CRITICAL)
+
+Optional chaining ?. is a last line of defense, not a strategy.
+
+❌ WRONG
+
+<Text>{user?.name}</Text>
+
+
+✅ CORRECT — NORMALIZE EARLY
+
+export function asString(value: unknown, fallback = ""): string {
+  return typeof value === "string" ? value : fallback
+}
+
+const user = {
+  name: asString(raw.name, "Unknown"),
+}
+
+<Text>{user.name}</Text>
+
+When ?. is allowed
+
+Dealing with truly optional relationships
+
+Absence is a valid domain state
+
+Examples:
+
+user.avatarUrl && <Avatar src={user.avatarUrl} />
+settings?.theme
+
+When ?. is forbidden
+user?.name
+order?.id
+profile?.email
+
+
+Conceptually required fields must be normalized. Do not push null-handling into UI.
+
+5) ARRAYS ARE NEVER OPTIONAL
+
+Always return arrays, never null or undefined.
+
+❌ WRONG
+
+items?: Item[]
+
+
+✅ CORRECT
+
+items: Item[]
+
+
+If .map() can crash, the design is wrong.
+
+6) STORES ARE BORING ON PURPOSE
+
+Stores hold state and expose setters. Nothing else.
+
+Forbidden in stores:
+
+Async logic
+
+API calls
+
+UI derivation
+
+Business rules
+
+✅ CORRECT STORE
+
+export const useUsersStore = create<UsersState>((set) => ({
+  users: [],
+  setUsers: (users) => set({ users }),
+  errorMessage: null,
+  setErrorMessage: (msg) => set({ errorMessage: msg }),
+}))
+
+7) SIDE EFFECTS HAVE HARD BOUNDARIES
+
+Async logic must be contained, not spread.
+
+Allowed: API modules, screen hooks
+Forbidden: UI components, pages, Zustand stores
+
+8) EVERY SCREEN HAS EXACTLY ONE LOGIC HOOK
+
+Hooks own behavior
+
+Pages own layout
+
+One screen → one hook.
+Hook owns fetching, actions, side effects.
+Page consumes results only.
+
+9) EVERY ASYNC SCREEN HAS EXACTLY FOUR STATES
+
+No exceptions. No shortcuts:
+
+loading
+
+error
+
+empty
+
+success
+
+type AsyncStatus = "loading" | "error" | "empty" | "success"
+
+10) SCREEN HOOK IS THE BRAIN
+
+Orchestrates everything
+
+Produces three explicit outputs: status, vm (View Model), actions
+
+11) VIEW MODEL (vm) — THE UI CONTRACT
+
+vm is the only data shape UI reasons about
+
+Freeze UI thinking, centralize derivation, prevent logic leakage
+
+Rules:
+
+Derived, UI-ready data only
+
+No functions, no side effects
+
+Must be small and intentional
+
+❌ WRONG
+
+vm: {
+  users,
+  rawUsers,
+  filteredUsers,
+  sortedUsers,
+  hasUsers,
+  isEmpty,
+}
+
+
+✅ CORRECT
+
+vm: {
+  users,
+  canRefresh,
+}
+
+12) MEMOIZATION RULES (IMPORTANT)
+
+Memoization ensures stability, not micro-optimization.
+
+Rules:
+
+vm must be memoized
+
+const vm = useMemo(() => ({
+  users,
+  canRefresh: status !== "loading",
+}), [users, status])
+
+
+Actions must be stable
+
+const refresh = useCallback(async () => { /* ... */ }, [])
+
+
+Do not memoize everything unnecessarily
+❌ WRONG
+
+const isEmpty = useMemo(() => users.length === 0, [users])
+
+
+Memoize only when values are passed to components, derived (not trivial), or identity stability matters.
+
+13) REQUIRED SCREEN HOOK PATTERN
+export function useUsersScreen() {
+  const { users, setUsers, setErrorMessage } = useUsersStore()
+  const [status, setStatus] = useState<AsyncStatus>("loading")
+
+  const refresh = useCallback(async () => {
+    setStatus("loading")
+    try {
+      const data = await fetchUsers()
+      setUsers(data)
+      setStatus(data.length === 0 ? "empty" : "success")
+    } catch (e) {
+      setErrorMessage(toUserMessage(e))
+      setStatus("error")
+    }
+  }, [])
+
+  useEffect(() => {
+    refresh()
+  }, [refresh])
+
+  const vm = useMemo(() => ({
+    users,
+    canRefresh: status !== "loading",
+  }), [users, status])
+
+  const actions = useMemo(() => ({
+    refresh,
+  }), [refresh])
+
+  return { status, vm, actions }
+}
+
+14) PAGES DO NOT FETCH DATA
+export function UsersPage() {
+  const { status, vm, actions } = useUsersScreen()
+
+  if (status === "loading") return <Skeleton />
+  if (status === "error") return <Error onRetry={actions.refresh} />
+  if (status === "empty") return <Empty />
+
+  return <UsersList users={vm.users} />
+}
+
+
+Pages select layout, nothing else.
+
+15) COMPONENTS ARE PURE AND DUMB
+
+Render props only
+
+Do not fetch
+
+Do not derive meaning
+
+Do not mutate state
+
+16) FAIL FAST IN DEV, FAIL SAFE IN UI
+
+Developers see crashes
+
+Users see messages
+
+API throws real errors, hooks convert errors, UI never throws.
+
+17) DUPLICATION > WRONG ABSTRACTION
+
+Bad abstraction is harder to delete than duplication.
+
+18) NAMING IS A DESIGN DECISION
+
+If naming is hard, the design is wrong.
+
+19) OPTIMIZE FOR READING, NOT WRITING
+
+Explicit > clever. Predictable > elegant.
+
+20) THE EXIT RULE
+
+Before merging, ask:
+
+“Can another developer understand this screen by reading only the hook and page in under 30 seconds?”
+
+If not: simplify, split, rename, delete.
+
+FINAL RULE
+
+Delete aggressively
+
+Normalize early
+
+Memoize intentionally
