@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import {
   LayoutGrid,
   Headphones,
@@ -59,29 +59,36 @@ export function CategoryFilter({
   const [showRightArrow, setShowRightArrow] = useState(false);
 
   // Check scroll position to show/hide arrows
-  const checkScrollPosition = () => {
+  const checkScrollPosition = useCallback(() => {
     const container = scrollContainerRef.current;
     if (container) {
       setShowLeftArrow(container.scrollLeft > 0);
       setShowRightArrow(
-        container.scrollLeft <
-        container.scrollWidth - container.clientWidth - 10,
+        container.scrollLeft < container.scrollWidth - container.clientWidth - 10
       );
     }
-  };
+  }, []);
 
   useEffect(() => {
-    checkScrollPosition();
     const container = scrollContainerRef.current;
-    if (container) {
-      container.addEventListener("scroll", checkScrollPosition);
-      window.addEventListener("resize", checkScrollPosition);
-      return () => {
-        container.removeEventListener("scroll", checkScrollPosition);
-        window.removeEventListener("resize", checkScrollPosition);
-      };
-    }
-  }, [categories]);
+    if (!container) return;
+
+    // initial
+    checkScrollPosition();
+
+    container.addEventListener("scroll", checkScrollPosition);
+    window.addEventListener("resize", checkScrollPosition);
+
+    return () => {
+      container.removeEventListener("scroll", checkScrollPosition);
+      window.removeEventListener("resize", checkScrollPosition);
+    };
+  }, [checkScrollPosition]);
+
+  useEffect(() => {
+    // categories changed -> widths likely changed
+    checkScrollPosition();
+  }, [categories, checkScrollPosition]);
 
   const scroll = (direction: "left" | "right") => {
     const container = scrollContainerRef.current;
@@ -116,8 +123,8 @@ export function CategoryFilter({
         <button
           onClick={() => onCategoryChange(null)}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all flex-shrink-0 ${selectedCategory === null
-              ? "bg-brand-500 text-white"
-              : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700"
+            ? "bg-brand-500 text-white"
+            : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700"
             }`}
         >
           <LayoutGrid className="w-4 h-4" />
@@ -137,8 +144,8 @@ export function CategoryFilter({
               key={category}
               onClick={() => onCategoryChange(category)}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all flex-shrink-0 ${isSelected
-                  ? "bg-brand-500 text-white"
-                  : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700"
+                ? "bg-brand-500 text-white"
+                : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700"
                 }`}
             >
               <Icon className="w-4 h-4" />
