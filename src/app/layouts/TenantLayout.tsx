@@ -88,6 +88,23 @@ export function TenantLayout() {
       label: "Products",
       icon: <Package className="h-5 w-5" />,
       href: "/tenant/products",
+      children: [
+        {
+          label: "All Products",
+          href: "/tenant/products",
+          icon: <Package className="h-4 w-4" />,
+        },
+        {
+          label: "Categories",
+          href: "/tenant/categories",
+          icon: <Package className="h-4 w-4" />,
+        },
+        {
+          label: "Brands",
+          href: "/tenant/brands",
+          icon: <Package className="h-4 w-4" />,
+        },
+      ],
     },
     {
       label: "Customers",
@@ -98,30 +115,30 @@ export function TenantLayout() {
 
   const posNavItems: NavItem[] = posEnabled
     ? [
-        {
-          label: "POS",
-          icon: <Store className="h-5 w-5" />,
-          href: "/tenant/pos",
-          badge: "NEW",
-          children: [
-            {
-              label: "Register",
-              href: "/tenant/pos/register",
-              icon: <ShoppingCart className="h-4 w-4" />,
-            },
-            {
-              label: "Sales History",
-              href: "/tenant/pos/sales",
-              icon: <History className="h-4 w-4" />,
-            },
-            {
-              label: "Shifts",
-              href: "/tenant/pos/shifts",
-              icon: <Clock className="h-4 w-4" />,
-            },
-          ],
-        },
-      ]
+      {
+        label: "POS",
+        icon: <Store className="h-5 w-5" />,
+        href: "/tenant/pos",
+        badge: "NEW",
+        children: [
+          {
+            label: "Register",
+            href: "/tenant/pos/register",
+            icon: <ShoppingCart className="h-4 w-4" />,
+          },
+          {
+            label: "Sales History",
+            href: "/tenant/pos/sales",
+            icon: <History className="h-4 w-4" />,
+          },
+          {
+            label: "Shifts",
+            href: "/tenant/pos/shifts",
+            icon: <Clock className="h-4 w-4" />,
+          },
+        ],
+      },
+    ]
     : [];
 
   const filteredNavItems = navItems.filter((item) => {

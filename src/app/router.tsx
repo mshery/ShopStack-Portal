@@ -24,6 +24,8 @@ import AddTenantUserPage from "@/pages/tenant/AddTenantUserPage";
 import ProductsPage from "@/pages/tenant/ProductsPage";
 import ProductDetailsPage from "@/pages/tenant/ProductDetailsPage";
 import AddProductPage from "@/pages/tenant/AddProductPage";
+import CategoriesPage from "@/pages/tenant/CategoriesPage";
+import BrandsPage from "@/pages/tenant/BrandsPage";
 import CustomersPage from "@/pages/tenant/CustomersPage";
 import AddCustomerPage from "@/pages/tenant/AddCustomerPage";
 import TenantSettingsPage from "@/pages/tenant/TenantSettingsPage";
@@ -171,6 +173,22 @@ export const router = createBrowserRouter(
           element: (
             <ProtectedRoute requiredPermission="products:create">
               <AddProductPage />
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: "categories",
+          element: (
+            <ProtectedRoute requiredPermission="settings:view">
+              <CategoriesPage />
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: "brands",
+          element: (
+            <ProtectedRoute requiredPermission="settings:view">
+              <BrandsPage />
             </ProtectedRoute>
           ),
         },

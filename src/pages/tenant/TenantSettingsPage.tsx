@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -16,17 +17,15 @@ import { useTenantsStore } from "@/stores/tenants.store";
 import { useCategoriesStore } from "@/stores/categories.store";
 import { useBrandsStore } from "@/stores/brands.store";
 import PageBreadcrumb from "@/components/common/PageBreadcrumb";
-import { Check, Plus, Pencil, Trash2, X, Package, Tag } from "lucide-react";
-import type { ProductCategory, ProductBrand } from "@/types";
+import { Check, ChevronRight, Package, Tag } from "lucide-react";
 
 export default function TenantSettingsPage() {
   const { activeTenantId } = useAuthStore();
   const { tenants, updateTenantSettings } = useTenantsStore();
   const tenant = tenants.find((t) => t.id === activeTenantId);
 
-  const { categories, addCategory, updateCategory, removeCategory } =
-    useCategoriesStore();
-  const { brands, addBrand, updateBrand, removeBrand } = useBrandsStore();
+  const { categories } = useCategoriesStore();
+  const { brands } = useBrandsStore();
 
   // Filter by tenant
   const tenantCategories = categories.filter(
@@ -39,18 +38,6 @@ export default function TenantSettingsPage() {
   );
   const [showSuccess, setShowSuccess] = useState(false);
 
-  // Category state
-  const [newCategoryName, setNewCategoryName] = useState("");
-  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(
-    null
-  );
-  const [editingCategoryName, setEditingCategoryName] = useState("");
-
-  // Brand state
-  const [newBrandName, setNewBrandName] = useState("");
-  const [editingBrandId, setEditingBrandId] = useState<string | null>(null);
-  const [editingBrandName, setEditingBrandName] = useState("");
-
   const handleSaveSettings = () => {
     if (!activeTenantId) return;
 
@@ -60,74 +47,6 @@ export default function TenantSettingsPage() {
 
     setShowSuccess(true);
     setTimeout(() => setShowSuccess(false), 3000);
-  };
-
-  // Category handlers
-  const handleAddCategory = () => {
-    if (!newCategoryName.trim() || !activeTenantId) return;
-    const newCat: ProductCategory = {
-      id: `cat-${Date.now()}`,
-      tenant_id: activeTenantId,
-      name: newCategoryName.trim(),
-      createdAt: new Date().toISOString(),
-    };
-    addCategory(newCat);
-    setNewCategoryName("");
-  };
-
-  const handleEditCategory = (cat: ProductCategory) => {
-    setEditingCategoryId(cat.id);
-    setEditingCategoryName(cat.name);
-  };
-
-  const handleSaveCategory = () => {
-    if (!editingCategoryId || !editingCategoryName.trim()) return;
-    updateCategory(editingCategoryId, { name: editingCategoryName.trim() });
-    setEditingCategoryId(null);
-    setEditingCategoryName("");
-  };
-
-  const handleCancelEditCategory = () => {
-    setEditingCategoryId(null);
-    setEditingCategoryName("");
-  };
-
-  const handleDeleteCategory = (id: string) => {
-    removeCategory(id);
-  };
-
-  // Brand handlers
-  const handleAddBrand = () => {
-    if (!newBrandName.trim() || !activeTenantId) return;
-    const newBr: ProductBrand = {
-      id: `brand-${Date.now()}`,
-      tenant_id: activeTenantId,
-      name: newBrandName.trim(),
-      createdAt: new Date().toISOString(),
-    };
-    addBrand(newBr);
-    setNewBrandName("");
-  };
-
-  const handleEditBrand = (brand: ProductBrand) => {
-    setEditingBrandId(brand.id);
-    setEditingBrandName(brand.name);
-  };
-
-  const handleSaveBrand = () => {
-    if (!editingBrandId || !editingBrandName.trim()) return;
-    updateBrand(editingBrandId, { name: editingBrandName.trim() });
-    setEditingBrandId(null);
-    setEditingBrandName("");
-  };
-
-  const handleCancelEditBrand = () => {
-    setEditingBrandId(null);
-    setEditingBrandName("");
-  };
-
-  const handleDeleteBrand = (id: string) => {
-    removeBrand(id);
   };
 
   return (
@@ -214,7 +133,7 @@ export default function TenantSettingsPage() {
             </CardContent>
           </Card>
 
-          {/* Product Configuration - Categories & Brands */}
+          {/* Product Configuration Quick Links */}
           <Card className="border-gray-200 dark:border-gray-800">
             <CardHeader className="space-y-1 pb-6">
               <div className="flex items-center gap-3">
@@ -231,208 +150,46 @@ export default function TenantSettingsPage() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Categories Section */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Tag className="h-5 w-5 text-gray-500" />
-                  <h3 className="text-base font-semibold text-gray-800 dark:text-white/90">
-                    Categories
-                  </h3>
-                </div>
-                {/* Add Category */}
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="New category name..."
-                    value={newCategoryName}
-                    onChange={(e) => setNewCategoryName(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleAddCategory()}
-                    className="flex-1"
-                  />
-                  <Button
-                    onClick={handleAddCategory}
-                    disabled={!newCategoryName.trim()}
-                    size="sm"
-                    className="px-4"
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Add
-                  </Button>
-                </div>
-                {/* Categories List */}
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {tenantCategories.length === 0 ? (
-                    <p className="text-sm text-gray-500 dark:text-gray-400 py-2">
-                      No categories added yet
+            <CardContent className="space-y-3">
+              <Link
+                to="/tenant/categories"
+                className="flex items-center justify-between p-4 rounded-xl border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 dark:bg-brand-900/20">
+                    <Tag className="h-5 w-5 text-brand-600 dark:text-brand-400" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900 dark:text-white">
+                      Categories
                     </p>
-                  ) : (
-                    tenantCategories.map((cat) => (
-                      <div
-                        key={cat.id}
-                        className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-900/50 rounded-lg group"
-                      >
-                        {editingCategoryId === cat.id ? (
-                          <div className="flex items-center gap-2 flex-1">
-                            <Input
-                              value={editingCategoryName}
-                              onChange={(e) =>
-                                setEditingCategoryName(e.target.value)
-                              }
-                              onKeyDown={(e) =>
-                                e.key === "Enter" && handleSaveCategory()
-                              }
-                              className="h-8 flex-1"
-                              autoFocus
-                            />
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={handleSaveCategory}
-                              className="h-8 w-8 p-0"
-                            >
-                              <Check className="h-4 w-4 text-green-600" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={handleCancelEditCategory}
-                              className="h-8 w-8 p-0"
-                            >
-                              <X className="h-4 w-4 text-gray-500" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <>
-                            <span className="text-sm text-gray-700 dark:text-gray-300">
-                              {cat.name}
-                            </span>
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleEditCategory(cat)}
-                                className="h-8 w-8 p-0"
-                              >
-                                <Pencil className="h-3.5 w-3.5 text-gray-500" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleDeleteCategory(cat.id)}
-                                className="h-8 w-8 p-0"
-                              >
-                                <Trash2 className="h-3.5 w-3.5 text-red-500" />
-                              </Button>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Brands Section */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Package className="h-5 w-5 text-gray-500" />
-                  <h3 className="text-base font-semibold text-gray-800 dark:text-white/90">
-                    Brands
-                  </h3>
-                </div>
-                {/* Add Brand */}
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="New brand name..."
-                    value={newBrandName}
-                    onChange={(e) => setNewBrandName(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleAddBrand()}
-                    className="flex-1"
-                  />
-                  <Button
-                    onClick={handleAddBrand}
-                    disabled={!newBrandName.trim()}
-                    size="sm"
-                    className="px-4"
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Add
-                  </Button>
-                </div>
-                {/* Brands List */}
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {tenantBrands.length === 0 ? (
-                    <p className="text-sm text-gray-500 dark:text-gray-400 py-2">
-                      No brands added yet
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      {tenantCategories.length} categories configured
                     </p>
-                  ) : (
-                    tenantBrands.map((brand) => (
-                      <div
-                        key={brand.id}
-                        className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-900/50 rounded-lg group"
-                      >
-                        {editingBrandId === brand.id ? (
-                          <div className="flex items-center gap-2 flex-1">
-                            <Input
-                              value={editingBrandName}
-                              onChange={(e) =>
-                                setEditingBrandName(e.target.value)
-                              }
-                              onKeyDown={(e) =>
-                                e.key === "Enter" && handleSaveBrand()
-                              }
-                              className="h-8 flex-1"
-                              autoFocus
-                            />
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={handleSaveBrand}
-                              className="h-8 w-8 p-0"
-                            >
-                              <Check className="h-4 w-4 text-green-600" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={handleCancelEditBrand}
-                              className="h-8 w-8 p-0"
-                            >
-                              <X className="h-4 w-4 text-gray-500" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <>
-                            <span className="text-sm text-gray-700 dark:text-gray-300">
-                              {brand.name}
-                            </span>
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleEditBrand(brand)}
-                                className="h-8 w-8 p-0"
-                              >
-                                <Pencil className="h-3.5 w-3.5 text-gray-500" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleDeleteBrand(brand.id)}
-                                className="h-8 w-8 p-0"
-                              >
-                                <Trash2 className="h-3.5 w-3.5 text-red-500" />
-                              </Button>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    ))
-                  )}
+                  </div>
                 </div>
-              </div>
+                <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors" />
+              </Link>
+
+              <Link
+                to="/tenant/brands"
+                className="flex items-center justify-between p-4 rounded-xl border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 dark:bg-brand-900/20">
+                    <Package className="h-5 w-5 text-brand-600 dark:text-brand-400" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900 dark:text-white">
+                      Brands
+                    </p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      {tenantBrands.length} brands configured
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors" />
+              </Link>
             </CardContent>
           </Card>
 
@@ -584,4 +341,3 @@ export default function TenantSettingsPage() {
     </>
   );
 }
-
