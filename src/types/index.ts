@@ -194,12 +194,12 @@ export interface Sale {
   tax: number;
   grandTotal: number;
   discount: Discount | null;
-  paymentMethod: "CASH" | "CARD";
+  paymentMethod: "CASH";
   createdAt: string;
   updatedAt: string;
 }
 
-export type PaymentMethod = "CASH" | "CARD";
+export type PaymentMethod = "CASH";
 
 export interface Payment {
   id: string;

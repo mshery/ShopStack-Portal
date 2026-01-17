@@ -15,7 +15,7 @@ interface CartSidebarProps {
   onDiscountChange: (discount: Discount | null) => void;
   onUpdateQuantity: (productId: string, delta: number) => void;
   onRemoveItem: (productId: string) => void;
-  onCheckout: (paymentMethod: "cash" | "card") => void;
+  onCheckout: () => void;
   onClearCart: () => void;
   onHoldOrder: () => void;
   currencySymbol: string;

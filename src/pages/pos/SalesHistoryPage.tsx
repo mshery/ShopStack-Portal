@@ -16,7 +16,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import Pagination from "@/components/common/Pagination";
-import { CreditCard, Banknote, Undo2 } from "lucide-react";
+import { Banknote, Undo2 } from "lucide-react";
 import { formatDateTime } from "@/utils/format";
 import { useTenantCurrency } from "@/hooks/useTenantCurrency";
 import { Button } from "@/components/ui/button";
@@ -187,12 +187,8 @@ export default function SalesHistoryPage() {
                               </TableCell>
                               <TableCell className="px-6 py-4">
                                 <div className="flex items-center gap-1.5 text-sm uppercase font-semibold text-gray-500 dark:text-gray-400">
-                                  {sale.paymentMethod === "CASH" ? (
-                                    <Banknote className="h-3.5 w-3.5 text-emerald-600" />
-                                  ) : (
-                                    <CreditCard className="h-3.5 w-3.5 text-brand-500" />
-                                  )}
-                                  {sale.paymentMethod}
+                                  <Banknote className="h-3.5 w-3.5 text-emerald-600" />
+                                  CASH
                                 </div>
                               </TableCell>
                               <TableCell className="px-6 py-4 font-bold dark:text-white">

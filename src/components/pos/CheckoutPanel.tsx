@@ -1,12 +1,13 @@
 import { motion } from "motion/react";
 import { formatCurrency } from "@/utils/format";
 import type { Discount } from "@/types";
+import { Banknote } from "lucide-react";
 
 interface CheckoutPanelProps {
   totals: { subtotal: number; tax: number; total: number };
   discount: Discount | null;
   onDiscountChange: (discount: Discount | null) => void;
-  onCheckout: (paymentMethod: "cash" | "card") => void;
+  onCheckout: () => void;
   onClearCart: () => void;
   onHoldOrder: () => void;
   cartItemCount: number;
@@ -16,6 +17,7 @@ interface CheckoutPanelProps {
 
 /**
  * CheckoutPanel - Using design system brand colors
+ * Only supports cash payment method
  */
 export function CheckoutPanel({
   totals,
@@ -84,29 +86,27 @@ export function CheckoutPanel({
         </div>
       </div>
 
-      {/* Payment Method */}
+      {/* Payment Method - Cash Only */}
       <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-6 bg-gradient-to-r from-orange-500 to-red-500 rounded flex items-center justify-center">
-            <span className="text-white text-xs font-bold">M</span>
+          <div className="w-8 h-6 bg-emerald-500 rounded flex items-center justify-center">
+            <Banknote className="h-4 w-4 text-white" />
           </div>
-          <span className="text-sm font-medium text-gray-700">Credit Card</span>
+          <span className="text-sm font-medium text-gray-700">Cash</span>
         </div>
-        <button className="text-sm text-gray-500 hover:text-gray-700">
-          Change Method →
-        </button>
       </div>
 
       {/* Continue Button - Using brand colors */}
       <motion.button
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
-        onClick={() => onCheckout("card")}
+        onClick={() => onCheckout()}
         disabled={cartItemCount === 0}
         className="w-full h-14 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors shadow-lg"
       >
-        Continue
+        Complete Sale (Cash)
       </motion.button>
     </div>
   );
 }
+

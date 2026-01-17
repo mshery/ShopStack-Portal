@@ -1062,7 +1062,7 @@
       "currentStock": 6,
       "minimumStock": 3,
       "status": "in_stock",
-      "imageUrl": "https://images.unsplash.com/photo-1617294787944-4e8adf04f802?w=400&h=400&fit=crop",
+      "imageUrl": "https://i.pcmag.com/imagery/reviews/00zkmQ5YaoPtt02MIcMMErI-29..v1598549506.jpg",
       "description": "Professional portrait lens",
       "createdAt": "2025-06-18T00:00:00Z",
       "updatedAt": "2025-06-18T00:00:00Z"
@@ -2170,7 +2170,7 @@
         "subtotal": 2398.0,
         "tax": 239.8,
         "grandTotal": 2637.8,
-        "paymentMethod": "CARD",
+        "paymentMethod": "CASH",
         "createdAt": "2025-08-10T10:30:00Z",
         "updatedAt": "2025-08-10T10:30:00Z"
       },
@@ -2220,7 +2220,7 @@
         "subtotal": 3897.0,
         "tax": 389.7,
         "grandTotal": 4286.7,
-        "paymentMethod": "CARD",
+        "paymentMethod": "CASH",
         "createdAt": "2025-09-05T09:15:00Z",
         "updatedAt": "2025-09-05T09:15:00Z"
       },
@@ -2270,7 +2270,7 @@
         "subtotal": 1678.0,
         "tax": 167.8,
         "grandTotal": 1845.8,
-        "paymentMethod": "CARD",
+        "paymentMethod": "CASH",
         "createdAt": "2025-10-03T11:20:00Z",
         "updatedAt": "2025-10-03T11:20:00Z"
       },
@@ -2328,7 +2328,7 @@
         "subtotal": 1998.0,
         "tax": 199.8,
         "grandTotal": 2197.8,
-        "paymentMethod": "CARD",
+        "paymentMethod": "CASH",
         "createdAt": "2025-10-28T10:00:00Z",
         "updatedAt": "2025-10-28T10:00:00Z"
       },
@@ -2353,7 +2353,7 @@
         "subtotal": 2598.0,
         "tax": 259.8,
         "grandTotal": 2857.8,
-        "paymentMethod": "CARD",
+        "paymentMethod": "CASH",
         "createdAt": "2025-11-05T15:30:00Z",
         "updatedAt": "2025-11-05T15:30:00Z"
       },
@@ -2403,7 +2403,7 @@
         "subtotal": 1745.0,
         "tax": 174.5,
         "grandTotal": 1919.5,
-        "paymentMethod": "CARD",
+        "paymentMethod": "CASH",
         "createdAt": "2025-11-25T14:15:00Z",
         "updatedAt": "2025-11-25T14:15:00Z"
       },
@@ -2428,7 +2428,7 @@
         "subtotal": 4796.0,
         "tax": 479.6,
         "grandTotal": 5275.6,
-        "paymentMethod": "CARD",
+        "paymentMethod": "CASH",
         "createdAt": "2025-12-08T12:00:00Z",
         "updatedAt": "2025-12-08T12:00:00Z"
       },
@@ -2486,7 +2486,7 @@
         "subtotal": 3597.0,
         "tax": 359.7,
         "grandTotal": 3956.7,
-        "paymentMethod": "CARD",
+        "paymentMethod": "CASH",
         "createdAt": "2025-12-22T10:30:00Z",
         "updatedAt": "2025-12-22T10:30:00Z"
       },
@@ -2569,7 +2569,7 @@
         "subtotal": 1578.0,
         "tax": 157.8,
         "grandTotal": 1735.8,
-        "paymentMethod": "CARD",
+        "paymentMethod": "CASH",
         "createdAt": "2026-01-04T09:45:00Z",
         "updatedAt": "2026-01-04T09:45:00Z"
       },
@@ -2594,7 +2594,7 @@
         "subtotal": 1199.0,
         "tax": 119.9,
         "grandTotal": 1318.9,
-        "paymentMethod": "CARD",
+        "paymentMethod": "CASH",
         "createdAt": "2026-01-10T11:00:00Z",
         "updatedAt": "2026-01-10T11:00:00Z"
       },

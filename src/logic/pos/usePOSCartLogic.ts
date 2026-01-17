@@ -178,78 +178,75 @@ export function usePOSCartLogic() {
   /**
    * Handle checkout process
    */
-  const handleCheckout = useCallback(
-    async (paymentMethod: "cash" | "card") => {
-      if (!activeTenantId || !currentUser || cart.length === 0) return;
+  const handleCheckout = useCallback(async () => {
+    if (!activeTenantId || !currentUser || cart.length === 0) return;
 
-      // Check stock availability
-      if (stockWarnings.length > 0) {
-        // Could show a confirmation dialog here
-        console.warn("Stock warnings detected:", stockWarnings);
-      }
+    // Check stock availability
+    if (stockWarnings.length > 0) {
+      // Could show a confirmation dialog here
+      console.warn("Stock warnings detected:", stockWarnings);
+    }
 
-      const lineItems = cart.map((item) => ({
-        productId: item.productId,
-        productName: item.product.name,
-        quantity: item.quantity,
-        unitPrice: item.product.unitPrice,
-        subtotal: item.subtotal,
-        nameSnapshot: item.product.name,
-        unitPriceSnapshot: item.product.unitPrice,
-        costPriceSnapshot: item.product.costPrice || 0,
-      }));
+    const lineItems = cart.map((item) => ({
+      productId: item.productId,
+      productName: item.product.name,
+      quantity: item.quantity,
+      unitPrice: item.product.unitPrice,
+      subtotal: item.subtotal,
+      nameSnapshot: item.product.name,
+      unitPriceSnapshot: item.product.unitPrice,
+      costPriceSnapshot: item.product.costPrice || 0,
+    }));
 
-      const saleData = {
-        tenant_id: activeTenantId,
-        registerId,
-        shiftId,
-        cashierUserId: currentUser.id,
-        customerId: selectedCustomerId || "", // Convert null to empty string
-        lineItems,
-        subtotal: cartTotals.subtotal,
-        tax: cartTotals.tax,
-        grandTotal: cartTotals.total,
-        paymentMethod: paymentMethod.toUpperCase() as "CASH" | "CARD",
-        discount: null, // Will be set by completeSale
-      };
-
-      const { saleId, receiptId } = completeSale(saleData);
-
-      // Set last checkout for receipt display
-      const sale: Sale = {
-        ...saleData,
-        id: saleId,
-        number: `SALE-${Date.now().toString().slice(-6)}`,
-        customerId: selectedCustomerId || "", // Ensure it's a string
-        discount: currentDiscount,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-
-      const receipt = {
-        id: receiptId,
-        saleId,
-        receiptNumber: `RCP-${Date.now().toString().slice(-8)}`,
-        tenant_id: activeTenantId,
-        generatedAt: new Date().toISOString(),
-        printedAt: null,
-      };
-
-      setLastCheckout({ sale, receipt });
-    },
-    [
-      activeTenantId,
-      currentUser,
-      cart,
-      selectedCustomerId,
-      cartTotals,
+    const saleData = {
+      tenant_id: activeTenantId,
       registerId,
       shiftId,
-      stockWarnings,
-      completeSale,
-      currentDiscount,
-    ],
-  );
+      cashierUserId: currentUser.id,
+      customerId: selectedCustomerId || "", // Convert null to empty string
+      lineItems,
+      subtotal: cartTotals.subtotal,
+      tax: cartTotals.tax,
+      grandTotal: cartTotals.total,
+      paymentMethod: "CASH" as const,
+      discount: null, // Will be set by completeSale
+    };
+
+    const { saleId, receiptId } = completeSale(saleData);
+
+    // Set last checkout for receipt display
+    const sale: Sale = {
+      ...saleData,
+      id: saleId,
+      number: `SALE-${Date.now().toString().slice(-6)}`,
+      customerId: selectedCustomerId || "", // Ensure it's a string
+      discount: currentDiscount,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const receipt = {
+      id: receiptId,
+      saleId,
+      receiptNumber: `RCP-${Date.now().toString().slice(-8)}`,
+      tenant_id: activeTenantId,
+      generatedAt: new Date().toISOString(),
+      printedAt: null,
+    };
+
+    setLastCheckout({ sale, receipt });
+  }, [
+    activeTenantId,
+    currentUser,
+    cart,
+    selectedCustomerId,
+    cartTotals,
+    registerId,
+    shiftId,
+    stockWarnings,
+    completeSale,
+    currentDiscount,
+  ]);
 
   const actions = useMemo(
     () => ({

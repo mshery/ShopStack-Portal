@@ -101,8 +101,8 @@ export default function CartPage() {
         setShowHeldOrders(false);
     };
 
-    const handleCheckout = (paymentMethod: "cash" | "card") => {
-        actions.checkout(paymentMethod);
+    const handleCheckout = () => {
+        actions.checkout();
         setShowCart(false);
     };
 

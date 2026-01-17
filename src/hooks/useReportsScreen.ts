@@ -80,15 +80,9 @@ export function useReportsScreen() {
       .sort((a, b) => b.quantity - a.quantity)
       .slice(0, 10);
 
-    // Payment method breakdown
-    const cashSales = sales.filter((s) => s.paymentMethod === "CASH").length;
-    const cardSales = sales.filter((s) => s.paymentMethod === "CARD").length;
-    const cashRevenue = sales
-      .filter((s) => s.paymentMethod === "CASH")
-      .reduce((sum, s) => sum + s.grandTotal, 0);
-    const cardRevenue = sales
-      .filter((s) => s.paymentMethod === "CARD")
-      .reduce((sum, s) => sum + s.grandTotal, 0);
+    // Payment method breakdown - Cash only
+    const cashSales = sales.length; // All sales are cash
+    const cashRevenue = sales.reduce((sum, s) => sum + s.grandTotal, 0);
 
     // Monthly sales (last 12 months)
     const monthlySales = new Map<string, number>();
@@ -125,11 +119,9 @@ export function useReportsScreen() {
       // Best sellers
       bestSellers,
 
-      // Payment methods
+      // Payment methods - Cash only
       cashSales,
-      cardSales,
       cashRevenue,
-      cardRevenue,
 
       // Monthly data
       monthlySales: Array.from(monthlySales.entries())

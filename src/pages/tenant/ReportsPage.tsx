@@ -19,7 +19,6 @@ import {
   DollarSign,
   TrendingUp,
   Package,
-  CreditCard,
   Banknote,
 } from "lucide-react";
 import PageBreadcrumb from "@/components/common/PageBreadcrumb";
@@ -130,14 +129,14 @@ export default function ReportsPage() {
           </CardContent>
         </Card>
 
-        {/* Payment Methods */}
+        {/* Payment Methods - Cash Only */}
         <Card className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
           <CardHeader className="px-6 py-5">
             <CardTitle className="text-lg font-semibold text-gray-800 dark:text-white/90">
               Payment Methods
             </CardTitle>
             <CardDescription className="text-sm text-gray-500 dark:text-gray-400">
-              Distribution of payment types
+              Cash payments only
             </CardDescription>
           </CardHeader>
           <CardContent className="px-6 pb-6">
@@ -158,29 +157,13 @@ export default function ReportsPage() {
                   </div>
                 </div>
               </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <CreditCard className="h-5 w-5 text-brand-500" />
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
-                    Card Sales
-                  </span>
-                </div>
-                <div className="text-right">
-                  <div className="text-lg font-bold text-gray-900 dark:text-white">
-                    {vm.cardSales}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {formatCurrency(vm.cardRevenue)}
-                  </div>
-                </div>
-              </div>
               <div className="mt-4 border-t border-gray-200 dark:border-gray-800 pt-4">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
                     Total Revenue
                   </span>
                   <span className="text-lg font-bold text-gray-900 dark:text-white">
-                    {formatCurrency(vm.cashRevenue + vm.cardRevenue)}
+                    {formatCurrency(vm.cashRevenue)}
                   </span>
                 </div>
               </div>
