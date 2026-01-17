@@ -84,10 +84,10 @@ export default function SalesHistoryPage() {
 
       <Tabs defaultValue="orders" className="w-full">
         <TabsList className="grid w-full grid-cols-2 max-w-[400px] mb-4">
-          <TabsTrigger value="orders">
+          <TabsTrigger value="orders" className="dark:text-white/90">
             All Orders ({vm.sales.length})
           </TabsTrigger>
-          <TabsTrigger value="refunds">
+          <TabsTrigger value="refunds" className="dark:text-white/90">
             Refunds & Returns ({vm.refunds.length})
           </TabsTrigger>
         </TabsList>

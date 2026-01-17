@@ -72,8 +72,8 @@ export default function TenantSettingsPage() {
                   </svg>
                 </div>
                 <div>
-                  <CardTitle className="text-lg">Company Information</CardTitle>
-                  <CardDescription>
+                  <CardTitle className="text-lg dark:text-white/90">Company Information</CardTitle>
+                  <CardDescription className="dark:text-white/90">
                     Your business details shown on receipts and invoices
                   </CardDescription>
                 </div>
@@ -139,8 +139,8 @@ export default function TenantSettingsPage() {
                   </svg>
                 </div>
                 <div>
-                  <CardTitle className="text-lg">POS Configurations</CardTitle>
-                  <CardDescription>
+                  <CardTitle className="text-lg dark:text-white/90">POS Configurations</CardTitle>
+                  <CardDescription className="dark:text-white/90">
                     Customize your point of sale behavior
                   </CardDescription>
                 </div>

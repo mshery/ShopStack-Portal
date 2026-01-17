@@ -96,8 +96,8 @@ export default function AddProductPage() {
           <div className="lg:col-span-2 space-y-6">
             <Card className="border-gray-200 dark:border-gray-800">
               <CardHeader>
-                <CardTitle>Basic Information</CardTitle>
-                <CardDescription>
+                <CardTitle className="dark:text-white/90">Basic Information</CardTitle>
+                <CardDescription className="dark:text-white/90">
                   Essential details about the product
                 </CardDescription>
               </CardHeader>
@@ -177,8 +177,8 @@ export default function AddProductPage() {
 
             <Card className="border-gray-200 dark:border-gray-800">
               <CardHeader>
-                <CardTitle>Pricing & Inventory</CardTitle>
-                <CardDescription>Define cost and stock levels</CardDescription>
+                <CardTitle className="dark:text-white/90">Pricing & Inventory</CardTitle>
+                <CardDescription className="dark:text-white/90">Define cost and stock levels</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -246,7 +246,7 @@ export default function AddProductPage() {
           <div className="space-y-6">
             <Card className="border-gray-200 dark:border-gray-800">
               <CardHeader>
-                <CardTitle>Product Media</CardTitle>
+                <CardTitle className="dark:text-white/90">Product Media</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="aspect-square rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-800 flex flex-col items-center justify-center p-6 text-center">

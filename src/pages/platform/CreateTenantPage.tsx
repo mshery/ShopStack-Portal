@@ -163,8 +163,8 @@ function StepBasics({
             <Building2 className="h-5 w-5 text-brand-600" />
           </div>
           <div>
-            <CardTitle className="text-xl">Basic Information</CardTitle>
-            <CardDescription>Enter the company details</CardDescription>
+            <CardTitle className="text-xl dark:text-white/90">Basic Information</CardTitle>
+            <CardDescription className="dark:text-white/90">Enter the company details</CardDescription>
           </div>
         </div>
       </CardHeader>
@@ -243,28 +243,28 @@ function StepPlanLimits({
     icon: React.ReactNode;
     color: string;
   }[] = [
-    {
-      value: "starter",
-      label: "Starter",
-      limits: { users: 5, products: 100, orders: 500 },
-      icon: <Sparkles className="h-5 w-5" />,
-      color: "success-600",
-    },
-    {
-      value: "professional",
-      label: "Professional",
-      limits: { users: 25, products: 1000, orders: 10000 },
-      icon: <Zap className="h-5 w-5" />,
-      color: "brand-600",
-    },
-    {
-      value: "enterprise",
-      label: "Enterprise",
-      limits: { users: 100, products: 10000, orders: 100000 },
-      icon: <Building2 className="h-5 w-5" />,
-      color: "warning-600",
-    },
-  ];
+      {
+        value: "starter",
+        label: "Starter",
+        limits: { users: 5, products: 100, orders: 500 },
+        icon: <Sparkles className="h-5 w-5" />,
+        color: "success-600",
+      },
+      {
+        value: "professional",
+        label: "Professional",
+        limits: { users: 25, products: 1000, orders: 10000 },
+        icon: <Zap className="h-5 w-5" />,
+        color: "brand-600",
+      },
+      {
+        value: "enterprise",
+        label: "Enterprise",
+        limits: { users: 100, products: 10000, orders: 100000 },
+        icon: <Building2 className="h-5 w-5" />,
+        color: "warning-600",
+      },
+    ];
 
   const handlePlanChange = (plan: TenantPlan) => {
     const selectedPlan = plans.find((p) => p.value === plan);
@@ -306,11 +306,10 @@ function StepPlanLimits({
                 onClick={() => handlePlanChange(plan.value)}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className={`group relative overflow-hidden rounded-xl border-2 p-4 text-left transition-all ${
-                  formData.plan === plan.value
+                className={`group relative overflow-hidden rounded-xl border-2 p-4 text-left transition-all ${formData.plan === plan.value
                     ? "border-brand-500 bg-brand-50 shadow-md"
                     : "border-gray-200 bg-white hover:border-brand-300 hover:shadow-sm"
-                }`}
+                  }`}
               >
                 <div
                   className={`mb-3 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-${plan.color} text-white shadow-sm`}
@@ -453,11 +452,10 @@ function StepFeatures({
           <motion.div
             key={feature.key}
             whileHover={{ scale: 1.01 }}
-            className={`flex items-center justify-between rounded-xl border-2 p-4 transition-all ${
-              formData.features[feature.key]
+            className={`flex items-center justify-between rounded-xl border-2 p-4 transition-all ${formData.features[feature.key]
                 ? "border-brand-500 bg-brand-50 shadow-sm"
                 : "border-gray-200 bg-white hover:border-gray-300"
-            }`}
+              }`}
           >
             <div className="flex items-center gap-3">
               <div
