@@ -92,13 +92,12 @@ export default function Pagination({
               key={index}
               onClick={() => typeof page === "number" && onPageChange(page)}
               disabled={page === "..."}
-              className={`min-w-[40px] h-10 px-3 rounded-lg font-medium transition-colors ${
-                page === currentPage
-                  ? "bg-brand-500 text-white"
-                  : page === "..."
-                    ? "text-gray-400 cursor-default"
-                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-              }`}
+              className={`min-w-[40px] h-10 px-3 rounded-lg font-medium transition-colors ${page === currentPage
+                ? "bg-brand-500 text-white"
+                : page === "..."
+                  ? "text-gray-400 cursor-default"
+                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                }`}
             >
               {page}
             </button>

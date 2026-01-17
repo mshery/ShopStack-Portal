@@ -47,22 +47,12 @@ export function usePOSCartLogic() {
     receipt: Receipt;
   } | null>(null);
 
+  // Return all tenant products (including out of stock) for filtering
+  // The new filter system handles stock status filtering
   const tenantProducts = useMemo(() => {
     if (!activeTenantId) return [];
-    return products.filter(
-      (p) => p.tenant_id === activeTenantId && p.status !== "out_of_stock",
-    );
+    return products.filter((p) => p.tenant_id === activeTenantId);
   }, [activeTenantId, products]);
-
-  const filteredProducts = useMemo(() => {
-    if (!search) return tenantProducts;
-    const lowerSearch = search.toLowerCase();
-    return tenantProducts.filter(
-      (p) =>
-        p.name.toLowerCase().includes(lowerSearch) ||
-        p.sku.toLowerCase().includes(lowerSearch),
-    );
-  }, [tenantProducts, search]);
 
   // Extract unique categories from products
   const categories = useMemo(() => {
@@ -107,7 +97,7 @@ export function usePOSCartLogic() {
 
   const vm = useMemo(
     () => ({
-      products: filteredProducts,
+      products: tenantProducts, // Return all tenant products, filtering handled by useProductFilters
       categories,
       customers: tenantCustomers,
       cart,
@@ -125,7 +115,7 @@ export function usePOSCartLogic() {
       tenantSettings,
     }),
     [
-      filteredProducts,
+      tenantProducts,
       categories,
       tenantCustomers,
       cart,

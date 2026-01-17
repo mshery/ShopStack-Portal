@@ -1,3 +1,4 @@
+import { memo, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Package,
@@ -10,35 +11,49 @@ import { formatCurrency } from "@/utils/format";
 import type { Product, CartItem } from "@/types";
 
 interface ProductGridProps {
+  /** Pre-filtered and paginated products to display */
   products: Product[];
   cart: CartItem[];
   onAddToCart: (product: Product) => void;
-  selectedCategory: string | null;
   viewMode?: "grid" | "list";
+  /** Total filtered count for display (may differ from products.length due to pagination) */
+  totalFilteredCount?: number;
+  /** Active category name for empty state message */
+  selectedCategory?: string | null;
+  /** Search query for empty state message */
   search?: string;
+  /** Whether data is currently loading */
+  isLoading?: boolean;
 }
 
 /**
  * ProductGrid - Professional POS product display with grid and list views
+ *
+ * Optimized for large datasets:
+ * - Products are pre-filtered and paginated by parent component
+ * - Uses memo for preventing unnecessary re-renders
+ * - Minimal internal state
  */
-export function ProductGrid({
+export const ProductGrid = memo(function ProductGrid({
   products,
   cart,
   onAddToCart,
-  selectedCategory,
   viewMode = "grid",
+  totalFilteredCount,
+  selectedCategory,
   search = "",
+  isLoading = false,
 }: ProductGridProps) {
-  const filteredProducts = products.filter((p) => {
-    const matchesCategory = selectedCategory
-      ? p.category === selectedCategory
-      : true;
-    const matchesSearch = search
-      ? p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.sku.toLowerCase().includes(search.toLowerCase())
-      : true;
-    return matchesCategory && matchesSearch;
-  });
+  // Create a Set for O(1) cart lookups
+  const cartProductIds = useMemo(
+    () => new Set(cart.map((item) => item.productId)),
+    [cart]
+  );
+
+  const getCartQuantity = (productId: string): number => {
+    const item = cart.find((i) => i.productId === productId);
+    return item?.quantity ?? 0;
+  };
 
   const getStockStatus = (stock: number) => {
     if (stock === 0)
@@ -60,14 +75,48 @@ export function ProductGrid({
     };
   };
 
-  if (filteredProducts.length === 0) {
+  // Loading skeleton
+  if (isLoading) {
+    return (
+      <div className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 no-scrollbar">
+        <div className="p-4 md:p-6">
+          <div
+            className={`grid gap-3 sm:gap-4 ${
+              viewMode === "grid"
+                ? "grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5"
+                : "grid-cols-1"
+            }`}
+          >
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div
+                key={i}
+                className="rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 overflow-hidden animate-pulse"
+              >
+                <div className="aspect-square bg-gray-200 dark:bg-gray-700" />
+                <div className="p-3 md:p-4 space-y-3">
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
+                  <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Empty state
+  if (products.length === 0) {
     return (
       <div className="flex-1 overflow-y-auto p-6 bg-gray-50 dark:bg-gray-900 no-scrollbar">
         <div className="flex flex-col items-center justify-center h-64 text-center">
           <div className="w-20 h-20 rounded-2xl bg-gray-200 dark:bg-gray-700 flex items-center justify-center mb-4">
             <Package className="h-10 w-10 text-gray-400 dark:text-gray-500" />
           </div>
-          <p className="text-gray-600 dark:text-gray-300 font-medium text-lg">No products found</p>
+          <p className="text-gray-600 dark:text-gray-300 font-medium text-lg">
+            No products found
+          </p>
           <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">
             {selectedCategory
               ? `Try selecting a different category`
@@ -80,6 +129,8 @@ export function ProductGrid({
     );
   }
 
+  const displayCount = totalFilteredCount ?? products.length;
+
   return (
     <div className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 no-scrollbar">
       <div className="p-4 md:p-6">
@@ -87,11 +138,14 @@ export function ProductGrid({
         <div className="mb-4 flex items-center justify-between">
           <p className="text-sm text-gray-500 dark:text-gray-400">
             <span className="font-semibold text-gray-700 dark:text-gray-200">
-              {filteredProducts.length}
+              {displayCount.toLocaleString()}
             </span>{" "}
             products
             {selectedCategory && (
-              <span className="text-gray-400 dark:text-gray-500"> in {selectedCategory}</span>
+              <span className="text-gray-400 dark:text-gray-500">
+                {" "}
+                in {selectedCategory}
+              </span>
             )}
           </p>
         </div>
@@ -100,9 +154,9 @@ export function ProductGrid({
         {viewMode === "grid" && (
           <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5">
             <AnimatePresence mode="popLayout">
-              {filteredProducts.map((product, index) => {
-                const cartItem = cart.find((i) => i.productId === product.id);
-                const inCart = !!cartItem;
+              {products.map((product, index) => {
+                const inCart = cartProductIds.has(product.id);
+                const cartQuantity = getCartQuantity(product.id);
                 const stockStatus = getStockStatus(product.currentStock);
                 const isOutOfStock = product.currentStock === 0;
 
@@ -135,7 +189,7 @@ export function ProductGrid({
                       <div className="absolute top-2 right-2 z-10">
                         <div className="w-7 h-7 rounded-full bg-brand-500 text-white flex items-center justify-center">
                           <span className="text-xs font-bold">
-                            {cartItem.quantity}
+                            {cartQuantity}
                           </span>
                         </div>
                       </div>
@@ -214,9 +268,9 @@ export function ProductGrid({
         {viewMode === "list" && (
           <div className="space-y-2">
             <AnimatePresence mode="popLayout">
-              {filteredProducts.map((product, index) => {
-                const cartItem = cart.find((i) => i.productId === product.id);
-                const inCart = !!cartItem;
+              {products.map((product, index) => {
+                const inCart = cartProductIds.has(product.id);
+                const cartQuantity = getCartQuantity(product.id);
                 const stockStatus = getStockStatus(product.currentStock);
                 const isOutOfStock = product.currentStock === 0;
 
@@ -283,7 +337,7 @@ export function ProductGrid({
                             <div className="flex items-center justify-end gap-1 mt-0.5">
                               <ShoppingCart className="w-3 h-3 text-brand-500" />
                               <span className="text-xs font-medium text-brand-600">
-                                {cartItem.quantity}×
+                                {cartQuantity}×
                               </span>
                             </div>
                           )}
@@ -316,4 +370,4 @@ export function ProductGrid({
       </div>
     </div>
   );
-}
+});

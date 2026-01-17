@@ -342,7 +342,7 @@
       "currentStock": 20,
       "minimumStock": 8,
       "status": "in_stock",
-      "imageUrl": "https://images.unsplash.com/photo-1617004906630-ae9e8c7cb47e?w=400&h=400&fit=crop",
+      "imageUrl": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSGjwMHtk_IhKJJ8ND8F0RWXyoGpu_9QTgS5A&s",
       "description": "Sleek laptop with PixelSense touchscreen",
       "createdAt": "2025-08-01T00:00:00Z",
       "updatedAt": "2025-08-01T00:00:00Z"
