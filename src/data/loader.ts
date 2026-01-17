@@ -3,6 +3,8 @@ import type { SeedData } from "@/types";
 import { useTenantsStore } from "@/stores/tenants.store";
 import { useUsersStore } from "@/stores/users.store";
 import { useProductsStore } from "@/stores/products.store";
+import { useCategoriesStore } from "@/stores/categories.store";
+import { useBrandsStore } from "@/stores/brands.store";
 import { useCustomersStore } from "@/stores/customers.store";
 import { usePOSStore } from "@/stores/pos.store";
 import { useActivityLogsStore } from "@/stores/activityLogs.store";
@@ -30,6 +32,12 @@ export function initializeStores(): void {
 
   // Load products
   useProductsStore.getState().setProducts(data.products ?? []);
+
+  // Load categories
+  useCategoriesStore.getState().setCategories(data.categories ?? []);
+
+  // Load brands
+  useBrandsStore.getState().setBrands(data.brands ?? []);
 
   // Load customers
   useCustomersStore.getState().setCustomers(data.customers ?? []);
@@ -105,6 +113,8 @@ export function exportCurrentState(): SeedData {
     tenants: useTenantsStore.getState().tenants,
     users: useUsersStore.getState().tenantUsers,
     products: useProductsStore.getState().products,
+    categories: useCategoriesStore.getState().categories,
+    brands: useBrandsStore.getState().brands,
     customers: useCustomersStore.getState().customers,
     vendors: useVendorsStore.getState().vendors,
     purchases: usePurchasesStore.getState().purchases,

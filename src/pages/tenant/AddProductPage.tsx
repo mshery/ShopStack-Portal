@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/auth.store";
 import { useProductsStore } from "@/stores/products.store";
+import { useCategoriesStore } from "@/stores/categories.store";
+import { useBrandsStore } from "@/stores/brands.store";
 import {
   Card,
   CardContent,
@@ -12,13 +14,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   ArrowLeft,
   Save,
   Package,
   Tag,
   DollarSign,
-  Layers,
+  ChevronDown,
 } from "lucide-react";
 import type { Product } from "@/types";
 
@@ -26,6 +29,14 @@ export default function AddProductPage() {
   const navigate = useNavigate();
   const { activeTenantId } = useAuthStore();
   const { addProduct } = useProductsStore();
+  const { categories } = useCategoriesStore();
+  const { brands } = useBrandsStore();
+
+  // Filter by tenant
+  const tenantCategories = categories.filter(
+    (c) => c.tenant_id === activeTenantId
+  );
+  const tenantBrands = brands.filter((b) => b.tenant_id === activeTenantId);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -96,16 +107,18 @@ export default function AddProductPage() {
           <div className="lg:col-span-2 space-y-6">
             <Card className="border-gray-200 dark:border-gray-800">
               <CardHeader>
-                <CardTitle className="dark:text-white/90">Basic Information</CardTitle>
+                <CardTitle className="dark:text-white/90">
+                  Basic Information
+                </CardTitle>
                 <CardDescription className="dark:text-white/90">
                   Essential details about the product
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     Product Name
-                  </label>
+                  </Label>
                   <div className="relative">
                     <Package className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
                     <Input
@@ -122,9 +135,9 @@ export default function AddProductPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                       SKU / Barcode
-                    </label>
+                    </Label>
                     <div className="relative">
                       <Tag className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
                       <Input
@@ -142,28 +155,68 @@ export default function AddProductPage() {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                       Category
-                    </label>
+                    </Label>
                     <div className="relative">
-                      <Layers className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
-                      <Input
+                      <select
                         required
-                        placeholder="Electronics"
-                        className="pl-10"
+                        className="w-full h-11 px-4 pr-10 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 appearance-none focus:outline-none focus:ring-2 focus:ring-brand-500"
                         value={formData.category}
                         onChange={(e) =>
                           setFormData({ ...formData, category: e.target.value })
                         }
-                      />
+                      >
+                        <option value="">Select a category</option>
+                        {tenantCategories.map((cat) => (
+                          <option key={cat.id} value={cat.name}>
+                            {cat.name}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-gray-400 pointer-events-none" />
                     </div>
+                    {tenantCategories.length === 0 && (
+                      <p className="text-xs text-amber-600 dark:text-amber-400">
+                        No categories found. Add categories in Settings.
+                      </p>
+                    )}
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Brand
+                  </Label>
+                  <div className="relative">
+                    <select
+                      required
+                      className="w-full h-11 px-4 pr-10 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 appearance-none focus:outline-none focus:ring-2 focus:ring-brand-500"
+                      value={formData.brand}
+                      onChange={(e) =>
+                        setFormData({ ...formData, brand: e.target.value })
+                      }
+                    >
+                      <option value="">Select a brand</option>
+                      {tenantBrands.map((brand) => (
+                        <option key={brand.id} value={brand.name}>
+                          {brand.name}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-gray-400 pointer-events-none" />
+                  </div>
+                  {tenantBrands.length === 0 && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400">
+                      No brands found. Add brands in Settings.
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     Description
-                  </label>
+                  </Label>
                   <Textarea
                     placeholder="Enter product description..."
                     value={formData.description}
@@ -177,15 +230,19 @@ export default function AddProductPage() {
 
             <Card className="border-gray-200 dark:border-gray-800">
               <CardHeader>
-                <CardTitle className="dark:text-white/90">Pricing & Inventory</CardTitle>
-                <CardDescription className="dark:text-white/90">Define cost and stock levels</CardDescription>
+                <CardTitle className="dark:text-white/90">
+                  Pricing & Inventory
+                </CardTitle>
+                <CardDescription className="dark:text-white/90">
+                  Define cost and stock levels
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                       Unit Price
-                    </label>
+                    </Label>
                     <div className="relative">
                       <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
                       <Input
@@ -205,9 +262,9 @@ export default function AddProductPage() {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                       Current Stock
-                    </label>
+                    </Label>
                     <Input
                       required
                       type="number"
@@ -222,9 +279,9 @@ export default function AddProductPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                       Min. Stock Level
-                    </label>
+                    </Label>
                     <Input
                       required
                       type="number"
@@ -246,7 +303,9 @@ export default function AddProductPage() {
           <div className="space-y-6">
             <Card className="border-gray-200 dark:border-gray-800">
               <CardHeader>
-                <CardTitle className="dark:text-white/90">Product Media</CardTitle>
+                <CardTitle className="dark:text-white/90">
+                  Product Media
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="aspect-square rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-800 flex flex-col items-center justify-center p-6 text-center">
@@ -281,3 +340,4 @@ export default function AddProductPage() {
     </div>
   );
 }
+

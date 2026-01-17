@@ -2804,5 +2804,177 @@
       },
       "createdAt": "2026-01-05T18:00:00Z"
     }
+  ],
+  "categories": [
+    {
+      "id": "cat-1",
+      "tenant_id": "tenant-1",
+      "name": "Laptops",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "cat-2",
+      "tenant_id": "tenant-1",
+      "name": "Phones",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "cat-3",
+      "tenant_id": "tenant-1",
+      "name": "Audio",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "cat-4",
+      "tenant_id": "tenant-1",
+      "name": "Accessories",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "cat-5",
+      "tenant_id": "tenant-1",
+      "name": "Wearables",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "cat-6",
+      "tenant_id": "tenant-1",
+      "name": "Monitors",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    }
+  ],
+  "brands": [
+    {
+      "id": "brand-1",
+      "tenant_id": "tenant-1",
+      "name": "ASUS",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "brand-2",
+      "tenant_id": "tenant-1",
+      "name": "Dell",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "brand-3",
+      "tenant_id": "tenant-1",
+      "name": "Apple",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "brand-4",
+      "tenant_id": "tenant-1",
+      "name": "HP",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "brand-5",
+      "tenant_id": "tenant-1",
+      "name": "Lenovo",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "brand-6",
+      "tenant_id": "tenant-1",
+      "name": "MSI",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "brand-7",
+      "tenant_id": "tenant-1",
+      "name": "Razer",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "brand-8",
+      "tenant_id": "tenant-1",
+      "name": "Microsoft",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "brand-9",
+      "tenant_id": "tenant-1",
+      "name": "Samsung",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "brand-10",
+      "tenant_id": "tenant-1",
+      "name": "Google",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "brand-11",
+      "tenant_id": "tenant-1",
+      "name": "Sony",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "brand-12",
+      "tenant_id": "tenant-1",
+      "name": "Bose",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "brand-13",
+      "tenant_id": "tenant-1",
+      "name": "JBL",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "brand-14",
+      "tenant_id": "tenant-1",
+      "name": "Logitech",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "brand-15",
+      "tenant_id": "tenant-1",
+      "name": "Xiaomi",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "brand-16",
+      "tenant_id": "tenant-1",
+      "name": "OnePlus",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "brand-17",
+      "tenant_id": "tenant-1",
+      "name": "Beats",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "brand-18",
+      "tenant_id": "tenant-1",
+      "name": "Sennheiser",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    }
   ]
 }

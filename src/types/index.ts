@@ -122,6 +122,24 @@ export interface Product {
 }
 
 // ============================================
+// Product Category & Brand Types
+// ============================================
+
+export interface ProductCategory {
+  id: string;
+  tenant_id: string;
+  name: string;
+  createdAt: string;
+}
+
+export interface ProductBrand {
+  id: string;
+  tenant_id: string;
+  name: string;
+  createdAt: string;
+}
+
+// ============================================
 // Customer Types
 // ============================================
 
@@ -397,6 +415,8 @@ export interface SeedData {
   tenants: Tenant[];
   users: TenantUser[];
   products: Product[];
+  categories: ProductCategory[];
+  brands: ProductBrand[];
   customers: Customer[];
   vendors: Vendor[];
   purchases: Purchase[];
