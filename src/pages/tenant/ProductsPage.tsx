@@ -18,6 +18,7 @@ import { useProductsStore } from "../../stores/products.store";
 import { Pencil, Trash2 } from "lucide-react";
 import type { Product } from "../../types";
 import { useTenantCurrency } from "../../hooks/useTenantCurrency";
+import Pagination from "../../components/common/Pagination";
 
 export default function ProductsPage() {
   const { status, vm, actions } = useProductsScreen();
@@ -228,6 +229,14 @@ export default function ProductsPage() {
           </Table>
         </div>
       </div>
+
+      <Pagination
+        currentPage={vm.currentPage}
+        totalPages={vm.totalPages}
+        totalItems={vm.totalItems}
+        itemsPerPage={10}
+        onPageChange={actions.setCurrentPage}
+      />
 
       {selectedProduct && (
         <EditProductModal
