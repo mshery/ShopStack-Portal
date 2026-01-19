@@ -23,6 +23,8 @@ export function CheckoutPanel({
   totals,
   discount,
   onCheckout,
+  onClearCart,
+  onHoldOrder,
   cartItemCount,
   taxRate,
 }: CheckoutPanelProps) {
@@ -94,6 +96,28 @@ export function CheckoutPanel({
           </div>
           <span className="text-sm font-medium text-gray-700">Cash</span>
         </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex gap-2">
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => onClearCart()}
+          disabled={cartItemCount === 0}
+          className="flex-1 h-12 bg-gray-100 hover:bg-gray-200 disabled:bg-gray-50 disabled:cursor-not-allowed text-gray-700 disabled:text-gray-400 font-semibold rounded-xl transition-colors"
+        >
+          Clear Cart
+        </motion.button>
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => onHoldOrder()}
+          disabled={cartItemCount === 0}
+          className="flex-1 h-12 bg-amber-100 hover:bg-amber-200 disabled:bg-amber-50 disabled:cursor-not-allowed text-amber-700 disabled:text-amber-400 font-semibold rounded-xl transition-colors"
+        >
+          Hold Order
+        </motion.button>
       </div>
 
       {/* Continue Button - Using brand colors */}
