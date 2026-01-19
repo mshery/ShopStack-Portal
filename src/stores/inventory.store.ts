@@ -12,7 +12,9 @@ interface InventoryStoreState {
 
   // Setters
   setInventoryAdjustments: (adjustments: InventoryAdjustment[]) => void;
-  addAdjustment: (adjustment: InventoryAdjustment) => void;
+  addAdjustment: (
+    adjustment: Omit<InventoryAdjustment, "createdAt" | "updatedAt">,
+  ) => void;
 }
 
 export const useInventoryStore = create<InventoryStoreState>((set) => ({
@@ -25,7 +27,14 @@ export const useInventoryStore = create<InventoryStoreState>((set) => ({
 
   addAdjustment: (adjustment) => {
     set((state) => ({
-      inventoryAdjustments: [...state.inventoryAdjustments, adjustment],
+      inventoryAdjustments: [
+        ...state.inventoryAdjustments,
+        {
+          ...adjustment,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        } as InventoryAdjustment,
+      ],
     }));
   },
 }));

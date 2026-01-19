@@ -17,7 +17,7 @@ interface UsersStoreState {
 
   // Setters for tenant users
   setTenantUsers: (users: TenantUser[]) => void;
-  addTenantUser: (user: TenantUser) => void;
+  addTenantUser: (user: Omit<TenantUser, "createdAt" | "updatedAt">) => void;
   updateTenantUser: (id: string, updates: Partial<TenantUser>) => void;
   removeTenantUser: (id: string) => void;
 }
@@ -35,13 +35,22 @@ export const useUsersStore = create<UsersStoreState>((set) => ({
 
   addTenantUser: (user) =>
     set((state) => ({
-      tenantUsers: [...state.tenantUsers, user],
+      tenantUsers: [
+        ...state.tenantUsers,
+        {
+          ...user,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        } as TenantUser,
+      ],
     })),
 
   updateTenantUser: (id, updates) =>
     set((state) => ({
       tenantUsers: state.tenantUsers.map((u) =>
-        u.id === id ? { ...u, ...updates } : u,
+        u.id === id
+          ? { ...u, ...updates, updatedAt: new Date().toISOString() }
+          : u,
       ),
     })),
 

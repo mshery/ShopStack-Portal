@@ -12,7 +12,9 @@ interface ExpensesStoreState {
 
   // Setters
   setExpenses: (expenses: Expense[]) => void;
-  addExpense: (expense: Expense) => void;
+  addExpense: (
+    expense: Omit<Expense, "id" | "createdAt" | "updatedAt">,
+  ) => void;
   updateExpense: (id: string, updates: Partial<Expense>) => void;
   removeExpense: (id: string) => void;
 }
@@ -25,8 +27,17 @@ export const useExpensesStore = create<ExpensesStoreState>((set) => ({
   setExpenses: (expenses) => set({ expenses: expenses ?? [] }),
 
   addExpense: (expense) => {
+    const id = `exp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     set((state) => ({
-      expenses: [...state.expenses, expense],
+      expenses: [
+        ...state.expenses,
+        {
+          ...expense,
+          id,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        } as Expense,
+      ],
     }));
   },
 

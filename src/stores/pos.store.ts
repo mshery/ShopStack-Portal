@@ -143,8 +143,8 @@ export const usePOSStore = create<POSStoreState>((set, get) => ({
       closingCash: null,
       expectedCash: null,
       status: "open",
-      openedAt: new Date().toISOString(),
-      closedAt: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
     set((state) => ({
       shifts: [...state.shifts, newShift],
@@ -177,7 +177,7 @@ export const usePOSStore = create<POSStoreState>((set, get) => ({
               closingCash,
               expectedCash,
               status: "closed" as const,
-              closedAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
             }
           : s,
       ),
@@ -192,7 +192,12 @@ export const usePOSStore = create<POSStoreState>((set, get) => ({
   // Payments methods
   setPayments: (payments) => set({ payments: payments ?? [] }),
   addPayment: (payment) =>
-    set((state) => ({ payments: [...state.payments, payment] })),
+    set((state) => ({
+      payments: [
+        ...state.payments,
+        { ...payment, updatedAt: payment.updatedAt || payment.createdAt },
+      ],
+    })),
 
   // Receipt methods
   setReceipts: (receipts) => set({ receipts: receipts ?? [] }),
@@ -201,7 +206,7 @@ export const usePOSStore = create<POSStoreState>((set, get) => ({
   markReceiptPrinted: (receiptId) =>
     set((state) => ({
       receipts: state.receipts.map((r) =>
-        r.id === receiptId ? { ...r, printedAt: new Date().toISOString() } : r,
+        r.id === receiptId ? { ...r, updatedAt: new Date().toISOString() } : r,
       ),
     })),
 
@@ -225,6 +230,7 @@ export const usePOSStore = create<POSStoreState>((set, get) => ({
       reason,
       processedBy,
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
     set((state) => ({
@@ -394,8 +400,8 @@ export const usePOSStore = create<POSStoreState>((set, get) => ({
       saleId,
       receiptNumber,
       tenant_id: saleData.tenant_id,
-      generatedAt: new Date().toISOString(),
-      printedAt: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
     set((state) => ({

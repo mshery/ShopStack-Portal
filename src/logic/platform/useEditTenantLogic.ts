@@ -93,6 +93,7 @@ export function useEditTenantLogic(tenant: Tenant, onClose: () => void) {
           companyName: formData.companyName,
         },
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       };
       addPlatformLog(log);
     }

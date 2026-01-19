@@ -57,6 +57,7 @@ export function useTenantUsersLogic() {
         status: "active",
         avatarUrl: null,
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       };
 
       addTenantUser(newUser);

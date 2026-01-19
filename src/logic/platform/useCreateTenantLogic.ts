@@ -5,13 +5,7 @@ import { useUsersStore } from "@/stores/users.store";
 import { useActivityLogsStore } from "@/stores/activityLogs.store";
 import { useAuthStore } from "@/stores/auth.store";
 import { generateId } from "@/utils/normalize";
-import type {
-  Tenant,
-  TenantUser,
-  TenantPlan,
-  TenantFeatures,
-  PlatformActivityLog,
-} from "@/types";
+import type { Tenant, TenantUser, TenantPlan, TenantFeatures } from "@/types";
 
 export interface CreateTenantData {
   // Step 1: Basics
@@ -188,19 +182,19 @@ export function useCreateTenantLogic() {
         status: "active",
         avatarUrl: null,
         createdAt: now,
+        updatedAt: now,
       };
       addTenantUser(newOwner);
     }
 
     // Log activity
-    const log: PlatformActivityLog = {
+    const log = {
       id: generateId("plog"),
       action: "tenant_created",
       actorId: currentUser?.id ?? "unknown",
       targetType: "tenant",
       targetId: tenantId,
       details: { companyName: formData.companyName },
-      createdAt: now,
     };
     addPlatformLog(log);
 

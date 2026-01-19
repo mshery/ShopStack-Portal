@@ -64,6 +64,7 @@ export default function AddCustomerPage() {
       phone: formData.phone.trim() || null,
       isDefault: false,
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     });
 
     // Navigate back to customers page

@@ -72,6 +72,7 @@ export default function TenantDetailPage() {
         slug: tenant!.slug,
       },
       createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
     };
     addPlatformLog(log);
 

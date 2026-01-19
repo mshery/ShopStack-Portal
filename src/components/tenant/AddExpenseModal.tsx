@@ -87,7 +87,6 @@ export default function AddExpenseModal({
   const handleSubmit = useCallback(() => {
     if (!validate()) return;
 
-    const now = new Date().toISOString();
     const userId = currentUser?.id || "system";
     const tenantId = activeTenantId || "";
 
@@ -96,7 +95,6 @@ export default function AddExpenseModal({
 
     // Create expense record
     addExpense({
-      id: expenseId,
       tenant_id: tenantId,
       category: formData.category,
       expenseType: formData.expenseType,
@@ -109,8 +107,6 @@ export default function AddExpenseModal({
       receiptUrl: null,
       date: new Date(formData.date).toISOString(),
       createdBy: userId,
-      createdAt: now,
-      updatedAt: now,
     });
 
     // Log expense creation
@@ -126,7 +122,6 @@ export default function AddExpenseModal({
         expenseType: formData.expenseType,
         amount,
       },
-      createdAt: now,
     });
 
     // Reset form and close

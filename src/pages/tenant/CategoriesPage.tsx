@@ -70,6 +70,7 @@ export default function CategoriesPage() {
             tenant_id: activeTenantId,
             name: newCategoryName.trim(),
             createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         };
         addCategory(newCat);
         setNewCategoryName("");

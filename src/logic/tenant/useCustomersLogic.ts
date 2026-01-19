@@ -46,6 +46,7 @@ export function useCustomersLogic() {
         phone: data.phone,
         isDefault: false,
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       };
 
       addCustomer(newCustomer);

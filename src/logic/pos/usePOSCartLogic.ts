@@ -225,13 +225,13 @@ export function usePOSCartLogic() {
       updatedAt: new Date().toISOString(),
     };
 
-    const receipt = {
+    const receipt: Receipt = {
       id: receiptId,
       saleId,
       receiptNumber: `RCP-${Date.now().toString().slice(-8)}`,
       tenant_id: activeTenantId,
-      generatedAt: new Date().toISOString(),
-      printedAt: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
     setLastCheckout({ sale, receipt });

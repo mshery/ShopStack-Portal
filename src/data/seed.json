@@ -11,7 +11,8 @@
       "name": "Shahroz Ijaz",
       "role": "super_admin",
       "avatarUrl": null,
-      "createdAt": "2025-01-01T00:00:00Z"
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
     }
   ],
   "platformActivityLogs": [
@@ -22,7 +23,8 @@
       "targetType": "tenant",
       "targetId": "tenant-1",
       "details": { "companyName": "Acme Corp" },
-      "createdAt": "2025-06-01T10:00:00Z"
+      "createdAt": "2025-06-01T10:00:00Z",
+      "updatedAt": "2025-06-01T10:00:00Z"
     },
     {
       "id": "plog-2",
@@ -31,7 +33,8 @@
       "targetType": "tenant",
       "targetId": "tenant-2",
       "details": { "companyName": "TechStart Inc" },
-      "createdAt": "2025-07-15T14:30:00Z"
+      "createdAt": "2025-07-15T14:30:00Z",
+      "updatedAt": "2025-07-15T14:30:00Z"
     },
     {
       "id": "plog-3",
@@ -40,7 +43,8 @@
       "targetType": "tenant",
       "targetId": "tenant-1",
       "details": { "oldPlan": "starter", "newPlan": "professional" },
-      "createdAt": "2025-09-01T09:00:00Z"
+      "createdAt": "2025-09-01T09:00:00Z",
+      "updatedAt": "2025-09-01T09:00:00Z"
     },
     {
       "id": "plog-4",
@@ -49,7 +53,8 @@
       "targetType": "tenant",
       "targetId": "tenant-3",
       "details": { "companyName": "Global Retail" },
-      "createdAt": "2025-10-20T11:00:00Z"
+      "createdAt": "2025-10-20T11:00:00Z",
+      "updatedAt": "2025-10-20T11:00:00Z"
     },
     {
       "id": "plog-5",
@@ -58,7 +63,8 @@
       "targetType": "tenant",
       "targetId": "tenant-3",
       "details": { "oldStatus": "active", "newStatus": "suspended" },
-      "createdAt": "2025-12-01T16:00:00Z"
+      "createdAt": "2025-12-01T16:00:00Z",
+      "updatedAt": "2025-12-01T16:00:00Z"
     }
   ],
   "tenants": [
@@ -177,7 +183,8 @@
       "role": "owner",
       "status": "active",
       "avatarUrl": null,
-      "createdAt": "2025-06-01T10:05:00Z"
+      "createdAt": "2025-06-01T10:05:00Z",
+      "updatedAt": "2025-06-01T10:05:00Z"
     },
     {
       "id": "user-2",
@@ -188,7 +195,8 @@
       "role": "owner",
       "status": "active",
       "avatarUrl": null,
-      "createdAt": "2025-06-10T09:00:00Z"
+      "createdAt": "2025-06-10T09:00:00Z",
+      "updatedAt": "2025-06-10T09:00:00Z"
     },
     {
       "id": "user-3",
@@ -199,7 +207,8 @@
       "role": "cashier",
       "status": "active",
       "avatarUrl": null,
-      "createdAt": "2025-06-15T09:00:00Z"
+      "createdAt": "2025-06-15T09:00:00Z",
+      "updatedAt": "2025-06-15T09:00:00Z"
     }
   ],
   "products": [
@@ -1328,7 +1337,8 @@
       "email": null,
       "phone": null,
       "isDefault": true,
-      "createdAt": "2025-06-01T10:00:00Z"
+      "createdAt": "2025-06-01T10:00:00Z",
+      "updatedAt": "2025-06-01T10:00:00Z"
     },
     {
       "id": "customer-1",
@@ -1337,7 +1347,8 @@
       "email": "robert.johnson@email.com",
       "phone": "+1-555-0101",
       "isDefault": false,
-      "createdAt": "2025-07-15T11:00:00Z"
+      "createdAt": "2025-07-15T11:00:00Z",
+      "updatedAt": "2025-07-15T11:00:00Z"
     },
     {
       "id": "customer-2",
@@ -1346,7 +1357,8 @@
       "email": "maria.garcia@email.com",
       "phone": "+1-555-0102",
       "isDefault": false,
-      "createdAt": "2025-08-20T14:30:00Z"
+      "createdAt": "2025-08-20T14:30:00Z",
+      "updatedAt": "2025-08-20T14:30:00Z"
     },
     {
       "id": "customer-3",
@@ -1355,7 +1367,8 @@
       "email": "purchasing@techsolutions.com",
       "phone": "+1-555-0200",
       "isDefault": false,
-      "createdAt": "2025-09-01T09:00:00Z"
+      "createdAt": "2025-09-01T09:00:00Z",
+      "updatedAt": "2025-09-01T09:00:00Z"
     },
     {
       "id": "customer-0-t4",
@@ -1364,7 +1377,8 @@
       "email": null,
       "phone": null,
       "isDefault": true,
-      "createdAt": "2025-11-01T09:00:00Z"
+      "createdAt": "2025-11-01T09:00:00Z",
+      "updatedAt": "2025-11-01T09:00:00Z"
     },
     {
       "id": "customer-4",
@@ -1373,7 +1387,8 @@
       "email": "james.wilson@email.com",
       "phone": "+1-555-0301",
       "isDefault": false,
-      "createdAt": "2025-11-15T10:00:00Z"
+      "createdAt": "2025-11-15T10:00:00Z",
+      "updatedAt": "2025-11-15T10:00:00Z"
     }
   ],
   "vendors": [
@@ -1422,7 +1437,8 @@
       "purchaseDate": "2025-12-01T10:00:00Z",
       "receivedDate": "2025-12-05T14:30:00Z",
       "notes": "Initial stock order",
-      "createdAt": "2025-12-01T10:00:00Z"
+      "createdAt": "2025-12-01T10:00:00Z",
+      "updatedAt": "2025-12-01T10:00:00Z"
     }
   ],
   "expenses": [
@@ -1866,7 +1882,8 @@
       "relatedExpenseId": "exp-14",
       "notes": "Damaged unit - customer dropped during demo, recorded as expense",
       "createdBy": "user-4",
-      "createdAt": "2026-01-02T16:00:00Z"
+      "createdAt": "2026-01-02T16:00:00Z",
+      "updatedAt": "2026-01-02T16:00:00Z"
     },
     {
       "id": "inv-adj-2",
@@ -1881,7 +1898,8 @@
       "relatedExpenseId": null,
       "notes": "Physical inventory count correction - found discrepancy",
       "createdBy": "user-4",
-      "createdAt": "2026-01-05T18:00:00Z"
+      "createdAt": "2026-01-05T18:00:00Z",
+      "updatedAt": "2026-01-05T18:00:00Z"
     },
     {
       "id": "inv-adj-3",
@@ -1896,7 +1914,8 @@
       "relatedExpenseId": null,
       "notes": "Customer return - unopened box",
       "createdBy": "user-3",
-      "createdAt": "2026-01-06T11:30:00Z"
+      "createdAt": "2026-01-06T11:30:00Z",
+      "updatedAt": "2026-01-06T11:30:00Z"
     },
     {
       "id": "inv-adj-4",
@@ -1911,7 +1930,8 @@
       "relatedExpenseId": "exp-15",
       "notes": "Shoplifting incident - reported to police, recorded as expense",
       "createdBy": "user-4",
-      "createdAt": "2025-12-15T14:30:00Z"
+      "createdAt": "2025-12-15T14:30:00Z",
+      "updatedAt": "2025-12-15T14:30:00Z"
     },
     {
       "id": "inv-adj-5",
@@ -1926,7 +1946,8 @@
       "relatedExpenseId": "exp-16",
       "notes": "Shipping damage - box crushed during delivery, recorded as expense",
       "createdBy": "user-4",
-      "createdAt": "2025-12-22T10:15:00Z"
+      "createdAt": "2025-12-22T10:15:00Z",
+      "updatedAt": "2025-12-22T10:15:00Z"
     },
     {
       "id": "inv-adj-6",
@@ -1941,7 +1962,8 @@
       "relatedExpenseId": null,
       "notes": "Customer return - changed mind within return window",
       "createdBy": "user-3",
-      "createdAt": "2026-01-04T14:00:00Z"
+      "createdAt": "2026-01-04T14:00:00Z",
+      "updatedAt": "2026-01-04T14:00:00Z"
     },
     {
       "id": "inv-adj-7",
@@ -1956,7 +1978,8 @@
       "relatedExpenseId": null,
       "notes": "Inventory audit - unit missing from shelf",
       "createdBy": "user-4",
-      "createdAt": "2025-12-28T17:00:00Z"
+      "createdAt": "2025-12-28T17:00:00Z",
+      "updatedAt": "2025-12-28T17:00:00Z"
     },
     {
       "id": "inv-adj-8",
@@ -1971,7 +1994,8 @@
       "relatedExpenseId": null,
       "notes": "Display unit damaged - screen cracked",
       "createdBy": "user-4",
-      "createdAt": "2025-12-18T11:30:00Z"
+      "createdAt": "2025-12-18T11:30:00Z",
+      "updatedAt": "2025-12-18T11:30:00Z"
     },
     {
       "id": "inv-adj-9",
@@ -1986,7 +2010,8 @@
       "relatedExpenseId": null,
       "notes": "Customer exchange - wanted different color",
       "createdBy": "user-3",
-      "createdAt": "2025-12-25T13:45:00Z"
+      "createdAt": "2025-12-25T13:45:00Z",
+      "updatedAt": "2025-12-25T13:45:00Z"
     },
     {
       "id": "inv-adj-10",
@@ -2001,7 +2026,8 @@
       "relatedExpenseId": "exp-17",
       "notes": "Suspected theft - unit unaccounted for after shift, recorded as expense",
       "createdBy": "user-4",
-      "createdAt": "2026-01-03T19:00:00Z"
+      "createdAt": "2026-01-03T19:00:00Z",
+      "updatedAt": "2026-01-03T19:00:00Z"
     },
     {
       "id": "inv-adj-11",
@@ -2016,7 +2042,8 @@
       "relatedExpenseId": "exp-13",
       "notes": "Purchase Order PO-1001 received - initial stock",
       "createdBy": "user-1",
-      "createdAt": "2025-12-05T14:30:00Z"
+      "createdAt": "2025-12-05T14:30:00Z",
+      "updatedAt": "2025-12-05T14:30:00Z"
     },
     {
       "id": "inv-adj-12",
@@ -2031,7 +2058,8 @@
       "relatedExpenseId": null,
       "notes": "Water damage from store leak - 2 units affected",
       "createdBy": "user-4",
-      "createdAt": "2025-12-12T09:00:00Z"
+      "createdAt": "2025-12-12T09:00:00Z",
+      "updatedAt": "2025-12-12T09:00:00Z"
     },
     {
       "id": "inv-adj-13",
@@ -2046,7 +2074,8 @@
       "relatedExpenseId": null,
       "notes": "Bulk return from corporate client - units in perfect condition",
       "createdBy": "user-3",
-      "createdAt": "2025-12-05T15:00:00Z"
+      "createdAt": "2025-12-05T15:00:00Z",
+      "updatedAt": "2025-12-05T15:00:00Z"
     },
     {
       "id": "inv-adj-14",
@@ -2061,7 +2090,8 @@
       "relatedExpenseId": null,
       "notes": "Annual inventory audit - unit missing, cause unknown",
       "createdBy": "user-4",
-      "createdAt": "2025-11-30T17:00:00Z"
+      "createdAt": "2025-11-30T17:00:00Z",
+      "updatedAt": "2025-11-30T17:00:00Z"
     },
     {
       "id": "inv-adj-15",
@@ -2076,7 +2106,8 @@
       "relatedExpenseId": null,
       "notes": "Customer returns - minor cosmetic issues, refurbished for resale",
       "createdBy": "user-3",
-      "createdAt": "2025-11-28T14:00:00Z"
+      "createdAt": "2025-11-28T14:00:00Z",
+      "updatedAt": "2025-11-28T14:00:00Z"
     }
   ],
   "pos": {
@@ -2086,28 +2117,36 @@
         "tenant_id": "tenant-1",
         "name": "Register 1",
         "location": "Main Store - Front",
-        "status": "active"
+        "status": "active",
+        "createdAt": "2025-01-01T10:00:00Z",
+        "updatedAt": "2025-01-01T10:00:00Z"
       },
       {
         "id": "register-2",
         "tenant_id": "tenant-1",
         "name": "Register 2",
         "location": "Main Store - Back",
-        "status": "active"
+        "status": "active",
+        "createdAt": "2025-01-01T10:00:00Z",
+        "updatedAt": "2025-01-01T10:00:00Z"
       },
       {
         "id": "register-3",
         "tenant_id": "tenant-1",
         "name": "Register 3",
         "location": "Warehouse",
-        "status": "inactive"
+        "status": "inactive",
+        "createdAt": "2025-01-01T10:00:00Z",
+        "updatedAt": "2025-01-01T10:00:00Z"
       },
       {
         "id": "register-4",
         "tenant_id": "tenant-4",
         "name": "Register A",
         "location": "Downtown Store",
-        "status": "active"
+        "status": "active",
+        "createdAt": "2025-11-01T09:00:00Z",
+        "updatedAt": "2025-11-01T09:00:00Z"
       }
     ],
     "shifts": [
@@ -2120,8 +2159,8 @@
         "closingCash": 1450.0,
         "expectedCash": 1435.0,
         "status": "closed",
-        "openedAt": "2026-01-03T08:00:00Z",
-        "closedAt": "2026-01-03T17:00:00Z"
+        "createdAt": "2026-01-03T08:00:00Z",
+        "updatedAt": "2026-01-03T17:00:00Z"
       },
       {
         "id": "shift-2",
@@ -2132,8 +2171,8 @@
         "closingCash": null,
         "expectedCash": null,
         "status": "open",
-        "openedAt": "2026-01-04T08:00:00Z",
-        "closedAt": null
+        "createdAt": "2026-01-04T08:00:00Z",
+        "updatedAt": "2026-01-04T08:00:00Z"
       },
       {
         "id": "shift-3",
@@ -2144,8 +2183,8 @@
         "closingCash": null,
         "expectedCash": null,
         "status": "open",
-        "openedAt": "2026-01-04T09:00:00Z",
-        "closedAt": null
+        "createdAt": "2026-01-04T09:00:00Z",
+        "updatedAt": "2026-01-04T09:00:00Z"
       }
     ],
     "sales": [
@@ -2622,6 +2661,89 @@
         "paymentMethod": "CASH",
         "createdAt": "2026-01-15T15:30:00Z",
         "updatedAt": "2026-01-15T15:30:00Z"
+      },
+      {
+        "id": "sale-t4-1",
+        "number": "SALE-T4-001",
+        "tenant_id": "tenant-4",
+        "registerId": "register-4",
+        "shiftId": "shift-3",
+        "cashierUserId": "user-8",
+        "customerId": "customer-0-t4",
+        "lineItems": [
+          {
+            "productId": "product-61",
+            "nameSnapshot": "LG OLED TV 65\"",
+            "unitPriceSnapshot": 2499.0,
+            "costPriceSnapshot": 1850.0,
+            "quantity": 1,
+            "subtotal": 2499.0
+          }
+        ],
+        "subtotal": 2499.0,
+        "tax": 249.9,
+        "grandTotal": 2748.9,
+        "paymentMethod": "CASH",
+        "createdAt": "2026-01-05T10:30:00Z",
+        "updatedAt": "2026-01-05T10:30:00Z"
+      },
+      {
+        "id": "sale-t4-2",
+        "number": "SALE-T4-002",
+        "tenant_id": "tenant-4",
+        "registerId": "register-4",
+        "shiftId": "shift-3",
+        "cashierUserId": "user-8",
+        "customerId": "customer-4",
+        "lineItems": [
+          {
+            "productId": "product-62",
+            "nameSnapshot": "Microsoft Surface Pro 9",
+            "unitPriceSnapshot": 1599.0,
+            "costPriceSnapshot": 1200.0,
+            "quantity": 1,
+            "subtotal": 1599.0
+          }
+        ],
+        "subtotal": 1599.0,
+        "tax": 159.9,
+        "grandTotal": 1758.9,
+        "paymentMethod": "CASH",
+        "createdAt": "2026-01-08T14:00:00Z",
+        "updatedAt": "2026-01-08T14:00:00Z"
+      },
+      {
+        "id": "sale-t4-3",
+        "number": "SALE-T4-003",
+        "tenant_id": "tenant-4",
+        "registerId": "register-4",
+        "shiftId": "shift-3",
+        "cashierUserId": "user-8",
+        "customerId": "customer-0-t4",
+        "lineItems": [
+          {
+            "productId": "product-61",
+            "nameSnapshot": "LG OLED TV 65\"",
+            "unitPriceSnapshot": 2499.0,
+            "costPriceSnapshot": 1850.0,
+            "quantity": 2,
+            "subtotal": 4998.0
+          },
+          {
+            "productId": "product-62",
+            "nameSnapshot": "Microsoft Surface Pro 9",
+            "unitPriceSnapshot": 1599.0,
+            "costPriceSnapshot": 1200.0,
+            "quantity": 1,
+            "subtotal": 1599.0
+          }
+        ],
+        "subtotal": 6597.0,
+        "tax": 659.7,
+        "grandTotal": 7256.7,
+        "paymentMethod": "CASH",
+        "createdAt": "2026-01-12T11:30:00Z",
+        "updatedAt": "2026-01-12T11:30:00Z"
       }
     ],
     "payments": [
@@ -2632,7 +2754,8 @@
         "method": "CASH",
         "amountTendered": 850.0,
         "changeGiven": 11.0,
-        "createdAt": "2026-01-03T10:30:00Z"
+        "createdAt": "2026-01-03T10:30:00Z",
+        "updatedAt": "2026-01-03T10:30:00Z"
       },
       {
         "id": "payment-2",
@@ -2641,7 +2764,8 @@
         "method": "CASH",
         "amountTendered": 560.0,
         "changeGiven": 2.0,
-        "createdAt": "2026-01-03T14:15:00Z"
+        "createdAt": "2026-01-03T14:15:00Z",
+        "updatedAt": "2026-01-03T14:15:00Z"
       },
       {
         "id": "payment-3",
@@ -2650,7 +2774,189 @@
         "method": "CASH",
         "amountTendered": 1600.0,
         "changeGiven": 22.0,
-        "createdAt": "2026-01-04T09:45:00Z"
+        "createdAt": "2026-01-04T09:45:00Z",
+        "updatedAt": "2026-01-04T09:45:00Z"
+      },
+      {
+        "id": "payment-4",
+        "tenant_id": "tenant-1",
+        "saleId": "sale-4",
+        "method": "CASH",
+        "amountTendered": 1400.0,
+        "changeGiven": 81.1,
+        "createdAt": "2026-01-10T11:00:00Z",
+        "updatedAt": "2026-01-10T11:00:00Z"
+      },
+      {
+        "id": "payment-5",
+        "tenant_id": "tenant-1",
+        "saleId": "sale-5",
+        "method": "CASH",
+        "amountTendered": 800.0,
+        "changeGiven": 32.2,
+        "createdAt": "2026-01-15T15:30:00Z",
+        "updatedAt": "2026-01-15T15:30:00Z"
+      },
+      {
+        "id": "payment-t4-1",
+        "tenant_id": "tenant-4",
+        "saleId": "sale-t4-1",
+        "method": "CASH",
+        "amountTendered": 2800.0,
+        "changeGiven": 50.9,
+        "createdAt": "2026-01-05T10:30:00Z",
+        "updatedAt": "2026-01-05T10:30:00Z"
+      },
+      {
+        "id": "payment-t4-2",
+        "tenant_id": "tenant-4",
+        "saleId": "sale-t4-2",
+        "method": "CASH",
+        "amountTendered": 1800.0,
+        "changeGiven": 40.9,
+        "createdAt": "2026-01-08T14:00:00Z",
+        "updatedAt": "2026-01-08T14:00:00Z"
+      }
+    ],
+    "receipts": [
+      {
+        "id": "receipt-h1",
+        "saleId": "sale-h1",
+        "receiptNumber": "REC-H001",
+        "tenant_id": "tenant-1",
+        "createdAt": "2025-08-10T10:30:00Z",
+        "updatedAt": "2025-08-10T10:30:00Z"
+      },
+      {
+        "id": "receipt-h2",
+        "saleId": "sale-h2",
+        "receiptNumber": "REC-H002",
+        "tenant_id": "tenant-1",
+        "createdAt": "2025-08-22T14:45:00Z",
+        "updatedAt": "2025-08-22T14:45:00Z"
+      },
+      {
+        "id": "receipt-h3",
+        "saleId": "sale-h3",
+        "receiptNumber": "REC-H003",
+        "tenant_id": "tenant-1",
+        "createdAt": "2025-09-05T09:15:00Z",
+        "updatedAt": "2025-09-05T09:15:00Z"
+      },
+      {
+        "id": "receipt-1",
+        "saleId": "sale-1",
+        "receiptNumber": "REC-001",
+        "tenant_id": "tenant-1",
+        "createdAt": "2026-01-03T10:30:00Z",
+        "updatedAt": "2026-01-03T10:30:00Z"
+      },
+      {
+        "id": "receipt-2",
+        "saleId": "sale-2",
+        "receiptNumber": "REC-002",
+        "tenant_id": "tenant-1",
+        "createdAt": "2026-01-03T14:15:00Z",
+        "updatedAt": "2026-01-03T14:15:00Z"
+      },
+      {
+        "id": "receipt-3",
+        "saleId": "sale-3",
+        "receiptNumber": "REC-003",
+        "tenant_id": "tenant-1",
+        "createdAt": "2026-01-04T09:45:00Z",
+        "updatedAt": "2026-01-04T09:45:00Z"
+      },
+      {
+        "id": "receipt-4",
+        "saleId": "sale-4",
+        "receiptNumber": "REC-004",
+        "tenant_id": "tenant-1",
+        "createdAt": "2026-01-10T11:00:00Z",
+        "updatedAt": "2026-01-10T11:00:00Z"
+      },
+      {
+        "id": "receipt-5",
+        "saleId": "sale-5",
+        "receiptNumber": "REC-005",
+        "tenant_id": "tenant-1",
+        "createdAt": "2026-01-15T15:30:00Z",
+        "updatedAt": "2026-01-15T15:30:00Z"
+      },
+      {
+        "id": "receipt-t4-1",
+        "saleId": "sale-t4-1",
+        "receiptNumber": "REC-T4-001",
+        "tenant_id": "tenant-4",
+        "createdAt": "2026-01-05T10:30:00Z",
+        "updatedAt": "2026-01-05T10:30:00Z"
+      },
+      {
+        "id": "receipt-t4-2",
+        "saleId": "sale-t4-2",
+        "receiptNumber": "REC-T4-002",
+        "tenant_id": "tenant-4",
+        "createdAt": "2026-01-08T14:00:00Z",
+        "updatedAt": "2026-01-08T14:00:00Z"
+      }
+    ],
+    "refunds": [
+      {
+        "id": "refund-1",
+        "tenant_id": "tenant-1",
+        "originalSaleId": "sale-h2",
+        "refundNumber": "REF-001",
+        "refundedItems": [
+          {
+            "productId": "product-3",
+            "productName": "Samsung Galaxy S24 Ultra",
+            "quantity": 1,
+            "refundAmount": 1208.9
+          }
+        ],
+        "refundTotal": 1208.9,
+        "reason": "Customer changed mind - returned within 7 days",
+        "processedBy": "user-1",
+        "createdAt": "2025-08-29T10:00:00Z",
+        "updatedAt": "2025-08-29T10:00:00Z"
+      },
+      {
+        "id": "refund-2",
+        "tenant_id": "tenant-1",
+        "originalSaleId": "sale-h5",
+        "refundNumber": "REF-002",
+        "refundedItems": [
+          {
+            "productId": "product-2",
+            "productName": "Airpods Pro 2nd Gen",
+            "quantity": 1,
+            "refundAmount": 922.9
+          }
+        ],
+        "refundTotal": 922.9,
+        "reason": "Defective product - replaced under warranty",
+        "processedBy": "user-2",
+        "createdAt": "2025-10-10T14:30:00Z",
+        "updatedAt": "2025-10-10T14:30:00Z"
+      },
+      {
+        "id": "refund-3",
+        "tenant_id": "tenant-1",
+        "originalSaleId": "sale-h10",
+        "refundNumber": "REF-003",
+        "refundedItems": [
+          {
+            "productId": "product-7",
+            "productName": "Sony WH-1000XM5",
+            "quantity": 2,
+            "refundAmount": 767.8
+          }
+        ],
+        "refundTotal": 767.8,
+        "reason": "Customer received wrong color - partial refund",
+        "processedBy": "user-1",
+        "createdAt": "2025-12-02T11:15:00Z",
+        "updatedAt": "2025-12-02T11:15:00Z"
       }
     ]
   },
@@ -2663,7 +2969,8 @@
       "targetType": "product",
       "targetId": "product-1",
       "details": { "productName": "ASUS ROG Gaming Laptop" },
-      "createdAt": "2025-12-01T00:00:00Z"
+      "createdAt": "2025-12-01T00:00:00Z",
+      "updatedAt": "2025-12-01T00:00:00Z"
     },
     {
       "id": "tlog-2",
@@ -2673,7 +2980,8 @@
       "targetType": "user",
       "targetId": "user-3",
       "details": { "userName": "Jane Cashier", "role": "cashier" },
-      "createdAt": "2025-06-15T09:00:00Z"
+      "createdAt": "2025-06-15T09:00:00Z",
+      "updatedAt": "2025-06-15T09:00:00Z"
     },
     {
       "id": "tlog-3",
@@ -2683,7 +2991,8 @@
       "targetType": "sale",
       "targetId": "sale-1",
       "details": { "grandTotal": 839.0, "paymentMethod": "CASH" },
-      "createdAt": "2026-01-03T10:30:00Z"
+      "createdAt": "2026-01-03T10:30:00Z",
+      "updatedAt": "2026-01-03T10:30:00Z"
     },
     {
       "id": "tlog-4",
@@ -2693,7 +3002,8 @@
       "targetType": "shift",
       "targetId": "shift-2",
       "details": { "registerId": "register-1", "openingCash": 150.0 },
-      "createdAt": "2026-01-04T08:00:00Z"
+      "createdAt": "2026-01-04T08:00:00Z",
+      "updatedAt": "2026-01-04T08:00:00Z"
     },
     {
       "id": "tlog-5",
@@ -2709,7 +3019,8 @@
         "previousStock": 5,
         "newStock": 4
       },
-      "createdAt": "2026-01-02T16:00:00Z"
+      "createdAt": "2026-01-02T16:00:00Z",
+      "updatedAt": "2026-01-02T16:00:00Z"
     },
     {
       "id": "tlog-6",
@@ -2724,7 +3035,8 @@
         "amount": 280.0,
         "productName": "Sony WH-1000XM5"
       },
-      "createdAt": "2026-01-02T16:00:00Z"
+      "createdAt": "2026-01-02T16:00:00Z",
+      "updatedAt": "2026-01-02T16:00:00Z"
     },
     {
       "id": "tlog-7",
@@ -2740,7 +3052,8 @@
         "previousStock": 0,
         "newStock": 50
       },
-      "createdAt": "2025-12-05T14:30:00Z"
+      "createdAt": "2025-12-05T14:30:00Z",
+      "updatedAt": "2025-12-05T14:30:00Z"
     },
     {
       "id": "tlog-8",
@@ -2754,7 +3067,8 @@
         "expenseType": "operational",
         "amount": 3500.0
       },
-      "createdAt": "2026-01-01T10:00:00Z"
+      "createdAt": "2026-01-01T10:00:00Z",
+      "updatedAt": "2026-01-01T10:00:00Z"
     },
     {
       "id": "tlog-9",
@@ -2770,7 +3084,8 @@
         "previousStock": 27,
         "newStock": 25
       },
-      "createdAt": "2025-12-15T14:30:00Z"
+      "createdAt": "2025-12-15T14:30:00Z",
+      "updatedAt": "2025-12-15T14:30:00Z"
     },
     {
       "id": "tlog-10",
@@ -2786,7 +3101,8 @@
         "previousStock": 27,
         "newStock": 28
       },
-      "createdAt": "2026-01-06T11:30:00Z"
+      "createdAt": "2026-01-06T11:30:00Z",
+      "updatedAt": "2026-01-06T11:30:00Z"
     },
     {
       "id": "tlog-11",
@@ -2802,7 +3118,8 @@
         "previousStock": 49,
         "newStock": 45
       },
-      "createdAt": "2026-01-05T18:00:00Z"
+      "createdAt": "2026-01-05T18:00:00Z",
+      "updatedAt": "2026-01-05T18:00:00Z"
     }
   ],
   "categories": [
@@ -2837,16 +3154,30 @@
     {
       "id": "cat-5",
       "tenant_id": "tenant-1",
-      "name": "Wearables",
+      "name": "Cameras",
       "createdAt": "2025-01-01T00:00:00Z",
       "updatedAt": "2025-01-01T00:00:00Z"
     },
     {
       "id": "cat-6",
       "tenant_id": "tenant-1",
-      "name": "Monitors",
+      "name": "Watches",
       "createdAt": "2025-01-01T00:00:00Z",
       "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "cat-7",
+      "tenant_id": "tenant-4",
+      "name": "TV",
+      "createdAt": "2025-11-01T00:00:00Z",
+      "updatedAt": "2025-11-01T00:00:00Z"
+    },
+    {
+      "id": "cat-8",
+      "tenant_id": "tenant-4",
+      "name": "Tablet",
+      "createdAt": "2025-11-01T00:00:00Z",
+      "updatedAt": "2025-11-01T00:00:00Z"
     }
   ],
   "brands": [

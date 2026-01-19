@@ -93,9 +93,6 @@ export default function AddExpensePage() {
       receiptUrl: formData.receiptUrl || null,
       date: formData.date,
       createdBy: currentUser.id,
-      id: "",
-      createdAt: "",
-      updatedAt: "",
     });
 
     // Navigate back to expenses page

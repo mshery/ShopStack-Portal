@@ -154,7 +154,6 @@ export default function AddPurchaseModal({
       // Create purchase_order expense
       const expenseId = generateId("exp");
       addExpense({
-        id: expenseId,
         tenant_id: activeTenantId,
         category: "inventory",
         expenseType: "purchase_order",
@@ -168,8 +167,6 @@ export default function AddPurchaseModal({
         receiptUrl: null,
         date: now,
         createdBy: userId,
-        createdAt: now,
-        updatedAt: now,
       });
 
       // Log expense creation
@@ -187,7 +184,6 @@ export default function AddPurchaseModal({
           vendorName,
           purchaseNumber,
         },
-        createdAt: now,
       });
 
       // Log purchase creation
@@ -204,14 +200,12 @@ export default function AddPurchaseModal({
           vendorName,
           itemCount: lineItems.length,
         },
-        createdAt: now,
       });
 
       // If status is "received", also log vendor_payment
       if (status === "received") {
         const vendorPaymentId = generateId("exp");
         addExpense({
-          id: vendorPaymentId,
           tenant_id: activeTenantId,
           category: "vendor_payment",
           expenseType: "vendor_payment",
@@ -224,8 +218,6 @@ export default function AddPurchaseModal({
           receiptUrl: null,
           date: now,
           createdBy: userId,
-          createdAt: now,
-          updatedAt: now,
         });
 
         addTenantLog({
@@ -241,7 +233,6 @@ export default function AddPurchaseModal({
             amount: totalCost,
             vendorName,
           },
-          createdAt: now,
         });
       }
 

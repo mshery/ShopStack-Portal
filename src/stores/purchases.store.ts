@@ -13,7 +13,10 @@ interface PurchasesStoreState {
   // Setters
   setPurchases: (purchases: Purchase[]) => void;
   addPurchase: (
-    purchase: Omit<Purchase, "id" | "purchaseNumber" | "createdAt">,
+    purchase: Omit<
+      Purchase,
+      "id" | "purchaseNumber" | "createdAt" | "updatedAt"
+    >,
   ) => string;
   updatePurchase: (id: string, updates: Partial<Purchase>) => void;
   updatePurchaseStatus: (
@@ -40,6 +43,7 @@ export const usePurchasesStore = create<PurchasesStoreState>((set) => ({
       id: purchaseId,
       purchaseNumber,
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
     set((state) => ({
       purchases: [...state.purchases, newPurchase],
@@ -50,7 +54,9 @@ export const usePurchasesStore = create<PurchasesStoreState>((set) => ({
   updatePurchase: (id, updates) =>
     set((state) => ({
       purchases: state.purchases.map((p) =>
-        p.id === id ? { ...p, ...updates } : p,
+        p.id === id
+          ? { ...p, ...updates, updatedAt: new Date().toISOString() }
+          : p,
       ),
     })),
 
@@ -65,6 +71,7 @@ export const usePurchasesStore = create<PurchasesStoreState>((set) => ({
                 status === "received"
                   ? receivedDate || new Date().toISOString()
                   : p.receivedDate,
+              updatedAt: new Date().toISOString(),
             }
           : p,
       ),

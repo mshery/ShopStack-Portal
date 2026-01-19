@@ -164,7 +164,6 @@ export default function AddUserModal({ isOpen, onClose }: AddUserModalProps) {
       role: formData.role,
       status: formData.status,
       avatarUrl: null,
-      createdAt: new Date().toISOString(),
     });
 
     handleClose();

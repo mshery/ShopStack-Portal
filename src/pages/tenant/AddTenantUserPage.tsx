@@ -146,7 +146,6 @@ export default function AddTenantUserPage() {
       role: formData.role,
       status: formData.status,
       avatarUrl: null,
-      createdAt: new Date().toISOString(),
     });
 
     navigate("/tenant/users");

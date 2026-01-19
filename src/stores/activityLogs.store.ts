@@ -14,10 +14,14 @@ interface ActivityLogsStoreState {
 
   // Setters
   setPlatformLogs: (logs: PlatformActivityLog[]) => void;
-  addPlatformLog: (log: PlatformActivityLog) => void;
+  addPlatformLog: (
+    log: Omit<PlatformActivityLog, "createdAt" | "updatedAt">,
+  ) => void;
 
   setTenantLogs: (logs: TenantActivityLog[]) => void;
-  addTenantLog: (log: TenantActivityLog) => void;
+  addTenantLog: (
+    log: Omit<TenantActivityLog, "createdAt" | "updatedAt">,
+  ) => void;
 }
 
 export const useActivityLogsStore = create<ActivityLogsStoreState>((set) => ({
@@ -29,13 +33,27 @@ export const useActivityLogsStore = create<ActivityLogsStoreState>((set) => ({
   setPlatformLogs: (logs) => set({ platformLogs: logs ?? [] }),
   addPlatformLog: (log) =>
     set((state) => ({
-      platformLogs: [log, ...state.platformLogs],
+      platformLogs: [
+        {
+          ...log,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        } as PlatformActivityLog,
+        ...state.platformLogs,
+      ],
     })),
 
   // Tenant log setters
   setTenantLogs: (logs) => set({ tenantLogs: logs ?? [] }),
   addTenantLog: (log) =>
     set((state) => ({
-      tenantLogs: [log, ...state.tenantLogs],
+      tenantLogs: [
+        {
+          ...log,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        } as TenantActivityLog,
+        ...state.tenantLogs,
+      ],
     })),
 }));

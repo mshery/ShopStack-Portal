@@ -134,7 +134,6 @@ export default function EditProductModal({
           relatedExpenseId = expenseId;
 
           addExpense({
-            id: expenseId,
             tenant_id: product.tenant_id,
             category: "inventory",
             expenseType: "inventory_loss",
@@ -147,8 +146,6 @@ export default function EditProductModal({
             receiptUrl: null,
             date: now,
             createdBy: userId,
-            createdAt: now,
-            updatedAt: now,
           });
 
           // Log expense creation
@@ -165,7 +162,6 @@ export default function EditProductModal({
               amount: costImpact,
               productName: product.name,
             },
-            createdAt: now,
           });
         }
 
@@ -184,7 +180,6 @@ export default function EditProductModal({
           relatedExpenseId,
           notes: adjustmentNotes,
           createdBy: userId,
-          createdAt: now,
         });
 
         // Log inventory adjustment
@@ -202,7 +197,6 @@ export default function EditProductModal({
             previousStock,
             newStock,
           },
-          createdAt: now,
         });
       }
     }

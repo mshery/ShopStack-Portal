@@ -72,7 +72,7 @@ export default function AddProductPage() {
       imageUrl: null,
       description: formData.description,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       costPrice: 0,
       vendorId: null,
     };

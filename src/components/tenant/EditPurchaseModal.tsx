@@ -64,7 +64,6 @@ function EditPurchaseModalInner({
 
       // Create vendor_payment expense
       addExpense({
-        id: expenseId,
         tenant_id: purchase.tenant_id,
         category: "vendor_payment",
         expenseType: "vendor_payment",
@@ -77,8 +76,6 @@ function EditPurchaseModalInner({
         receiptUrl: null,
         date: now,
         createdBy: userId,
-        createdAt: now,
-        updatedAt: now,
       });
 
       // Log expense creation
@@ -96,7 +93,6 @@ function EditPurchaseModalInner({
           vendorName,
           purchaseNumber: purchase.purchaseNumber,
         },
-        createdAt: now,
       });
 
       // Log purchase received
@@ -112,7 +108,6 @@ function EditPurchaseModalInner({
           totalCost: purchase.totalCost,
           vendorName,
         },
-        createdAt: now,
       });
     }
 

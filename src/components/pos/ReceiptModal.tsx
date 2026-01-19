@@ -68,7 +68,7 @@ export function ReceiptModal({
                   <div className="flex justify-between">
                     <span>Date:</span>
                     <span className="text-gray-900 dark:text-white">
-                      {formatDateTime(receipt.generatedAt)}
+                      {formatDateTime(receipt.createdAt)}
                     </span>
                   </div>
                   <div className="flex justify-between">

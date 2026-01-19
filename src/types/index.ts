@@ -27,6 +27,7 @@ export interface PlatformUser {
   status: UserStatus;
   avatarUrl: string | null;
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface PlatformActivityLog {
@@ -37,6 +38,7 @@ export interface PlatformActivityLog {
   targetId: string;
   details: Record<string, unknown>;
   createdAt: string;
+  updatedAt: string;
 }
 
 // ============================================
@@ -94,6 +96,7 @@ export interface TenantUser {
   status: UserStatus;
   avatarUrl: string | null;
   createdAt: string;
+  updatedAt: string;
 }
 
 // ============================================
@@ -130,6 +133,7 @@ export interface ProductCategory {
   tenant_id: string;
   name: string;
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface ProductBrand {
@@ -137,6 +141,7 @@ export interface ProductBrand {
   tenant_id: string;
   name: string;
   createdAt: string;
+  updatedAt: string;
 }
 
 // ============================================
@@ -151,6 +156,7 @@ export interface Customer {
   phone: string | null;
   isDefault: boolean;
   createdAt: string;
+  updatedAt: string;
 }
 
 // ============================================
@@ -165,6 +171,8 @@ export interface Register {
   name: string;
   location: string;
   status: RegisterStatus;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export type ShiftStatus = "open" | "closed";
@@ -178,8 +186,8 @@ export interface Shift {
   closingCash: number | null;
   expectedCash: number | null;
   status: ShiftStatus;
-  openedAt: string;
-  closedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface SaleLineItem {
@@ -227,6 +235,7 @@ export interface Payment {
   amountTendered: number;
   changeGiven: number;
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface POSData {
@@ -247,8 +256,8 @@ export interface Receipt {
   saleId: string;
   receiptNumber: string;
   tenant_id: string;
-  generatedAt: string;
-  printedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // ============================================
@@ -272,6 +281,7 @@ export interface Refund {
   reason: string;
   processedBy: string;
   createdAt: string;
+  updatedAt: string;
 }
 
 // ============================================
@@ -317,6 +327,7 @@ export interface Purchase {
   receivedDate: string | null;
   notes: string;
   createdAt: string;
+  updatedAt: string;
 }
 
 // ============================================
@@ -387,6 +398,7 @@ export interface InventoryAdjustment {
   notes: string;
   createdBy: string;
   createdAt: string;
+  updatedAt: string;
 }
 
 // ============================================
@@ -402,6 +414,7 @@ export interface TenantActivityLog {
   targetId: string;
   details: Record<string, unknown>;
   createdAt: string;
+  updatedAt: string;
 }
 
 // ============================================
