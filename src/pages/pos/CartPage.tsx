@@ -12,6 +12,8 @@ import { HoldOrdersPanel } from "@/components/pos/HoldOrdersPanel";
 import { ReceiptModal } from "@/components/pos/ReceiptModal";
 import { useAuthStore } from "@/stores/auth.store";
 import { useTenantsStore } from "@/stores/tenants.store";
+import { useCategoriesStore } from "@/stores/categories.store";
+import { useBrandsStore } from "@/stores/brands.store";
 import { AnimatePresence } from "motion/react";
 
 /**
@@ -27,6 +29,24 @@ export default function CartPage() {
     const { vm, actions } = usePOSCartLogic();
     const { activeTenantId } = useAuthStore();
     const { tenants } = useTenantsStore();
+    const { categories: allCategories } = useCategoriesStore();
+    const { brands: allBrands } = useBrandsStore();
+
+    // Create category and brand lookup maps
+    const categoryMap = useMemo(() => {
+        const tenantCats = allCategories.filter((c) => c.tenant_id === activeTenantId);
+        return new Map(tenantCats.map((c) => [c.id, c.name]));
+    }, [allCategories, activeTenantId]);
+
+    const brandMap = useMemo(() => {
+        const tenantBrands = allBrands.filter((b) => b.tenant_id === activeTenantId);
+        return new Map(tenantBrands.map((b) => [b.id, b.name]));
+    }, [allBrands, activeTenantId]);
+
+    // Category name lookup function for ProductGrid
+    const getCategoryName = useMemo(() => {
+        return (id: string) => categoryMap.get(id) || "Unknown";
+    }, [categoryMap]);
 
     const [showCart, setShowCart] = useState(false);
     const [showHeldOrders, setShowHeldOrders] = useState(false);
@@ -55,6 +75,8 @@ export default function CartPage() {
     } = useProductFilters({
         products: vm.products,
         initialItemsPerPage: 24,
+        categoryMap,
+        brandMap,
     });
 
     const tenant = tenants.find((t) => t.id === activeTenantId);
@@ -116,6 +138,7 @@ export default function CartPage() {
             totalFilteredCount,
             selectedCategory: filters.category,
             search: filters.search,
+            getCategoryName,
         }),
         [
             paginatedProducts,
@@ -125,6 +148,7 @@ export default function CartPage() {
             totalFilteredCount,
             filters.category,
             filters.search,
+            getCategoryName,
         ]
     );
 

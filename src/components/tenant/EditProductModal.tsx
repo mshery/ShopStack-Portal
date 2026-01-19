@@ -8,6 +8,8 @@ import { useInventoryStore } from "../../stores/inventory.store";
 import { useExpensesStore } from "../../stores/expenses.store";
 import { useActivityLogsStore } from "../../stores/activityLogs.store";
 import { useAuthStore } from "../../stores/auth.store";
+import { useCategoriesStore } from "../../stores/categories.store";
+import { useBrandsStore } from "../../stores/brands.store";
 import type {
   Product,
   TenantUser,
@@ -41,7 +43,13 @@ export default function EditProductModal({
   const { addAdjustment } = useInventoryStore();
   const { addExpense } = useExpensesStore();
   const { addTenantLog } = useActivityLogsStore();
-  const { currentUser } = useAuthStore();
+  const { currentUser, activeTenantId } = useAuthStore();
+  const { categories } = useCategoriesStore();
+  const { brands } = useBrandsStore();
+
+  // Filter by tenant
+  const tenantCategories = categories.filter((c) => c.tenant_id === activeTenantId);
+  const tenantBrands = brands.filter((b) => b.tenant_id === activeTenantId);
 
   const isOwner = (currentUser as TenantUser)?.role === "owner";
 
@@ -51,8 +59,8 @@ export default function EditProductModal({
   const [formData, setFormData] = useState({
     name: product.name,
     sku: product.sku,
-    category: product.category,
-    brand: product.brand,
+    categoryId: product.categoryId,
+    brandId: product.brandId,
     unitPrice: product.unitPrice,
   });
 
@@ -258,11 +266,10 @@ export default function EditProductModal({
                   key={step.id}
                   type="button"
                   onClick={() => setCurrentStep(step.id)}
-                  className={`flex-1 py-2 px-4 text-sm font-medium rounded-lg transition-colors ${
-                    currentStep === step.id
-                      ? "bg-brand-500 text-white"
-                      : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
-                  }`}
+                  className={`flex-1 py-2 px-4 text-sm font-medium rounded-lg transition-colors ${currentStep === step.id
+                    ? "bg-brand-500 text-white"
+                    : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                    }`}
                 >
                   <span className="mr-2">{index + 1}.</span>
                   {step.label}
@@ -305,20 +312,34 @@ export default function EditProductModal({
 
                   <div className="col-span-2 lg:col-span-1">
                     <Label>Category</Label>
-                    <Input
-                      type="text"
-                      value={formData.category}
-                      onChange={(e) => handleChange("category", e.target.value)}
-                    />
+                    <select
+                      value={formData.categoryId}
+                      onChange={(e) => handleChange("categoryId", e.target.value)}
+                      className="w-full h-11 px-4 pr-10 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 appearance-none focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    >
+                      <option value="">Select a category</option>
+                      {tenantCategories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div className="col-span-2 lg:col-span-1">
                     <Label>Brand</Label>
-                    <Input
-                      type="text"
-                      value={formData.brand}
-                      onChange={(e) => handleChange("brand", e.target.value)}
-                    />
+                    <select
+                      value={formData.brandId}
+                      onChange={(e) => handleChange("brandId", e.target.value)}
+                      className="w-full h-11 px-4 pr-10 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 appearance-none focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    >
+                      <option value="">Select a brand</option>
+                      {tenantBrands.map((brand) => (
+                        <option key={brand.id} value={brand.id}>
+                          {brand.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div className="col-span-2 lg:col-span-1">
@@ -459,12 +480,12 @@ export default function EditProductModal({
                             {stockAction === "count_correction"
                               ? setStockTo
                               : stockAction === "restock" ||
-                                  stockAction === "return"
+                                stockAction === "return"
                                 ? product.currentStock + adjustmentQuantity
                                 : Math.max(
-                                    0,
-                                    product.currentStock - adjustmentQuantity,
-                                  )}
+                                  0,
+                                  product.currentStock - adjustmentQuantity,
+                                )}
                           </span>{" "}
                           units
                         </p>

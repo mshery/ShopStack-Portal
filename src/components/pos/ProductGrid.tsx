@@ -24,6 +24,8 @@ interface ProductGridProps {
   search?: string;
   /** Whether data is currently loading */
   isLoading?: boolean;
+  /** Category name lookup function */
+  getCategoryName?: (categoryId: string) => string;
 }
 
 /**
@@ -43,6 +45,7 @@ export const ProductGrid = memo(function ProductGrid({
   selectedCategory,
   search = "",
   isLoading = false,
+  getCategoryName = (id) => id,
 }: ProductGridProps) {
   // Create a Set for O(1) cart lookups
   const cartProductIds = useMemo(
@@ -81,11 +84,10 @@ export const ProductGrid = memo(function ProductGrid({
       <div className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 no-scrollbar">
         <div className="p-4 md:p-6">
           <div
-            className={`grid gap-3 sm:gap-4 ${
-              viewMode === "grid"
+            className={`grid gap-3 sm:gap-4 ${viewMode === "grid"
                 ? "grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5"
                 : "grid-cols-1"
-            }`}
+              }`}
           >
             {Array.from({ length: 12 }).map((_, i) => (
               <div
@@ -236,10 +238,10 @@ export const ProductGrid = memo(function ProductGrid({
                         onClick={() => onAddToCart(product)}
                         disabled={isOutOfStock}
                         className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all ${inCart
-                            ? "bg-brand-500 text-white hover:bg-brand-600 active:scale-[0.98]"
-                            : isOutOfStock
-                              ? "bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
-                              : "bg-gray-900 dark:bg-gray-700 text-white hover:bg-gray-800 dark:hover:bg-gray-600 active:scale-[0.98]"
+                          ? "bg-brand-500 text-white hover:bg-brand-600 active:scale-[0.98]"
+                          : isOutOfStock
+                            ? "bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
+                            : "bg-gray-900 dark:bg-gray-700 text-white hover:bg-gray-800 dark:hover:bg-gray-600 active:scale-[0.98]"
                           }`}
                       >
                         {inCart ? (
@@ -323,7 +325,7 @@ export const ProductGrid = memo(function ProductGrid({
                               {product.sku}
                             </span>
                             <span className="text-[10px] md:text-xs text-gray-400 dark:text-gray-500">
-                              {product.category}
+                              {getCategoryName(product.categoryId)}
                             </span>
                           </div>
                         </div>
@@ -350,10 +352,10 @@ export const ProductGrid = memo(function ProductGrid({
                       onClick={() => onAddToCart(product)}
                       disabled={isOutOfStock}
                       className={`flex-shrink-0 flex items-center justify-center gap-1.5 px-3 md:px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${inCart
-                          ? "bg-brand-500 text-white hover:bg-brand-600 active:scale-[0.98]"
-                          : isOutOfStock
-                            ? "bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
-                            : "bg-gray-900 dark:bg-gray-700 text-white hover:bg-gray-800 dark:hover:bg-gray-600 active:scale-[0.98]"
+                        ? "bg-brand-500 text-white hover:bg-brand-600 active:scale-[0.98]"
+                        : isOutOfStock
+                          ? "bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
+                          : "bg-gray-900 dark:bg-gray-700 text-white hover:bg-gray-800 dark:hover:bg-gray-600 active:scale-[0.98]"
                         }`}
                     >
                       <Plus className="w-4 h-4" />

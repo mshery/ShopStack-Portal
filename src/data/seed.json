@@ -22,7 +22,9 @@
       "actorId": "platform-user-1",
       "targetType": "tenant",
       "targetId": "tenant-1",
-      "details": { "companyName": "Acme Corp" },
+      "details": {
+        "companyName": "Acme Corp"
+      },
       "createdAt": "2025-06-01T10:00:00Z",
       "updatedAt": "2025-06-01T10:00:00Z"
     },
@@ -32,7 +34,9 @@
       "actorId": "platform-user-1",
       "targetType": "tenant",
       "targetId": "tenant-2",
-      "details": { "companyName": "TechStart Inc" },
+      "details": {
+        "companyName": "TechStart Inc"
+      },
       "createdAt": "2025-07-15T14:30:00Z",
       "updatedAt": "2025-07-15T14:30:00Z"
     },
@@ -42,7 +46,10 @@
       "actorId": "platform-user-1",
       "targetType": "tenant",
       "targetId": "tenant-1",
-      "details": { "oldPlan": "starter", "newPlan": "professional" },
+      "details": {
+        "oldPlan": "starter",
+        "newPlan": "professional"
+      },
       "createdAt": "2025-09-01T09:00:00Z",
       "updatedAt": "2025-09-01T09:00:00Z"
     },
@@ -52,7 +59,9 @@
       "actorId": "platform-user-2",
       "targetType": "tenant",
       "targetId": "tenant-3",
-      "details": { "companyName": "Global Retail" },
+      "details": {
+        "companyName": "Global Retail"
+      },
       "createdAt": "2025-10-20T11:00:00Z",
       "updatedAt": "2025-10-20T11:00:00Z"
     },
@@ -62,7 +71,10 @@
       "actorId": "platform-user-1",
       "targetType": "tenant",
       "targetId": "tenant-3",
-      "details": { "oldStatus": "active", "newStatus": "suspended" },
+      "details": {
+        "oldStatus": "active",
+        "newStatus": "suspended"
+      },
       "createdAt": "2025-12-01T16:00:00Z",
       "updatedAt": "2025-12-01T16:00:00Z"
     }
@@ -217,8 +229,6 @@
       "tenant_id": "tenant-1",
       "name": "ASUS ROG Gaming Laptop",
       "sku": "ASUS-ROG-001",
-      "category": "Laptops",
-      "brand": "ASUS",
       "unitPrice": 2199.0,
       "costPrice": 1650.0,
       "vendorId": "vendor-1",
@@ -228,15 +238,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1603302576837-37561b2e2302?w=400&h=400&fit=crop",
       "description": "High-performance gaming laptop with RTX graphics",
       "createdAt": "2025-12-01T00:00:00Z",
-      "updatedAt": "2025-12-01T00:00:00Z"
+      "updatedAt": "2025-12-01T00:00:00Z",
+      "categoryId": "cat-1",
+      "brandId": "brand-1"
     },
     {
       "id": "product-2",
       "tenant_id": "tenant-1",
       "name": "Dell XPS 15",
       "sku": "DELL-XPS15-002",
-      "category": "Laptops",
-      "brand": "Dell",
       "unitPrice": 1799.0,
       "costPrice": 1350.0,
       "vendorId": "vendor-1",
@@ -246,15 +256,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=400&h=400&fit=crop",
       "description": "Premium ultrabook with OLED display",
       "createdAt": "2025-08-18T00:00:00Z",
-      "updatedAt": "2025-08-18T00:00:00Z"
+      "updatedAt": "2025-08-18T00:00:00Z",
+      "categoryId": "cat-1",
+      "brandId": "brand-2"
     },
     {
       "id": "product-3",
       "tenant_id": "tenant-1",
       "name": "MacBook Pro 14\"",
       "sku": "APPLE-MBP14-003",
-      "category": "Laptops",
-      "brand": "Apple",
       "unitPrice": 1999.0,
       "costPrice": 1600.0,
       "vendorId": "vendor-1",
@@ -264,15 +274,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400&h=400&fit=crop",
       "description": "M3 Pro chip with stunning Liquid Retina XDR display",
       "createdAt": "2025-09-01T00:00:00Z",
-      "updatedAt": "2025-09-01T00:00:00Z"
+      "updatedAt": "2025-09-01T00:00:00Z",
+      "categoryId": "cat-1",
+      "brandId": "brand-3"
     },
     {
       "id": "product-4",
       "tenant_id": "tenant-1",
       "name": "HP Spectre x360",
       "sku": "HP-SPEC-004",
-      "category": "Laptops",
-      "brand": "HP",
       "unitPrice": 1549.0,
       "costPrice": 1150.0,
       "vendorId": "vendor-1",
@@ -282,15 +292,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1544731612-de7f96afe55f?w=400&h=400&fit=crop",
       "description": "Convertible laptop with AMOLED touchscreen",
       "createdAt": "2025-07-15T00:00:00Z",
-      "updatedAt": "2025-07-15T00:00:00Z"
+      "updatedAt": "2025-07-15T00:00:00Z",
+      "categoryId": "cat-1",
+      "brandId": "brand-4"
     },
     {
       "id": "product-5",
       "tenant_id": "tenant-1",
       "name": "Lenovo ThinkPad X1 Carbon",
       "sku": "LEN-X1C-005",
-      "category": "Laptops",
-      "brand": "Lenovo",
       "unitPrice": 1649.0,
       "costPrice": 1250.0,
       "vendorId": "vendor-1",
@@ -300,15 +310,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?w=400&h=400&fit=crop",
       "description": "Business ultrabook with legendary keyboard",
       "createdAt": "2025-06-20T00:00:00Z",
-      "updatedAt": "2025-06-20T00:00:00Z"
+      "updatedAt": "2025-06-20T00:00:00Z",
+      "categoryId": "cat-1",
+      "brandId": "brand-5"
     },
     {
       "id": "product-6",
       "tenant_id": "tenant-1",
       "name": "MSI Stealth 16",
       "sku": "MSI-STL16-006",
-      "category": "Laptops",
-      "brand": "MSI",
       "unitPrice": 2499.0,
       "costPrice": 1900.0,
       "vendorId": "vendor-1",
@@ -318,15 +328,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1525547719571-a2d4ac8945e2?w=400&h=400&fit=crop",
       "description": "Ultra-thin gaming laptop with RTX 4070",
       "createdAt": "2025-10-10T00:00:00Z",
-      "updatedAt": "2025-10-10T00:00:00Z"
+      "updatedAt": "2025-10-10T00:00:00Z",
+      "categoryId": "cat-1",
+      "brandId": "brand-6"
     },
     {
       "id": "product-7",
       "tenant_id": "tenant-1",
       "name": "Razer Blade 15",
       "sku": "RAZ-BL15-007",
-      "category": "Laptops",
-      "brand": "Razer",
       "unitPrice": 2299.0,
       "costPrice": 1750.0,
       "vendorId": "vendor-1",
@@ -336,15 +346,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1593642632559-0c6d3fc62b89?w=400&h=400&fit=crop",
       "description": "Premium gaming laptop with RGB keyboard",
       "createdAt": "2025-11-05T00:00:00Z",
-      "updatedAt": "2025-11-05T00:00:00Z"
+      "updatedAt": "2025-11-05T00:00:00Z",
+      "categoryId": "cat-1",
+      "brandId": "brand-7"
     },
     {
       "id": "product-8",
       "tenant_id": "tenant-1",
       "name": "Surface Laptop 5",
       "sku": "MS-SL5-008",
-      "category": "Laptops",
-      "brand": "Microsoft",
       "unitPrice": 1299.0,
       "costPrice": 980.0,
       "vendorId": "vendor-1",
@@ -354,15 +364,15 @@
       "imageUrl": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSGjwMHtk_IhKJJ8ND8F0RWXyoGpu_9QTgS5A&s",
       "description": "Sleek laptop with PixelSense touchscreen",
       "createdAt": "2025-08-01T00:00:00Z",
-      "updatedAt": "2025-08-01T00:00:00Z"
+      "updatedAt": "2025-08-01T00:00:00Z",
+      "categoryId": "cat-1",
+      "brandId": "brand-8"
     },
     {
       "id": "product-9",
       "tenant_id": "tenant-1",
       "name": "Acer Swift 5",
       "sku": "ACER-SW5-009",
-      "category": "Laptops",
-      "brand": "Acer",
       "unitPrice": 999.0,
       "costPrice": 750.0,
       "vendorId": "vendor-1",
@@ -372,15 +382,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1516387938699-a93567ec168e?w=400&h=400&fit=crop",
       "description": "Lightweight laptop with antimicrobial coating",
       "createdAt": "2025-07-10T00:00:00Z",
-      "updatedAt": "2025-07-10T00:00:00Z"
+      "updatedAt": "2025-07-10T00:00:00Z",
+      "categoryId": "cat-1",
+      "brandId": "brand-19"
     },
     {
       "id": "product-10",
       "tenant_id": "tenant-1",
       "name": "LG Gram 17",
       "sku": "LG-GRM17-010",
-      "category": "Laptops",
-      "brand": "LG",
       "unitPrice": 1699.0,
       "costPrice": 1280.0,
       "vendorId": "vendor-1",
@@ -390,15 +400,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=400&h=400&fit=crop",
       "description": "Ultra-lightweight 17-inch laptop",
       "createdAt": "2025-09-15T00:00:00Z",
-      "updatedAt": "2025-09-15T00:00:00Z"
+      "updatedAt": "2025-09-15T00:00:00Z",
+      "categoryId": "cat-1",
+      "brandId": "brand-29"
     },
     {
       "id": "product-11",
       "tenant_id": "tenant-1",
       "name": "iPhone 15 Pro Max",
       "sku": "APPLE-IP15PM-011",
-      "category": "Phones",
-      "brand": "Apple",
       "unitPrice": 1199.0,
       "costPrice": 900.0,
       "vendorId": "vendor-1",
@@ -408,15 +418,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1591337676887-a217a6970a8a?w=400&h=400&fit=crop",
       "description": "Titanium design with A17 Pro chip",
       "createdAt": "2025-09-22T00:00:00Z",
-      "updatedAt": "2025-09-22T00:00:00Z"
+      "updatedAt": "2025-09-22T00:00:00Z",
+      "categoryId": "cat-2",
+      "brandId": "brand-3"
     },
     {
       "id": "product-12",
       "tenant_id": "tenant-1",
       "name": "Samsung Galaxy S24 Ultra",
       "sku": "SAM-S24U-012",
-      "category": "Phones",
-      "brand": "Samsung",
       "unitPrice": 1299.0,
       "costPrice": 950.0,
       "vendorId": "vendor-1",
@@ -426,15 +436,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1610945415295-d9bbf067e59c?w=400&h=400&fit=crop",
       "description": "Galaxy AI with S Pen built-in",
       "createdAt": "2025-11-01T00:00:00Z",
-      "updatedAt": "2025-11-01T00:00:00Z"
+      "updatedAt": "2025-11-01T00:00:00Z",
+      "categoryId": "cat-2",
+      "brandId": "brand-9"
     },
     {
       "id": "product-13",
       "tenant_id": "tenant-1",
       "name": "Google Pixel 8 Pro",
       "sku": "GOOG-PX8P-013",
-      "category": "Phones",
-      "brand": "Google",
       "unitPrice": 999.0,
       "costPrice": 720.0,
       "vendorId": "vendor-1",
@@ -444,15 +454,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=400&h=400&fit=crop",
       "description": "Best-in-class camera with Tensor G3",
       "createdAt": "2025-10-12T00:00:00Z",
-      "updatedAt": "2025-10-12T00:00:00Z"
+      "updatedAt": "2025-10-12T00:00:00Z",
+      "categoryId": "cat-2",
+      "brandId": "brand-10"
     },
     {
       "id": "product-14",
       "tenant_id": "tenant-1",
       "name": "OnePlus 12",
       "sku": "OP-12-014",
-      "category": "Phones",
-      "brand": "OnePlus",
       "unitPrice": 799.0,
       "costPrice": 580.0,
       "vendorId": "vendor-1",
@@ -462,15 +472,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1574944985070-8f3ebc6b79d2?w=400&h=400&fit=crop",
       "description": "Flagship killer with Hasselblad camera",
       "createdAt": "2025-08-25T00:00:00Z",
-      "updatedAt": "2025-08-25T00:00:00Z"
+      "updatedAt": "2025-08-25T00:00:00Z",
+      "categoryId": "cat-2",
+      "brandId": "brand-16"
     },
     {
       "id": "product-15",
       "tenant_id": "tenant-1",
       "name": "Xiaomi 14 Ultra",
       "sku": "XI-14U-015",
-      "category": "Phones",
-      "brand": "Xiaomi",
       "unitPrice": 899.0,
       "costPrice": 650.0,
       "vendorId": "vendor-1",
@@ -480,15 +490,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400&h=400&fit=crop",
       "description": "Leica camera system with 1-inch sensor",
       "createdAt": "2025-07-30T00:00:00Z",
-      "updatedAt": "2025-07-30T00:00:00Z"
+      "updatedAt": "2025-07-30T00:00:00Z",
+      "categoryId": "cat-2",
+      "brandId": "brand-15"
     },
     {
       "id": "product-16",
       "tenant_id": "tenant-1",
       "name": "Samsung Galaxy Z Fold 5",
       "sku": "SAM-ZF5-016",
-      "category": "Phones",
-      "brand": "Samsung",
       "unitPrice": 1799.0,
       "costPrice": 1350.0,
       "vendorId": "vendor-1",
@@ -498,15 +508,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1592899677977-9c10ca588bbd?w=400&h=400&fit=crop",
       "description": "Foldable phone with Flex Mode",
       "createdAt": "2025-08-10T00:00:00Z",
-      "updatedAt": "2025-08-10T00:00:00Z"
+      "updatedAt": "2025-08-10T00:00:00Z",
+      "categoryId": "cat-2",
+      "brandId": "brand-9"
     },
     {
       "id": "product-17",
       "tenant_id": "tenant-1",
       "name": "iPhone 15",
       "sku": "APPLE-IP15-017",
-      "category": "Phones",
-      "brand": "Apple",
       "unitPrice": 799.0,
       "costPrice": 600.0,
       "vendorId": "vendor-1",
@@ -516,15 +526,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?w=400&h=400&fit=crop",
       "description": "Dynamic Island with USB-C",
       "createdAt": "2025-09-22T00:00:00Z",
-      "updatedAt": "2025-09-22T00:00:00Z"
+      "updatedAt": "2025-09-22T00:00:00Z",
+      "categoryId": "cat-2",
+      "brandId": "brand-3"
     },
     {
       "id": "product-18",
       "tenant_id": "tenant-1",
       "name": "Nothing Phone 2",
       "sku": "NOTH-P2-018",
-      "category": "Phones",
-      "brand": "Nothing",
       "unitPrice": 599.0,
       "costPrice": 420.0,
       "vendorId": "vendor-1",
@@ -534,15 +544,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1556656793-08538906a9f8?w=400&h=400&fit=crop",
       "description": "Unique Glyph interface design",
       "createdAt": "2025-06-15T00:00:00Z",
-      "updatedAt": "2025-06-15T00:00:00Z"
+      "updatedAt": "2025-06-15T00:00:00Z",
+      "categoryId": "cat-2",
+      "brandId": "brand-33"
     },
     {
       "id": "product-19",
       "tenant_id": "tenant-1",
       "name": "Samsung Galaxy A54",
       "sku": "SAM-A54-019",
-      "category": "Phones",
-      "brand": "Samsung",
       "unitPrice": 449.0,
       "costPrice": 320.0,
       "vendorId": "vendor-1",
@@ -552,15 +562,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1565849904461-04a58ad377e0?w=400&h=400&fit=crop",
       "description": "Mid-range with flagship features",
       "createdAt": "2025-05-20T00:00:00Z",
-      "updatedAt": "2025-05-20T00:00:00Z"
+      "updatedAt": "2025-05-20T00:00:00Z",
+      "categoryId": "cat-2",
+      "brandId": "brand-9"
     },
     {
       "id": "product-20",
       "tenant_id": "tenant-1",
       "name": "Motorola Edge 40",
       "sku": "MOTO-E40-020",
-      "category": "Phones",
-      "brand": "Motorola",
       "unitPrice": 549.0,
       "costPrice": 380.0,
       "vendorId": "vendor-1",
@@ -570,15 +580,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb?w=400&h=400&fit=crop",
       "description": "Curved pOLED display with 144Hz",
       "createdAt": "2025-07-05T00:00:00Z",
-      "updatedAt": "2025-07-05T00:00:00Z"
+      "updatedAt": "2025-07-05T00:00:00Z",
+      "categoryId": "cat-2",
+      "brandId": "brand-31"
     },
     {
       "id": "product-21",
       "tenant_id": "tenant-1",
       "name": "Sony WH-1000XM5",
       "sku": "SONY-WH5-021",
-      "category": "Audio",
-      "brand": "Sony",
       "unitPrice": 399.0,
       "costPrice": 280.0,
       "vendorId": "vendor-2",
@@ -588,15 +598,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1545127398-14699f92334b?w=400&h=400&fit=crop",
       "description": "Industry-leading noise cancellation",
       "createdAt": "2025-10-05T00:00:00Z",
-      "updatedAt": "2025-10-05T00:00:00Z"
+      "updatedAt": "2025-10-05T00:00:00Z",
+      "categoryId": "cat-3",
+      "brandId": "brand-11"
     },
     {
       "id": "product-22",
       "tenant_id": "tenant-1",
       "name": "Bose QuietComfort Ultra",
       "sku": "BOSE-QCU-022",
-      "category": "Audio",
-      "brand": "Bose",
       "unitPrice": 429.0,
       "costPrice": 310.0,
       "vendorId": "vendor-2",
@@ -606,15 +616,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400&h=400&fit=crop",
       "description": "Immersive audio with spatial sound",
       "createdAt": "2025-11-18T00:00:00Z",
-      "updatedAt": "2025-11-18T00:00:00Z"
+      "updatedAt": "2025-11-18T00:00:00Z",
+      "categoryId": "cat-3",
+      "brandId": "brand-12"
     },
     {
       "id": "product-23",
       "tenant_id": "tenant-1",
       "name": "Apple AirPods Max",
       "sku": "APPLE-APM-023",
-      "category": "Audio",
-      "brand": "Apple",
       "unitPrice": 549.0,
       "costPrice": 420.0,
       "vendorId": "vendor-1",
@@ -624,15 +634,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop",
       "description": "High-fidelity audio with H1 chip",
       "createdAt": "2025-09-10T00:00:00Z",
-      "updatedAt": "2025-09-10T00:00:00Z"
+      "updatedAt": "2025-09-10T00:00:00Z",
+      "categoryId": "cat-3",
+      "brandId": "brand-3"
     },
     {
       "id": "product-24",
       "tenant_id": "tenant-1",
       "name": "Sennheiser Momentum 4",
       "sku": "SENN-M4-024",
-      "category": "Audio",
-      "brand": "Sennheiser",
       "unitPrice": 349.0,
       "costPrice": 250.0,
       "vendorId": "vendor-2",
@@ -642,15 +652,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1583394838336-acd977736f90?w=400&h=400&fit=crop",
       "description": "Audiophile-grade wireless headphones",
       "createdAt": "2025-08-20T00:00:00Z",
-      "updatedAt": "2025-08-20T00:00:00Z"
+      "updatedAt": "2025-08-20T00:00:00Z",
+      "categoryId": "cat-3",
+      "brandId": "brand-18"
     },
     {
       "id": "product-25",
       "tenant_id": "tenant-1",
       "name": "Beats Studio Pro",
       "sku": "BEATS-SP-025",
-      "category": "Audio",
-      "brand": "Beats",
       "unitPrice": 349.0,
       "costPrice": 240.0,
       "vendorId": "vendor-1",
@@ -660,15 +670,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1484704849700-f032a568e944?w=400&h=400&fit=crop",
       "description": "Premium sound with Apple integration",
       "createdAt": "2025-07-25T00:00:00Z",
-      "updatedAt": "2025-07-25T00:00:00Z"
+      "updatedAt": "2025-07-25T00:00:00Z",
+      "categoryId": "cat-3",
+      "brandId": "brand-17"
     },
     {
       "id": "product-26",
       "tenant_id": "tenant-1",
       "name": "JBL Charge 5",
       "sku": "JBL-CH5-026",
-      "category": "Audio",
-      "brand": "JBL",
       "unitPrice": 179.0,
       "costPrice": 120.0,
       "vendorId": "vendor-2",
@@ -678,15 +688,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=400&h=400&fit=crop",
       "description": "Portable waterproof Bluetooth speaker",
       "createdAt": "2025-06-30T00:00:00Z",
-      "updatedAt": "2025-06-30T00:00:00Z"
+      "updatedAt": "2025-06-30T00:00:00Z",
+      "categoryId": "cat-3",
+      "brandId": "brand-13"
     },
     {
       "id": "product-27",
       "tenant_id": "tenant-1",
       "name": "Sonos Era 300",
       "sku": "SONOS-E300-027",
-      "category": "Audio",
-      "brand": "Sonos",
       "unitPrice": 449.0,
       "costPrice": 330.0,
       "vendorId": "vendor-2",
@@ -696,15 +706,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1545454675-3531b543be5d?w=400&h=400&fit=crop",
       "description": "Spatial audio smart speaker",
       "createdAt": "2025-10-20T00:00:00Z",
-      "updatedAt": "2025-10-20T00:00:00Z"
+      "updatedAt": "2025-10-20T00:00:00Z",
+      "categoryId": "cat-3",
+      "brandId": "brand-35"
     },
     {
       "id": "product-28",
       "tenant_id": "tenant-1",
       "name": "Marshall Stanmore III",
       "sku": "MARSH-S3-028",
-      "category": "Audio",
-      "brand": "Marshall",
       "unitPrice": 379.0,
       "costPrice": 270.0,
       "vendorId": "vendor-2",
@@ -714,15 +724,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=400&fit=crop",
       "description": "Iconic rock sound in home speaker",
       "createdAt": "2025-09-05T00:00:00Z",
-      "updatedAt": "2025-09-05T00:00:00Z"
+      "updatedAt": "2025-09-05T00:00:00Z",
+      "categoryId": "cat-3",
+      "brandId": "brand-30"
     },
     {
       "id": "product-29",
       "tenant_id": "tenant-1",
       "name": "Sony WF-1000XM5",
       "sku": "SONY-WF5-029",
-      "category": "Audio",
-      "brand": "Sony",
       "unitPrice": 299.0,
       "costPrice": 210.0,
       "vendorId": "vendor-2",
@@ -732,15 +742,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1590658165737-15a047b7c0b0?w=400&h=400&fit=crop",
       "description": "Premium true wireless earbuds",
       "createdAt": "2025-08-15T00:00:00Z",
-      "updatedAt": "2025-08-15T00:00:00Z"
+      "updatedAt": "2025-08-15T00:00:00Z",
+      "categoryId": "cat-3",
+      "brandId": "brand-11"
     },
     {
       "id": "product-30",
       "tenant_id": "tenant-1",
       "name": "Bose SoundLink Flex",
       "sku": "BOSE-SLF-030",
-      "category": "Audio",
-      "brand": "Bose",
       "unitPrice": 149.0,
       "costPrice": 100.0,
       "vendorId": "vendor-2",
@@ -750,15 +760,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop",
       "description": "Portable outdoor Bluetooth speaker",
       "createdAt": "2025-07-12T00:00:00Z",
-      "updatedAt": "2025-07-12T00:00:00Z"
+      "updatedAt": "2025-07-12T00:00:00Z",
+      "categoryId": "cat-3",
+      "brandId": "brand-12"
     },
     {
       "id": "product-31",
       "tenant_id": "tenant-1",
       "name": "AirPods Pro 2",
       "sku": "APPLE-APP2-031",
-      "category": "Accessories",
-      "brand": "Apple",
       "unitPrice": 249.0,
       "costPrice": 180.0,
       "vendorId": "vendor-1",
@@ -768,15 +778,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1606841837239-c5a1a4a07af7?w=400&h=400&fit=crop",
       "description": "Active noise cancellation with USB-C",
       "createdAt": "2025-06-29T00:00:00Z",
-      "updatedAt": "2025-06-29T00:00:00Z"
+      "updatedAt": "2025-06-29T00:00:00Z",
+      "categoryId": "cat-4",
+      "brandId": "brand-3"
     },
     {
       "id": "product-32",
       "tenant_id": "tenant-1",
       "name": "Samsung Galaxy Buds2 Pro",
       "sku": "SAM-GB2P-032",
-      "category": "Accessories",
-      "brand": "Samsung",
       "unitPrice": 229.0,
       "costPrice": 160.0,
       "vendorId": "vendor-1",
@@ -786,15 +796,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1606220588913-b3aacb4d2f46?w=400&h=400&fit=crop",
       "description": "Hi-Fi 24bit audio earbuds",
       "createdAt": "2025-08-02T00:00:00Z",
-      "updatedAt": "2025-08-02T00:00:00Z"
+      "updatedAt": "2025-08-02T00:00:00Z",
+      "categoryId": "cat-4",
+      "brandId": "brand-9"
     },
     {
       "id": "product-33",
       "tenant_id": "tenant-1",
       "name": "Apple Magic Keyboard",
       "sku": "APPLE-MK-033",
-      "category": "Accessories",
-      "brand": "Apple",
       "unitPrice": 299.0,
       "costPrice": 220.0,
       "vendorId": "vendor-1",
@@ -804,15 +814,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=400&h=400&fit=crop",
       "description": "Wireless keyboard with Touch ID",
       "createdAt": "2025-07-18T00:00:00Z",
-      "updatedAt": "2025-07-18T00:00:00Z"
+      "updatedAt": "2025-07-18T00:00:00Z",
+      "categoryId": "cat-4",
+      "brandId": "brand-3"
     },
     {
       "id": "product-34",
       "tenant_id": "tenant-1",
       "name": "Logitech MX Master 3S",
       "sku": "LOGI-MXM3-034",
-      "category": "Accessories",
-      "brand": "Logitech",
       "unitPrice": 99.0,
       "costPrice": 70.0,
       "vendorId": "vendor-1",
@@ -822,15 +832,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=400&h=400&fit=crop",
       "description": "Premium wireless mouse for productivity",
       "createdAt": "2025-06-10T00:00:00Z",
-      "updatedAt": "2025-06-10T00:00:00Z"
+      "updatedAt": "2025-06-10T00:00:00Z",
+      "categoryId": "cat-4",
+      "brandId": "brand-14"
     },
     {
       "id": "product-35",
       "tenant_id": "tenant-1",
       "name": "Anker 737 Power Bank",
       "sku": "ANKR-737-035",
-      "category": "Accessories",
-      "brand": "Anker",
       "unitPrice": 149.0,
       "costPrice": 100.0,
       "vendorId": "vendor-1",
@@ -840,15 +850,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?w=400&h=400&fit=crop",
       "description": "24000mAh portable charger with 140W",
       "createdAt": "2025-09-25T00:00:00Z",
-      "updatedAt": "2025-09-25T00:00:00Z"
+      "updatedAt": "2025-09-25T00:00:00Z",
+      "categoryId": "cat-4",
+      "brandId": "brand-21"
     },
     {
       "id": "product-36",
       "tenant_id": "tenant-1",
       "name": "Apple MagSafe Charger",
       "sku": "APPLE-MSC-036",
-      "category": "Accessories",
-      "brand": "Apple",
       "unitPrice": 39.0,
       "costPrice": 25.0,
       "vendorId": "vendor-1",
@@ -858,15 +868,15 @@
       "imageUrl": "https://achishopping.com/cdn/shop/products/magsafewirelesscharger.jpg?v=1657209941",
       "description": "Magnetic wireless charging",
       "createdAt": "2025-05-15T00:00:00Z",
-      "updatedAt": "2025-05-15T00:00:00Z"
+      "updatedAt": "2025-05-15T00:00:00Z",
+      "categoryId": "cat-4",
+      "brandId": "brand-3"
     },
     {
       "id": "product-37",
       "tenant_id": "tenant-1",
       "name": "Samsung T7 SSD 1TB",
       "sku": "SAM-T7-037",
-      "category": "Accessories",
-      "brand": "Samsung",
       "unitPrice": 109.0,
       "costPrice": 75.0,
       "vendorId": "vendor-1",
@@ -876,15 +886,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1597872200969-2b65d56bd16b?w=400&h=400&fit=crop",
       "description": "Portable NVMe SSD with fingerprint",
       "createdAt": "2025-08-28T00:00:00Z",
-      "updatedAt": "2025-08-28T00:00:00Z"
+      "updatedAt": "2025-08-28T00:00:00Z",
+      "categoryId": "cat-4",
+      "brandId": "brand-9"
     },
     {
       "id": "product-38",
       "tenant_id": "tenant-1",
       "name": "Belkin 3-in-1 Charger",
       "sku": "BELK-3IN1-038",
-      "category": "Accessories",
-      "brand": "Belkin",
       "unitPrice": 149.0,
       "costPrice": 105.0,
       "vendorId": "vendor-1",
@@ -894,15 +904,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1586816879360-004f5b0c51e5?w=400&h=400&fit=crop",
       "description": "Wireless charging for iPhone, Watch, AirPods",
       "createdAt": "2025-07-08T00:00:00Z",
-      "updatedAt": "2025-07-08T00:00:00Z"
+      "updatedAt": "2025-07-08T00:00:00Z",
+      "categoryId": "cat-4",
+      "brandId": "brand-22"
     },
     {
       "id": "product-39",
       "tenant_id": "tenant-1",
       "name": "Apple Pencil 2nd Gen",
       "sku": "APPLE-PEN2-039",
-      "category": "Accessories",
-      "brand": "Apple",
       "unitPrice": 129.0,
       "costPrice": 95.0,
       "vendorId": "vendor-1",
@@ -912,15 +922,15 @@
       "imageUrl": "https://media.cdn.kaufland.de/product-images/1024x1024/7573406612814603f011a7594dcfccbc.jpg",
       "description": "Precision stylus for iPad",
       "createdAt": "2025-06-22T00:00:00Z",
-      "updatedAt": "2025-06-22T00:00:00Z"
+      "updatedAt": "2025-06-22T00:00:00Z",
+      "categoryId": "cat-4",
+      "brandId": "brand-3"
     },
     {
       "id": "product-40",
       "tenant_id": "tenant-1",
       "name": "SanDisk Extreme Pro 256GB",
       "sku": "SAND-EP256-040",
-      "category": "Accessories",
-      "brand": "SanDisk",
       "unitPrice": 54.0,
       "costPrice": 35.0,
       "vendorId": "vendor-1",
@@ -930,15 +940,15 @@
       "imageUrl": "https://vmart.pk/cdn/shop/files/SanDisk-Extreme-PRO-SDXC-UHS-I-Card-256GB.webp?v=1737541289",
       "description": "High-speed microSD card",
       "createdAt": "2025-05-28T00:00:00Z",
-      "updatedAt": "2025-05-28T00:00:00Z"
+      "updatedAt": "2025-05-28T00:00:00Z",
+      "categoryId": "cat-4",
+      "brandId": "brand-34"
     },
     {
       "id": "product-41",
       "tenant_id": "tenant-1",
       "name": "Canon EOS R5",
       "sku": "CANON-R5-041",
-      "category": "Cameras",
-      "brand": "Canon",
       "unitPrice": 3899.0,
       "costPrice": 2950.0,
       "vendorId": "vendor-1",
@@ -948,15 +958,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=400&h=400&fit=crop",
       "description": "8K mirrorless camera",
       "createdAt": "2025-09-28T00:00:00Z",
-      "updatedAt": "2025-09-28T00:00:00Z"
+      "updatedAt": "2025-09-28T00:00:00Z",
+      "categoryId": "cat-5",
+      "brandId": "brand-23"
     },
     {
       "id": "product-42",
       "tenant_id": "tenant-1",
       "name": "Sony A7 IV",
       "sku": "SONY-A7IV-042",
-      "category": "Cameras",
-      "brand": "Sony",
       "unitPrice": 2498.0,
       "costPrice": 1850.0,
       "vendorId": "vendor-1",
@@ -966,15 +976,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=400&h=400&fit=crop",
       "description": "Full-frame hybrid camera",
       "createdAt": "2025-08-12T00:00:00Z",
-      "updatedAt": "2025-08-12T00:00:00Z"
+      "updatedAt": "2025-08-12T00:00:00Z",
+      "categoryId": "cat-5",
+      "brandId": "brand-11"
     },
     {
       "id": "product-43",
       "tenant_id": "tenant-1",
       "name": "Nikon Z8",
       "sku": "NIK-Z8-043",
-      "category": "Cameras",
-      "brand": "Nikon",
       "unitPrice": 3999.0,
       "costPrice": 3000.0,
       "vendorId": "vendor-1",
@@ -984,15 +994,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1617005082133-548c4dd27f35?w=400&h=400&fit=crop",
       "description": "Pro-grade stacked sensor camera",
       "createdAt": "2025-10-15T00:00:00Z",
-      "updatedAt": "2025-10-15T00:00:00Z"
+      "updatedAt": "2025-10-15T00:00:00Z",
+      "categoryId": "cat-5",
+      "brandId": "brand-32"
     },
     {
       "id": "product-44",
       "tenant_id": "tenant-1",
       "name": "Fujifilm X-T5",
       "sku": "FUJI-XT5-044",
-      "category": "Cameras",
-      "brand": "Fujifilm",
       "unitPrice": 1699.0,
       "costPrice": 1280.0,
       "vendorId": "vendor-1",
@@ -1002,15 +1012,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1512790182412-b19e6d62bc39?w=400&h=400&fit=crop",
       "description": "Retro-styled mirrorless camera",
       "createdAt": "2025-07-22T00:00:00Z",
-      "updatedAt": "2025-07-22T00:00:00Z"
+      "updatedAt": "2025-07-22T00:00:00Z",
+      "categoryId": "cat-5",
+      "brandId": "brand-26"
     },
     {
       "id": "product-45",
       "tenant_id": "tenant-1",
       "name": "GoPro Hero 12",
       "sku": "GOPRO-H12-045",
-      "category": "Cameras",
-      "brand": "GoPro",
       "unitPrice": 449.0,
       "costPrice": 320.0,
       "vendorId": "vendor-1",
@@ -1020,15 +1030,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=400&h=400&fit=crop",
       "description": "Waterproof action camera",
       "createdAt": "2025-09-08T00:00:00Z",
-      "updatedAt": "2025-09-08T00:00:00Z"
+      "updatedAt": "2025-09-08T00:00:00Z",
+      "categoryId": "cat-5",
+      "brandId": "brand-28"
     },
     {
       "id": "product-46",
       "tenant_id": "tenant-1",
       "name": "DJI Osmo Pocket 3",
       "sku": "DJI-OP3-046",
-      "category": "Cameras",
-      "brand": "DJI",
       "unitPrice": 519.0,
       "costPrice": 380.0,
       "vendorId": "vendor-1",
@@ -1038,15 +1048,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1579829366248-204fe8413f31?w=400&h=400&fit=crop",
       "description": "Pocket gimbal camera with 1\" sensor",
       "createdAt": "2025-10-25T00:00:00Z",
-      "updatedAt": "2025-10-25T00:00:00Z"
+      "updatedAt": "2025-10-25T00:00:00Z",
+      "categoryId": "cat-5",
+      "brandId": "brand-24"
     },
     {
       "id": "product-47",
       "tenant_id": "tenant-1",
       "name": "Sony ZV-1 II",
       "sku": "SONY-ZV1II-047",
-      "category": "Cameras",
-      "brand": "Sony",
       "unitPrice": 899.0,
       "costPrice": 680.0,
       "vendorId": "vendor-1",
@@ -1056,15 +1066,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1617727553252-65863c156eb0?w=400&h=400&fit=crop",
       "description": "Vlogging camera with wide-angle lens",
       "createdAt": "2025-08-05T00:00:00Z",
-      "updatedAt": "2025-08-05T00:00:00Z"
+      "updatedAt": "2025-08-05T00:00:00Z",
+      "categoryId": "cat-5",
+      "brandId": "brand-11"
     },
     {
       "id": "product-48",
       "tenant_id": "tenant-1",
       "name": "Canon RF 50mm f/1.2",
       "sku": "CANON-RF50-048",
-      "category": "Cameras",
-      "brand": "Canon",
       "unitPrice": 2299.0,
       "costPrice": 1750.0,
       "vendorId": "vendor-1",
@@ -1074,15 +1084,15 @@
       "imageUrl": "https://i.pcmag.com/imagery/reviews/00zkmQ5YaoPtt02MIcMMErI-29..v1598549506.jpg",
       "description": "Professional portrait lens",
       "createdAt": "2025-06-18T00:00:00Z",
-      "updatedAt": "2025-06-18T00:00:00Z"
+      "updatedAt": "2025-06-18T00:00:00Z",
+      "categoryId": "cat-5",
+      "brandId": "brand-23"
     },
     {
       "id": "product-49",
       "tenant_id": "tenant-1",
       "name": "Sony 24-70mm f/2.8 GM II",
       "sku": "SONY-2470-049",
-      "category": "Cameras",
-      "brand": "Sony",
       "unitPrice": 2299.0,
       "costPrice": 1720.0,
       "vendorId": "vendor-1",
@@ -1092,15 +1102,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1495707902641-75cac588d2e9?w=400&h=400&fit=crop",
       "description": "Professional zoom lens",
       "createdAt": "2025-07-28T00:00:00Z",
-      "updatedAt": "2025-07-28T00:00:00Z"
+      "updatedAt": "2025-07-28T00:00:00Z",
+      "categoryId": "cat-5",
+      "brandId": "brand-11"
     },
     {
       "id": "product-50",
       "tenant_id": "tenant-1",
       "name": "DJI Mini 4 Pro",
       "sku": "DJI-M4P-050",
-      "category": "Cameras",
-      "brand": "DJI",
       "unitPrice": 759.0,
       "costPrice": 550.0,
       "vendorId": "vendor-1",
@@ -1110,15 +1120,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1508444845599-5c89863b1c44?w=400&h=400&fit=crop",
       "description": "Compact drone with 4K camera",
       "createdAt": "2025-11-08T00:00:00Z",
-      "updatedAt": "2025-11-08T00:00:00Z"
+      "updatedAt": "2025-11-08T00:00:00Z",
+      "categoryId": "cat-5",
+      "brandId": "brand-24"
     },
     {
       "id": "product-51",
       "tenant_id": "tenant-1",
       "name": "Apple Watch Ultra 2",
       "sku": "APPLE-AWU2-051",
-      "category": "Watches",
-      "brand": "Apple",
       "unitPrice": 799.0,
       "costPrice": 600.0,
       "vendorId": "vendor-1",
@@ -1128,15 +1138,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1434494878577-86c23bcb06b9?w=400&h=400&fit=crop",
       "description": "Rugged titanium smartwatch",
       "createdAt": "2025-03-13T00:00:00Z",
-      "updatedAt": "2025-03-13T00:00:00Z"
+      "updatedAt": "2025-03-13T00:00:00Z",
+      "categoryId": "cat-6",
+      "brandId": "brand-3"
     },
     {
       "id": "product-52",
       "tenant_id": "tenant-1",
       "name": "Samsung Galaxy Watch 6 Classic",
       "sku": "SAM-GW6C-052",
-      "category": "Watches",
-      "brand": "Samsung",
       "unitPrice": 429.0,
       "costPrice": 310.0,
       "vendorId": "vendor-1",
@@ -1146,15 +1156,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=400&fit=crop",
       "description": "Classic design with rotating bezel",
       "createdAt": "2025-08-22T00:00:00Z",
-      "updatedAt": "2025-08-22T00:00:00Z"
+      "updatedAt": "2025-08-22T00:00:00Z",
+      "categoryId": "cat-6",
+      "brandId": "brand-9"
     },
     {
       "id": "product-53",
       "tenant_id": "tenant-1",
       "name": "Garmin Fenix 7X",
       "sku": "GARM-F7X-053",
-      "category": "Watches",
-      "brand": "Garmin",
       "unitPrice": 899.0,
       "costPrice": 680.0,
       "vendorId": "vendor-1",
@@ -1164,15 +1174,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?w=400&h=400&fit=crop",
       "description": "Multisport GPS watch with solar",
       "createdAt": "2025-09-18T00:00:00Z",
-      "updatedAt": "2025-09-18T00:00:00Z"
+      "updatedAt": "2025-09-18T00:00:00Z",
+      "categoryId": "cat-6",
+      "brandId": "brand-27"
     },
     {
       "id": "product-54",
       "tenant_id": "tenant-1",
       "name": "Apple Watch Series 9",
       "sku": "APPLE-AW9-054",
-      "category": "Watches",
-      "brand": "Apple",
       "unitPrice": 399.0,
       "costPrice": 290.0,
       "vendorId": "vendor-1",
@@ -1182,15 +1192,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=400&h=400&fit=crop",
       "description": "Advanced health features with S9 chip",
       "createdAt": "2025-09-22T00:00:00Z",
-      "updatedAt": "2025-09-22T00:00:00Z"
+      "updatedAt": "2025-09-22T00:00:00Z",
+      "categoryId": "cat-6",
+      "brandId": "brand-3"
     },
     {
       "id": "product-55",
       "tenant_id": "tenant-1",
       "name": "Fitbit Sense 2",
       "sku": "FIT-S2-055",
-      "category": "Watches",
-      "brand": "Fitbit",
       "unitPrice": 299.0,
       "costPrice": 210.0,
       "vendorId": "vendor-1",
@@ -1200,15 +1210,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1575311373937-040b8e1fd5b6?w=400&h=400&fit=crop",
       "description": "Health-focused smartwatch with stress management",
       "createdAt": "2025-07-15T00:00:00Z",
-      "updatedAt": "2025-07-15T00:00:00Z"
+      "updatedAt": "2025-07-15T00:00:00Z",
+      "categoryId": "cat-6",
+      "brandId": "brand-25"
     },
     {
       "id": "product-56",
       "tenant_id": "tenant-1",
       "name": "Garmin Venu 3",
       "sku": "GARM-V3-056",
-      "category": "Watches",
-      "brand": "Garmin",
       "unitPrice": 449.0,
       "costPrice": 330.0,
       "vendorId": "vendor-1",
@@ -1218,15 +1228,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?w=400&h=400&fit=crop",
       "description": "AMOLED fitness smartwatch",
       "createdAt": "2025-10-02T00:00:00Z",
-      "updatedAt": "2025-10-02T00:00:00Z"
+      "updatedAt": "2025-10-02T00:00:00Z",
+      "categoryId": "cat-6",
+      "brandId": "brand-27"
     },
     {
       "id": "product-57",
       "tenant_id": "tenant-1",
       "name": "TAG Heuer Connected",
       "sku": "TAG-CON-057",
-      "category": "Watches",
-      "brand": "TAG Heuer",
       "unitPrice": 1899.0,
       "costPrice": 1450.0,
       "vendorId": "vendor-1",
@@ -1236,15 +1246,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1522312346375-d1a52e2b99b3?w=400&h=400&fit=crop",
       "description": "Luxury smartwatch with Wear OS",
       "createdAt": "2025-11-12T00:00:00Z",
-      "updatedAt": "2025-11-12T00:00:00Z"
+      "updatedAt": "2025-11-12T00:00:00Z",
+      "categoryId": "cat-6",
+      "brandId": "brand-36"
     },
     {
       "id": "product-58",
       "tenant_id": "tenant-1",
       "name": "Amazfit GTR 4",
       "sku": "AMAZ-GTR4-058",
-      "category": "Watches",
-      "brand": "Amazfit",
       "unitPrice": 199.0,
       "costPrice": 140.0,
       "vendorId": "vendor-1",
@@ -1254,15 +1264,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1539874754764-5a96559165b0?w=400&h=400&fit=crop",
       "description": "Long battery life smartwatch",
       "createdAt": "2025-06-28T00:00:00Z",
-      "updatedAt": "2025-06-28T00:00:00Z"
+      "updatedAt": "2025-06-28T00:00:00Z",
+      "categoryId": "cat-6",
+      "brandId": "brand-20"
     },
     {
       "id": "product-59",
       "tenant_id": "tenant-1",
       "name": "Withings ScanWatch 2",
       "sku": "WITH-SW2-059",
-      "category": "Watches",
-      "brand": "Withings",
       "unitPrice": 349.0,
       "costPrice": 250.0,
       "vendorId": "vendor-1",
@@ -1272,15 +1282,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1524592094714-0f0654e20314?w=400&h=400&fit=crop",
       "description": "Medical-grade health monitoring",
       "createdAt": "2025-08-08T00:00:00Z",
-      "updatedAt": "2025-08-08T00:00:00Z"
+      "updatedAt": "2025-08-08T00:00:00Z",
+      "categoryId": "cat-6",
+      "brandId": "brand-37"
     },
     {
       "id": "product-60",
       "tenant_id": "tenant-1",
       "name": "Google Pixel Watch 2",
       "sku": "GOOG-PW2-060",
-      "category": "Watches",
-      "brand": "Google",
       "unitPrice": 349.0,
       "costPrice": 260.0,
       "vendorId": "vendor-1",
@@ -1290,15 +1300,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1617043786394-f977fa12eddf?w=400&h=400&fit=crop",
       "description": "Wear OS smartwatch with Fitbit integration",
       "createdAt": "2025-10-12T00:00:00Z",
-      "updatedAt": "2025-10-12T00:00:00Z"
+      "updatedAt": "2025-10-12T00:00:00Z",
+      "categoryId": "cat-6",
+      "brandId": "brand-10"
     },
     {
       "id": "product-61",
       "tenant_id": "tenant-4",
       "name": "LG OLED TV 65\"",
       "sku": "LG-OLED65-061",
-      "category": "TV",
-      "brand": "LG",
       "unitPrice": 2499.0,
       "costPrice": 1850.0,
       "vendorId": null,
@@ -1308,15 +1318,15 @@
       "imageUrl": "https://images.unsplash.com/photo-1593784991095-a205069470b6?w=400&h=400&fit=crop",
       "description": "Premium 4K OLED television",
       "createdAt": "2025-11-10T00:00:00Z",
-      "updatedAt": "2025-11-10T00:00:00Z"
+      "updatedAt": "2025-11-10T00:00:00Z",
+      "categoryId": "cat-7",
+      "brandId": "brand-29"
     },
     {
       "id": "product-62",
       "tenant_id": "tenant-4",
       "name": "Microsoft Surface Pro 9",
       "sku": "MS-SP9-062",
-      "category": "Tablet",
-      "brand": "Microsoft",
       "unitPrice": 1599.0,
       "costPrice": 1200.0,
       "vendorId": null,
@@ -1326,7 +1336,9 @@
       "imageUrl": "https://images.unsplash.com/photo-1587614382346-4ec70e388b28?w=400&h=400&fit=crop",
       "description": "Versatile 2-in-1 tablet",
       "createdAt": "2025-11-12T00:00:00Z",
-      "updatedAt": "2025-11-12T00:00:00Z"
+      "updatedAt": "2025-11-12T00:00:00Z",
+      "categoryId": "cat-8",
+      "brandId": "brand-8"
     }
   ],
   "customers": [
@@ -2968,7 +2980,9 @@
       "actorId": "user-1",
       "targetType": "product",
       "targetId": "product-1",
-      "details": { "productName": "ASUS ROG Gaming Laptop" },
+      "details": {
+        "productName": "ASUS ROG Gaming Laptop"
+      },
       "createdAt": "2025-12-01T00:00:00Z",
       "updatedAt": "2025-12-01T00:00:00Z"
     },
@@ -2979,7 +2993,10 @@
       "actorId": "user-1",
       "targetType": "user",
       "targetId": "user-3",
-      "details": { "userName": "Jane Cashier", "role": "cashier" },
+      "details": {
+        "userName": "Jane Cashier",
+        "role": "cashier"
+      },
       "createdAt": "2025-06-15T09:00:00Z",
       "updatedAt": "2025-06-15T09:00:00Z"
     },
@@ -2990,7 +3007,10 @@
       "actorId": "user-3",
       "targetType": "sale",
       "targetId": "sale-1",
-      "details": { "grandTotal": 839.0, "paymentMethod": "CASH" },
+      "details": {
+        "grandTotal": 839.0,
+        "paymentMethod": "CASH"
+      },
       "createdAt": "2026-01-03T10:30:00Z",
       "updatedAt": "2026-01-03T10:30:00Z"
     },
@@ -3001,7 +3021,10 @@
       "actorId": "user-3",
       "targetType": "shift",
       "targetId": "shift-2",
-      "details": { "registerId": "register-1", "openingCash": 150.0 },
+      "details": {
+        "registerId": "register-1",
+        "openingCash": 150.0
+      },
       "createdAt": "2026-01-04T08:00:00Z",
       "updatedAt": "2026-01-04T08:00:00Z"
     },
@@ -3304,6 +3327,139 @@
       "id": "brand-18",
       "tenant_id": "tenant-1",
       "name": "Sennheiser",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "brand-19",
+      "tenant_id": "tenant-1",
+      "name": "Acer",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "brand-20",
+      "tenant_id": "tenant-1",
+      "name": "Amazfit",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "brand-21",
+      "tenant_id": "tenant-1",
+      "name": "Anker",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "brand-22",
+      "tenant_id": "tenant-1",
+      "name": "Belkin",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "brand-23",
+      "tenant_id": "tenant-1",
+      "name": "Canon",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "brand-24",
+      "tenant_id": "tenant-1",
+      "name": "DJI",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "brand-25",
+      "tenant_id": "tenant-1",
+      "name": "Fitbit",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "brand-26",
+      "tenant_id": "tenant-1",
+      "name": "Fujifilm",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "brand-27",
+      "tenant_id": "tenant-1",
+      "name": "Garmin",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "brand-28",
+      "tenant_id": "tenant-1",
+      "name": "GoPro",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "brand-29",
+      "tenant_id": "tenant-1",
+      "name": "LG",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "brand-30",
+      "tenant_id": "tenant-1",
+      "name": "Marshall",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "brand-31",
+      "tenant_id": "tenant-1",
+      "name": "Motorola",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "brand-32",
+      "tenant_id": "tenant-1",
+      "name": "Nikon",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "brand-33",
+      "tenant_id": "tenant-1",
+      "name": "Nothing",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "brand-34",
+      "tenant_id": "tenant-1",
+      "name": "SanDisk",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "brand-35",
+      "tenant_id": "tenant-1",
+      "name": "Sonos",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "brand-36",
+      "tenant_id": "tenant-1",
+      "name": "TAG Heuer",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "brand-37",
+      "tenant_id": "tenant-1",
+      "name": "Withings",
       "createdAt": "2025-01-01T00:00:00Z",
       "updatedAt": "2025-01-01T00:00:00Z"
     }

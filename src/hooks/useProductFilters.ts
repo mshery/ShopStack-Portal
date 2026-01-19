@@ -24,6 +24,10 @@ export interface UseProductFiltersOptions {
   products: Product[];
   initialFilters?: Partial<ProductFilters>;
   initialItemsPerPage?: number;
+  /** Map of category ID to category name */
+  categoryMap?: Map<string, string>;
+  /** Map of brand ID to brand name */
+  brandMap?: Map<string, string>;
 }
 
 const DEFAULT_FILTERS: ProductFilters = {
@@ -49,6 +53,8 @@ export function useProductFilters({
   products,
   initialFilters = {},
   initialItemsPerPage = 24,
+  categoryMap = new Map(),
+  brandMap = new Map(),
 }: UseProductFiltersOptions) {
   // Filter state
   const [filters, setFilters] = useState<ProductFilters>({
@@ -60,17 +66,27 @@ export function useProductFilters({
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(initialItemsPerPage);
 
-  // Extract unique brands from products
+  // Extract unique brands from products (mapped to names)
   const brands = useMemo(() => {
-    const uniqueBrands = new Set(products.map((p) => p.brand).filter(Boolean));
-    return Array.from(uniqueBrands).sort();
-  }, [products]);
+    const uniqueBrandIds = new Set(
+      products.map((p) => p.brandId).filter(Boolean),
+    );
+    const brandNames = Array.from(uniqueBrandIds)
+      .map((id) => brandMap.get(id))
+      .filter((name): name is string => !!name);
+    return brandNames.sort();
+  }, [products, brandMap]);
 
-  // Extract unique categories from products
+  // Extract unique categories from products (mapped to names)
   const categories = useMemo(() => {
-    const uniqueCategories = new Set(products.map((p) => p.category));
-    return Array.from(uniqueCategories).sort();
-  }, [products]);
+    const uniqueCategoryIds = new Set(
+      products.map((p) => p.categoryId).filter(Boolean),
+    );
+    const categoryNames = Array.from(uniqueCategoryIds)
+      .map((id) => categoryMap.get(id))
+      .filter((name): name is string => !!name);
+    return categoryNames.sort();
+  }, [products, categoryMap]);
 
   // Get price range bounds from products
   const priceBounds = useMemo(() => {
@@ -94,26 +110,33 @@ export function useProductFilters({
           p.name.toLowerCase().includes(searchLower) ||
           p.sku.toLowerCase().includes(searchLower) ||
           p.description?.toLowerCase().includes(searchLower) ||
-          p.brand?.toLowerCase().includes(searchLower)
+          brandMap.get(p.brandId)?.toLowerCase().includes(searchLower),
       );
     }
 
-    // Category filter
+    // Category filter (by name, lookup from map)
     if (filters.category) {
-      result = result.filter((p) => p.category === filters.category);
+      // Create reverse lookup from name to IDs
+      const matchingCategoryIds: string[] = [];
+      categoryMap.forEach((name, id) => {
+        if (name === filters.category) matchingCategoryIds.push(id);
+      });
+      result = result.filter((p) => matchingCategoryIds.includes(p.categoryId));
     }
 
-    // Brand filter
+    // Brand filter (by name, lookup from map)
     if (filters.brand) {
-      result = result.filter((p) => p.brand === filters.brand);
+      const matchingBrandIds: string[] = [];
+      brandMap.forEach((name, id) => {
+        if (name === filters.brand) matchingBrandIds.push(id);
+      });
+      result = result.filter((p) => matchingBrandIds.includes(p.brandId));
     }
 
     // Price range filter
     if (filters.priceRange) {
       const [min, max] = filters.priceRange;
-      result = result.filter(
-        (p) => p.unitPrice >= min && p.unitPrice <= max
-      );
+      result = result.filter((p) => p.unitPrice >= min && p.unitPrice <= max);
     }
 
     // Stock status filter
@@ -138,13 +161,13 @@ export function useProductFilters({
       case "newest":
         result.sort(
           (a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
         );
         break;
     }
 
     return result;
-  }, [products, filters]);
+  }, [products, filters, brandMap, categoryMap]);
 
   // Calculate pagination
   const pagination: PaginationState = useMemo(() => {
@@ -192,7 +215,7 @@ export function useProductFilters({
       setFilters((prev) => ({ ...prev, stockStatus }));
       setCurrentPage(1);
     },
-    []
+    [],
   );
 
   const setSortBy = useCallback((sortBy: ProductFilters["sortBy"]) => {
@@ -210,7 +233,7 @@ export function useProductFilters({
       const clampedPage = Math.max(1, Math.min(page, pagination.totalPages));
       setCurrentPage(clampedPage);
     },
-    [pagination.totalPages]
+    [pagination.totalPages],
   );
 
   const handleItemsPerPageChange = useCallback((newItemsPerPage: number) => {

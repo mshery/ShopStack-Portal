@@ -5,6 +5,7 @@ import { useProductsStore } from "@/stores/products.store";
 import { usePOSStore } from "@/stores/pos.store";
 import { useCustomersStore } from "@/stores/customers.store";
 import { useTenantsStore } from "@/stores/tenants.store";
+import { useCategoriesStore } from "@/stores/categories.store";
 import type { AsyncStatus, Product, Sale, Receipt } from "@/types";
 
 /**
@@ -21,6 +22,7 @@ export function usePOSCartLogic() {
   const { products } = useProductsStore();
   const { customers } = useCustomersStore();
   const { tenants } = useTenantsStore();
+  const { categories: allCategories } = useCategoriesStore();
   const {
     cart,
     addToCart,
@@ -54,11 +56,21 @@ export function usePOSCartLogic() {
     return products.filter((p) => p.tenant_id === activeTenantId);
   }, [activeTenantId, products]);
 
-  // Extract unique categories from products
+  // Extract unique categories from products, using category names from store
   const categories = useMemo(() => {
-    const uniqueCategories = new Set(tenantProducts.map((p) => p.category));
-    return Array.from(uniqueCategories).sort();
-  }, [tenantProducts]);
+    const tenantCats = allCategories.filter(
+      (c) => c.tenant_id === activeTenantId,
+    );
+    const catMap = new Map(tenantCats.map((c) => [c.id, c.name]));
+
+    // Get unique category IDs from products, then map to names
+    const uniqueCategoryIds = new Set(tenantProducts.map((p) => p.categoryId));
+    const categoryNames = Array.from(uniqueCategoryIds)
+      .map((id) => catMap.get(id))
+      .filter((name): name is string => !!name)
+      .sort();
+    return categoryNames;
+  }, [tenantProducts, allCategories, activeTenantId]);
 
   const tenantCustomers = useMemo(() => {
     if (!activeTenantId) return [];

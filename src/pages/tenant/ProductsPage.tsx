@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import PageBreadcrumb from "../../components/common/PageBreadcrumb";
 import {
   Table,
@@ -15,6 +15,8 @@ import { BoxCubeIcon } from "../../components/ui/Icons";
 import EditProductModal from "../../components/tenant/EditProductModal";
 import DeleteConfirmationModal from "../../components/common/DeleteConfirmationModal";
 import { useProductsStore } from "../../stores/products.store";
+import { useCategoriesStore } from "../../stores/categories.store";
+import { useBrandsStore } from "../../stores/brands.store";
 import { Pencil, Trash2 } from "lucide-react";
 import type { Product } from "../../types";
 import { useTenantCurrency } from "../../hooks/useTenantCurrency";
@@ -23,9 +25,22 @@ import Pagination from "../../components/common/Pagination";
 export default function ProductsPage() {
   const { status, vm, actions } = useProductsScreen();
   const { removeProduct } = useProductsStore();
+  const { categories } = useCategoriesStore();
+  const { brands } = useBrandsStore();
   const { formatPrice } = useTenantCurrency();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+
+  // Create lookup maps for category and brand names
+  const getCategoryName = useMemo(() => {
+    const map = new Map(categories.map((c) => [c.id, c.name]));
+    return (id: string) => map.get(id) || "Unknown";
+  }, [categories]);
+
+  const getBrandName = useMemo(() => {
+    const map = new Map(brands.map((b) => [b.id, b.name]));
+    return (id: string) => map.get(id) || "Unknown";
+  }, [brands]);
 
   if (status === "error") return <div>Error: Tenant context not found.</div>;
 
@@ -125,11 +140,11 @@ export default function ProductsPage() {
                         </div>
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-xs text-gray-500 dark:text-gray-400">
-                            {product.category}
+                            {getCategoryName(product.categoryId)}
                           </span>
                           <span className="text-xs text-gray-400">•</span>
                           <span className="text-xs text-gray-500 dark:text-gray-400">
-                            {product.brand}
+                            {getBrandName(product.brandId)}
                           </span>
                         </div>
                       </div>
@@ -148,7 +163,7 @@ export default function ProductsPage() {
                       to={`/tenant/products/${product.id}`}
                       className="text-gray-500 dark:text-gray-400 text-theme-sm"
                     >
-                      {product.category}
+                      {getCategoryName(product.categoryId)}
                     </Link>
                   </TableCell>
                   <TableCell className="px-6 py-4">

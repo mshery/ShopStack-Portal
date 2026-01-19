@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useMemo } from "react";
 import { useProductDetailsScreen } from "@/hooks/useProductDetailsScreen";
 import PageBreadcrumb from "@/components/common/PageBreadcrumb";
 import { DetailPageHeader } from "@/components/common/DetailPageHeader";
@@ -23,10 +24,25 @@ import {
   Info,
 } from "lucide-react";
 import { useTenantCurrency } from "@/hooks/useTenantCurrency";
+import { useCategoriesStore } from "@/stores/categories.store";
+import { useBrandsStore } from "@/stores/brands.store";
 
 export default function ProductDetailsPage() {
   const { status, vm, actions } = useProductDetailsScreen();
   const { formatPrice } = useTenantCurrency();
+  const { categories } = useCategoriesStore();
+  const { brands } = useBrandsStore();
+
+  // Lookup helpers
+  const getCategoryName = useMemo(() => {
+    const map = new Map(categories.map((c) => [c.id, c.name]));
+    return (id: string) => map.get(id) || "Unknown";
+  }, [categories]);
+
+  const getBrandName = useMemo(() => {
+    const map = new Map(brands.map((b) => [b.id, b.name]));
+    return (id: string) => map.get(id) || "Unknown";
+  }, [brands]);
 
   // Error/Not found state
   if (status === "error" || !vm.product) {
@@ -116,8 +132,8 @@ export default function ProductDetailsPage() {
         {/* Left column - Product details */}
         <div className="lg:col-span-2">
           <InfoSection icon={Info} title="Product Information">
-            <InfoRow label="Category" value={product.category} />
-            <InfoRow label="Brand" value={product.brand} />
+            <InfoRow label="Category" value={getCategoryName(product.categoryId)} />
+            <InfoRow label="Brand" value={getBrandName(product.brandId)} />
             <InfoRow
               label="Vendor"
               value={vendor?.name || "No vendor assigned"}

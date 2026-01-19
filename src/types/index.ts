@@ -110,8 +110,8 @@ export interface Product {
   tenant_id: string;
   name: string;
   sku: string;
-  category: string;
-  brand: string;
+  categoryId: string;
+  brandId: string;
   unitPrice: number;
   costPrice: number; // For profit calculation
   vendorId: string | null; // Link to vendor

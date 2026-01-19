@@ -41,8 +41,8 @@ export default function AddProductPage() {
   const [formData, setFormData] = useState({
     name: "",
     sku: "",
-    category: "",
-    brand: "",
+    categoryId: "",
+    brandId: "",
     unitPrice: "",
     currentStock: "",
     minimumStock: "",
@@ -58,8 +58,8 @@ export default function AddProductPage() {
       tenant_id: activeTenantId,
       name: formData.name,
       sku: formData.sku,
-      category: formData.category,
-      brand: formData.brand,
+      categoryId: formData.categoryId,
+      brandId: formData.brandId,
       unitPrice: parseFloat(formData.unitPrice),
       currentStock: parseInt(formData.currentStock),
       minimumStock: parseInt(formData.minimumStock),
@@ -72,7 +72,7 @@ export default function AddProductPage() {
       imageUrl: null,
       description: formData.description,
       createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       costPrice: 0,
       vendorId: null,
     };
@@ -162,14 +162,14 @@ export default function AddProductPage() {
                       <select
                         required
                         className="w-full h-11 px-4 pr-10 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 appearance-none focus:outline-none focus:ring-2 focus:ring-brand-500"
-                        value={formData.category}
+                        value={formData.categoryId}
                         onChange={(e) =>
-                          setFormData({ ...formData, category: e.target.value })
+                          setFormData({ ...formData, categoryId: e.target.value })
                         }
                       >
                         <option value="">Select a category</option>
                         {tenantCategories.map((cat) => (
-                          <option key={cat.id} value={cat.name}>
+                          <option key={cat.id} value={cat.id}>
                             {cat.name}
                           </option>
                         ))}
@@ -192,14 +192,14 @@ export default function AddProductPage() {
                     <select
                       required
                       className="w-full h-11 px-4 pr-10 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 appearance-none focus:outline-none focus:ring-2 focus:ring-brand-500"
-                      value={formData.brand}
+                      value={formData.brandId}
                       onChange={(e) =>
-                        setFormData({ ...formData, brand: e.target.value })
+                        setFormData({ ...formData, brandId: e.target.value })
                       }
                     >
                       <option value="">Select a brand</option>
                       {tenantBrands.map((brand) => (
-                        <option key={brand.id} value={brand.name}>
+                        <option key={brand.id} value={brand.id}>
                           {brand.name}
                         </option>
                       ))}
