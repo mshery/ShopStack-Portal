@@ -36,6 +36,7 @@ import PurchaseDetailsPage from "@/pages/tenant/PurchaseDetailsPage";
 import ReportsPage from "@/pages/tenant/ReportsPage";
 import ExpensesPage from "@/pages/tenant/ExpensesPage";
 import InventoryPage from "@/pages/tenant/InventoryPage";
+import BillingPage from "@/pages/tenant/BillingPage";
 
 // POS pages
 import CartPage from "../pages/pos/CartPage";
@@ -281,6 +282,14 @@ export const router = createBrowserRouter(
           element: (
             <ProtectedRoute requiredPermission="reports:view">
               <ReportsPage />
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: "billing",
+          element: (
+            <ProtectedRoute requiredPermission="billing:view">
+              <BillingPage />
             </ProtectedRoute>
           ),
         },

@@ -14,6 +14,7 @@ import {
   ListIcon,
   ArrowLeftIcon,
 } from "../../components/ui/Icons";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { EditTenantModal } from "../../components/tenant/EditTenantModal";
 import { DeleteTenantModal } from "../../components/tenant/DeleteTenantModal";
 import { TenantBillingTab } from "../../components/platform/TenantBillingTab";
@@ -31,6 +32,8 @@ import type {
 
 type TabType = "overview" | "billing" | "activity";
 
+const LOGS_PER_PAGE = 10;
+
 export default function TenantDetailPage() {
   const { tenantId } = useParams<{ tenantId: string }>();
   const { tenants } = useTenantsStore();
@@ -44,6 +47,7 @@ export default function TenantDetailPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>("overview");
+  const [logPage, setLogPage] = useState(1);
 
   const tenant = useMemo(
     () => tenants.find((t) => t.id === tenantId),
@@ -61,9 +65,17 @@ export default function TenantDetailPage() {
   );
 
   const tenantLogs = useMemo(
-    () => allLogs.filter((l: TenantActivityLog) => l.tenant_id === tenantId),
+    () => allLogs.filter((l: TenantActivityLog) => l.tenant_id === tenantId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
     [allLogs, tenantId],
   );
+
+  // Pagination for logs
+  const totalLogPages = Math.ceil(tenantLogs.length / LOGS_PER_PAGE);
+  const paginatedLogs = useMemo(() => {
+    const start = (logPage - 1) * LOGS_PER_PAGE;
+    return tenantLogs.slice(start, start + LOGS_PER_PAGE);
+  }, [tenantLogs, logPage]);
 
   const handleDelete = () => {
     // Log the deletion
@@ -209,10 +221,39 @@ export default function TenantDetailPage() {
       {activeTab === "billing" && <TenantBillingTab tenantId={tenantId!} />}
 
       {activeTab === "activity" && (
-        <RecentActivities
-          logs={tenantLogs.slice(0, 10)}
-          title="Tenant Activity Audit"
-        />
+        <div className="space-y-4">
+          <RecentActivities
+            logs={paginatedLogs}
+            title="Tenant Activity Audit"
+          />
+
+          {/* Activity Pagination */}
+          {totalLogPages > 1 && (
+            <div className="flex items-center justify-center gap-2 py-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setLogPage((p) => Math.max(1, p - 1))}
+                disabled={logPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Previous
+              </Button>
+              <span className="text-sm text-gray-500 px-4">
+                Page {logPage} of {totalLogPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setLogPage((p) => Math.min(totalLogPages, p + 1))}
+                disabled={logPage === totalLogPages}
+              >
+                Next
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Edit Modal */}
@@ -232,3 +273,4 @@ export default function TenantDetailPage() {
     </>
   );
 }
+

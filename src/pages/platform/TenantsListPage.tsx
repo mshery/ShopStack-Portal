@@ -10,9 +10,11 @@ import Badge from "../../components/ui/badge";
 import Button from "../../components/ui/button";
 import { useTenantsListScreen } from "../../hooks/useTenantsListScreen";
 import { Link } from "react-router-dom";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function TenantsListPage() {
   const { vm, actions } = useTenantsListScreen();
+  const { pagination } = vm;
 
   return (
     <>
@@ -28,9 +30,14 @@ export default function TenantsListPage() {
             onChange={(e) => actions.setSearch(e.target.value)}
           />
         </div>
-        <Link to="/platform/tenants/new">
-          <Button variant="primary">Add New Tenant</Button>
-        </Link>
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-gray-500 dark:text-gray-400">
+            {vm.allTenantsCount} tenants
+          </span>
+          <Link to="/platform/tenants/new">
+            <Button variant="primary">Add New Tenant</Button>
+          </Link>
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
@@ -130,7 +137,37 @@ export default function TenantsListPage() {
             </TableBody>
           </Table>
         </div>
+
+        {/* Pagination */}
+        {pagination.totalPages > 1 && (
+          <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 dark:border-gray-800">
+            <span className="text-sm text-gray-500 dark:text-gray-400">
+              Page {pagination.currentPage} of {pagination.totalPages}
+            </span>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={actions.prevPage}
+                disabled={pagination.currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={actions.nextPage}
+                disabled={pagination.currentPage === pagination.totalPages}
+              >
+                Next
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );
 }
+

@@ -37,7 +37,8 @@ export type Permission =
   | "expenses:create"
   | "expenses:edit"
   | "inventory:view"
-  | "inventory:adjust";
+  | "inventory:adjust"
+  | "billing:view";
 
 // Role permission mappings
 export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
@@ -73,6 +74,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "expenses:edit",
     "inventory:view",
     "inventory:adjust",
+    "billing:view",
   ],
   cashier: [
     // POS access - can use register, cart, complete sales, view own sales
@@ -104,6 +106,7 @@ export const ROUTE_PERMISSIONS: Record<string, Permission> = {
   "/tenant/expenses": "expenses:view",
   "/tenant/inventory": "inventory:view",
   "/tenant/pos/sell": "pos:access",
+  "/tenant/billing": "billing:view",
 };
 
 /**

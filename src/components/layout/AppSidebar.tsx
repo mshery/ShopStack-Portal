@@ -151,6 +151,12 @@ const AppSidebar: React.FC = () => {
           category: "SYSTEM",
         },
         {
+          name: "Billing",
+          icon: <DollarSignIcon />,
+          path: "/tenant/billing",
+          category: "SYSTEM",
+        },
+        {
           name: "Settings",
           icon: <CogIcon />,
           path: "/tenant/settings",

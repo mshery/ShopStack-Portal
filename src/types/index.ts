@@ -72,6 +72,7 @@ export interface TenantSettings {
   businessName: string;
   businessAddress: string;
   businessPhone: string;
+  billingAddress?: BillingAddress;
 }
 
 export interface Tenant {
@@ -95,7 +96,59 @@ export interface Tenant {
 
 export type BillingStatus = "active" | "past_due" | "cancelled" | "trial";
 export type BillingCycle = "monthly" | "yearly";
-export type InvoiceStatus = "paid" | "pending" | "failed";
+export type InvoiceStatus = "paid" | "pending" | "failed" | "unpaid";
+export type BillingPaymentMethodType = "card" | "paypal";
+export type CardBrand = "visa" | "mastercard" | "amex" | "discover";
+
+// Plan Feature
+export interface PlanFeature {
+  name: string;
+  included: boolean;
+}
+
+// Plan Limits
+export interface PlanLimits {
+  maxUsers: number;
+  maxProducts: number;
+  maxOrders: number;
+}
+
+// Subscription Plan
+export interface SubscriptionPlan {
+  id: string;
+  name: string;
+  slug: TenantPlan;
+  monthlyPrice: number;
+  yearlyPrice: number;
+  features: PlanFeature[];
+  limits: PlanLimits;
+  isPopular: boolean;
+}
+
+// Billing Payment Method
+export interface BillingPaymentMethod {
+  id: string;
+  tenant_id: string;
+  type: BillingPaymentMethodType;
+  brand?: CardBrand;
+  last4?: string;
+  expiryMonth?: number;
+  expiryYear?: number;
+  email?: string;
+  isDefault: boolean;
+  createdAt: string;
+}
+
+// Billing Address
+export interface BillingAddress {
+  name: string;
+  street: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+  vatNumber: string | null;
+}
 
 export interface TenantBilling {
   id: string;
@@ -116,6 +169,7 @@ export interface BillingInvoice {
   id: string;
   tenant_id: string;
   invoiceNumber: string;
+  planName: string;
   amount: number;
   status: InvoiceStatus;
   dueDate: string;
@@ -474,6 +528,8 @@ export interface SeedData {
   tenants: Tenant[];
   tenantBillings: TenantBilling[];
   billingInvoices: BillingInvoice[];
+  subscriptionPlans: SubscriptionPlan[];
+  paymentMethods: BillingPaymentMethod[];
   platformSettings: PlatformSettings;
   users: TenantUser[];
   products: Product[];

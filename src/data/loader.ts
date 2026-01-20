@@ -36,6 +36,10 @@ export function initializeStores(): void {
   // Load billing data
   useBillingsStore.getState().setBillings(data.tenantBillings ?? []);
   useBillingsStore.getState().setInvoices(data.billingInvoices ?? []);
+  useBillingsStore
+    .getState()
+    .setSubscriptionPlans(data.subscriptionPlans ?? []);
+  useBillingsStore.getState().setPaymentMethods(data.paymentMethods ?? []);
 
   // Load users
   useUsersStore.getState().setPlatformUsers(data.platformUsers ?? []);
@@ -124,6 +128,8 @@ export function exportCurrentState(): SeedData {
     tenants: useTenantsStore.getState().tenants,
     tenantBillings: useBillingsStore.getState().billings,
     billingInvoices: useBillingsStore.getState().invoices,
+    subscriptionPlans: useBillingsStore.getState().subscriptionPlans,
+    paymentMethods: useBillingsStore.getState().paymentMethods,
     platformSettings: usePlatformSettingsStore.getState().settings,
     users: useUsersStore.getState().tenantUsers,
     products: useProductsStore.getState().products,

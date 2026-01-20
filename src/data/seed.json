@@ -11,6 +11,50 @@
     "primaryColor": "#465fff",
     "accentColor": "#12b76a"
   },
+  "subscriptionPlans": [
+    {
+      "id": "plan-starter",
+      "name": "Starter",
+      "slug": "starter",
+      "monthlyPrice": 29.0,
+      "yearlyPrice": 290.0,
+      "features": [
+        { "name": "100 orders per month", "included": true },
+        { "name": "Basic integrations", "included": true },
+        { "name": "Email support", "included": true },
+        { "name": "1 GB Storage", "included": true },
+        { "name": "Custom Templates", "included": false },
+        { "name": "Advanced Marketing tools", "included": false }
+      ],
+      "limits": {
+        "maxUsers": 1,
+        "maxProducts": 20,
+        "maxOrders": 100
+      },
+      "isPopular": false
+    },
+    {
+      "id": "plan-enterprise",
+      "name": "Enterprise",
+      "slug": "enterprise",
+      "monthlyPrice": 199.0,
+      "yearlyPrice": 1990.0,
+      "features": [
+        { "name": "Unlimited orders per month", "included": true },
+        { "name": "Unlimited integrations", "included": true },
+        { "name": "Exclusive AutoFile discount", "included": true },
+        { "name": "Unlimited Storage", "included": true },
+        { "name": "Custom Templates", "included": false },
+        { "name": "Advanced Marketing tools", "included": false }
+      ],
+      "limits": {
+        "maxUsers": 999999,
+        "maxProducts": 999999,
+        "maxOrders": 999999
+      },
+      "isPopular": true
+    }
+  ],
   "platformUsers": [
     {
       "id": "platform-user-1",
@@ -111,7 +155,16 @@
         "timezone": "America/New_York",
         "businessName": "Acme Corp",
         "businessAddress": "123 Main St, New York, NY 10001",
-        "businessPhone": "+1-555-0100"
+        "businessPhone": "+1-555-0100",
+        "billingAddress": {
+          "name": "Musharof Chowdhury",
+          "street": "800 E Elcamino Real, suite #400",
+          "city": "Mountain View",
+          "state": "CA",
+          "zipCode": "94040",
+          "country": "United States of America",
+          "vatNumber": "DE4920348"
+        }
       },
       "createdAt": "2025-06-01T10:00:00Z",
       "updatedAt": "2025-12-15T08:30:00Z"
@@ -137,7 +190,16 @@
         "timezone": "America/Los_Angeles",
         "businessName": "TechStart Inc",
         "businessAddress": "456 Tech Blvd, San Francisco, CA 94102",
-        "businessPhone": "+1-555-0200"
+        "businessPhone": "+1-555-0200",
+        "billingAddress": {
+          "name": "Sarah Tech",
+          "street": "456 Tech Blvd",
+          "city": "San Francisco",
+          "state": "CA",
+          "zipCode": "94102",
+          "country": "United States of America",
+          "vatNumber": null
+        }
       },
       "createdAt": "2025-07-15T14:30:00Z",
       "updatedAt": "2025-07-15T14:30:00Z"
@@ -163,7 +225,16 @@
         "timezone": "America/Chicago",
         "businessName": "Global Retail",
         "businessAddress": "789 Commerce Dr, Chicago, IL 60601",
-        "businessPhone": "+1-555-0300"
+        "businessPhone": "+1-555-0300",
+        "billingAddress": {
+          "name": "Global Admin",
+          "street": "789 Commerce Dr",
+          "city": "Chicago",
+          "state": "IL",
+          "zipCode": "60601",
+          "country": "United States of America",
+          "vatNumber": null
+        }
       },
       "createdAt": "2025-10-20T11:00:00Z",
       "updatedAt": "2025-12-01T16:00:00Z"
@@ -189,7 +260,16 @@
         "timezone": "America/Denver",
         "businessName": "Metro Electronics",
         "businessAddress": "321 Metro Plaza, Denver, CO 80202",
-        "businessPhone": "+1-555-0400"
+        "businessPhone": "+1-555-0400",
+        "billingAddress": {
+          "name": "Metro Admin",
+          "street": "321 Metro Plaza",
+          "city": "Denver",
+          "state": "CO",
+          "zipCode": "80202",
+          "country": "United States of America",
+          "vatNumber": null
+        }
       },
       "createdAt": "2025-11-01T09:00:00Z",
       "updatedAt": "2025-11-01T09:00:00Z"
@@ -257,7 +337,8 @@
     {
       "id": "invoice-1",
       "tenant_id": "tenant-1",
-      "invoiceNumber": "INV-2026-0101",
+      "invoiceNumber": "#012 - January 2026",
+      "planName": "Enterprise",
       "amount": 199.0,
       "status": "paid",
       "dueDate": "2026-01-05T00:00:00Z",
@@ -267,7 +348,8 @@
     {
       "id": "invoice-2",
       "tenant_id": "tenant-1",
-      "invoiceNumber": "INV-2025-1201",
+      "invoiceNumber": "#011 - December 2025",
+      "planName": "Enterprise",
       "amount": 199.0,
       "status": "paid",
       "dueDate": "2025-12-05T00:00:00Z",
@@ -277,7 +359,8 @@
     {
       "id": "invoice-3",
       "tenant_id": "tenant-1",
-      "invoiceNumber": "INV-2025-1101",
+      "invoiceNumber": "#010 - November 2025",
+      "planName": "Enterprise",
       "amount": 199.0,
       "status": "paid",
       "dueDate": "2025-11-05T00:00:00Z",
@@ -286,8 +369,53 @@
     },
     {
       "id": "invoice-4",
+      "tenant_id": "tenant-1",
+      "invoiceNumber": "#009 - October 2025",
+      "planName": "Starter Plan",
+      "amount": 120.0,
+      "status": "paid",
+      "dueDate": "2025-10-05T00:00:00Z",
+      "paidAt": "2025-10-01T14:00:00Z",
+      "createdAt": "2025-10-01T00:00:00Z"
+    },
+    {
+      "id": "invoice-5",
+      "tenant_id": "tenant-1",
+      "invoiceNumber": "#008 - September 2025",
+      "planName": "Starter Plan",
+      "amount": 120.0,
+      "status": "unpaid",
+      "dueDate": "2025-09-05T00:00:00Z",
+      "paidAt": null,
+      "createdAt": "2025-09-01T00:00:00Z"
+    },
+    {
+      "id": "invoice-6",
+      "tenant_id": "tenant-1",
+      "invoiceNumber": "#007 - August 2025",
+      "planName": "Pro Plan",
+      "amount": 250.0,
+      "status": "paid",
+      "dueDate": "2025-08-05T00:00:00Z",
+      "paidAt": "2025-08-01T14:00:00Z",
+      "createdAt": "2025-08-01T00:00:00Z"
+    },
+    {
+      "id": "invoice-7",
+      "tenant_id": "tenant-1",
+      "invoiceNumber": "#006 - July 2025",
+      "planName": "Pro Plan",
+      "amount": 250.0,
+      "status": "paid",
+      "dueDate": "2025-07-05T00:00:00Z",
+      "paidAt": "2025-07-01T14:00:00Z",
+      "createdAt": "2025-07-01T00:00:00Z"
+    },
+    {
+      "id": "invoice-8",
       "tenant_id": "tenant-2",
-      "invoiceNumber": "INV-2026-0115",
+      "invoiceNumber": "#001 - January 2026",
+      "planName": "Starter Plan",
       "amount": 29.0,
       "status": "paid",
       "dueDate": "2026-01-20T00:00:00Z",
@@ -295,9 +423,10 @@
       "createdAt": "2026-01-15T00:00:00Z"
     },
     {
-      "id": "invoice-5",
+      "id": "invoice-9",
       "tenant_id": "tenant-3",
-      "invoiceNumber": "INV-2025-1120",
+      "invoiceNumber": "#003 - November 2025",
+      "planName": "Enterprise",
       "amount": 199.0,
       "status": "paid",
       "dueDate": "2025-11-25T00:00:00Z",
@@ -305,14 +434,58 @@
       "createdAt": "2025-11-20T00:00:00Z"
     },
     {
-      "id": "invoice-6",
+      "id": "invoice-10",
       "tenant_id": "tenant-3",
-      "invoiceNumber": "INV-2025-1220",
+      "invoiceNumber": "#004 - December 2025",
+      "planName": "Enterprise",
       "amount": 199.0,
       "status": "failed",
       "dueDate": "2025-12-25T00:00:00Z",
       "paidAt": null,
       "createdAt": "2025-12-20T00:00:00Z"
+    }
+  ],
+  "paymentMethods": [
+    {
+      "id": "pm-1",
+      "tenant_id": "tenant-1",
+      "type": "card",
+      "brand": "mastercard",
+      "last4": "9029",
+      "expiryMonth": 1,
+      "expiryYear": 24,
+      "isDefault": true,
+      "createdAt": "2025-06-01T10:00:00Z"
+    },
+    {
+      "id": "pm-2",
+      "tenant_id": "tenant-1",
+      "type": "card",
+      "brand": "visa",
+      "last4": "4328",
+      "expiryMonth": 1,
+      "expiryYear": 25,
+      "isDefault": false,
+      "createdAt": "2025-08-15T10:00:00Z"
+    },
+    {
+      "id": "pm-3",
+      "tenant_id": "tenant-1",
+      "type": "paypal",
+      "email": "name@example.com",
+      "isDefault": false,
+      "createdAt": "2025-09-01T10:00:00Z"
+    },
+    {
+      "id": "pm-4",
+      "tenant_id": "tenant-2",
+      "type": "card",
+      "brand": "visa",
+      "last4": "1234",
+      "expiryMonth": 6,
+      "expiryYear": 26,
+      "isDefault": true,
+      "createdAt": "2025-07-15T14:30:00Z"
     }
   ],
   "users": [
@@ -351,6 +524,34 @@
       "password": "12345678",
       "name": "Jane Cashier",
       "role": "cashier",
+      "status": "active",
+      "avatarUrl": null,
+      "createdBy": "platform",
+      "createdAt": "2025-06-15T09:00:00Z",
+      "updatedAt": "2025-06-15T09:00:00Z",
+      "phone": null
+    },
+    {
+      "id": "user-4",
+      "tenant_id": "tenant-2",
+      "email": "t2@t2.com",
+      "password": "12345678",
+      "name": "John Owner T2",
+      "role": "owner",
+      "status": "active",
+      "avatarUrl": null,
+      "createdBy": "platform",
+      "createdAt": "2025-06-15T09:00:00Z",
+      "updatedAt": "2025-06-15T09:00:00Z",
+      "phone": null
+    },
+    {
+      "id": "user-6",
+      "tenant_id": "tenant-3",
+      "email": "t3@t3.com",
+      "password": "12345678",
+      "name": "John Owner T3",
+      "role": "owner",
       "status": "active",
       "avatarUrl": null,
       "createdBy": "platform",
