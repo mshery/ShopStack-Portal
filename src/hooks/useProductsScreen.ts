@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { useProductsStore } from "../stores/products.store";
 import { useAuthStore } from "../stores/auth.store";
+import { useTenantsStore } from "../stores/tenants.store";
 import { useParams } from "react-router-dom";
 import type { Product } from "../types";
 
@@ -11,11 +12,17 @@ const ITEMS_PER_PAGE = 10;
 export function useProductsScreen() {
   const { tenantId: paramTenantId } = useParams<{ tenantId: string }>();
   const { activeTenantId } = useAuthStore();
+  const { tenants } = useTenantsStore();
   const { products: allProducts } = useProductsStore();
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
   const tenantId = paramTenantId || activeTenantId;
+
+  const tenant = useMemo(
+    () => tenants.find((t) => t.id === tenantId),
+    [tenants, tenantId],
+  );
 
   const tenantProducts = useMemo(() => {
     if (!tenantId) return [];
@@ -36,6 +43,9 @@ export function useProductsScreen() {
     return filteredProducts.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [filteredProducts, currentPage]);
 
+  const { userType, isImpersonating } = useAuthStore();
+  const isSuperAdmin = userType === "platform" || isImpersonating;
+
   const vm = useMemo(
     () => ({
       products: paginatedProducts,
@@ -45,6 +55,10 @@ export function useProductsScreen() {
       currentPage,
       totalPages,
       totalItems: filteredProducts.length,
+      canAddMore: tenant ? tenantProducts.length < tenant.maxProducts : false,
+      maxProducts: tenant?.maxProducts ?? 0,
+      currentCount: tenantProducts.length,
+      isSuperAdmin,
     }),
     [
       paginatedProducts,
@@ -53,7 +67,19 @@ export function useProductsScreen() {
       currentPage,
       totalPages,
       filteredProducts.length,
+      tenant,
+      tenantProducts.length,
+      isSuperAdmin,
     ],
+  );
+
+  const { removeProduct } = useProductsStore();
+
+  const deleteProduct = useCallback(
+    (productId: string) => {
+      removeProduct(productId);
+    },
+    [removeProduct],
   );
 
   const actions = useMemo(
@@ -63,8 +89,9 @@ export function useProductsScreen() {
         setCurrentPage(1); // Reset to first page on search
       },
       setCurrentPage,
+      deleteProduct,
     }),
-    [],
+    [deleteProduct],
   );
 
   const status: ProductsStatus = !tenantId

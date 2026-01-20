@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { Tenant, TenantSettings } from "@/types";
+import { broadcastTenantStatusChange } from "@/hooks/useTenantStatusSync";
 
 /**
  * Tenants Store - Platform-level tenant management
@@ -7,6 +8,7 @@ import type { Tenant, TenantSettings } from "@/types";
  * RULES:
  * - Arrays are NEVER optional, always []
  * - Stores are boring on purpose
+ * - Status changes are broadcast to other tabs
  */
 
 interface TenantsStoreState {
@@ -34,13 +36,20 @@ export const useTenantsStore = create<TenantsStoreState>((set) => ({
     })),
 
   updateTenant: (id, updates) =>
-    set((state) => ({
-      tenants: state.tenants.map((t) =>
-        t.id === id
-          ? { ...t, ...updates, updatedAt: new Date().toISOString() }
-          : t,
-      ),
-    })),
+    set((state) => {
+      // If status is changing, broadcast to other tabs
+      if (updates.status) {
+        broadcastTenantStatusChange(id, updates.status);
+      }
+
+      return {
+        tenants: state.tenants.map((t) =>
+          t.id === id
+            ? { ...t, ...updates, updatedAt: new Date().toISOString() }
+            : t,
+        ),
+      };
+    }),
 
   updateTenantSettings: (id, settings) =>
     set((state) => ({

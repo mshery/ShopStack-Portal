@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { usePlatformSettingsStore } from "@/stores/platformSettings.store";
 import {
   Card,
   CardContent,
@@ -10,9 +12,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Settings, Mail, Palette, Shield } from "lucide-react";
+import { Settings, Mail, Palette, Shield, Check } from "lucide-react";
 
 export default function PlatformSettingsPage() {
+  const { settings, updateSettings } = usePlatformSettingsStore();
+  const [localSettings, setLocalSettings] = useState(settings);
+  const [saved, setSaved] = useState(false);
+
+  const handleSave = () => {
+    updateSettings(localSettings);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  const handleChange = (key: keyof typeof settings, value: string | boolean) => {
+    setLocalSettings((prev) => ({ ...prev, [key]: value }));
+  };
+
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
@@ -57,7 +73,8 @@ export default function PlatformSettingsPage() {
                 </Label>
                 <Input
                   id="platform-name"
-                  defaultValue="SaaS Admin Console"
+                  value={localSettings.platformName}
+                  onChange={(e) => handleChange("platformName", e.target.value)}
                   className="h-11 border-gray-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
                 />
               </div>
@@ -72,7 +89,8 @@ export default function PlatformSettingsPage() {
                 <Input
                   id="support-email"
                   type="email"
-                  defaultValue="support@saasplatform.com"
+                  value={localSettings.supportEmail}
+                  onChange={(e) => handleChange("supportEmail", e.target.value)}
                   className="h-11 border-gray-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
                 />
               </div>
@@ -90,7 +108,12 @@ export default function PlatformSettingsPage() {
                     Disable access for all tenants
                   </p>
                 </div>
-                <Switch />
+                <Switch
+                  checked={localSettings.maintenanceMode}
+                  onCheckedChange={(checked) =>
+                    handleChange("maintenanceMode", checked)
+                  }
+                />
               </div>
               <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-4">
                 <div className="space-y-0.5">
@@ -101,13 +124,28 @@ export default function PlatformSettingsPage() {
                     Allow public signups for new tenants
                   </p>
                 </div>
-                <Switch defaultChecked />
+                <Switch
+                  checked={localSettings.allowNewRegistrations}
+                  onCheckedChange={(checked) =>
+                    handleChange("allowNewRegistrations", checked)
+                  }
+                />
               </div>
             </div>
 
             <div className="flex justify-end">
-              <Button className="bg-brand-600 hover:bg-brand-700">
-                Save Configuration
+              <Button
+                onClick={handleSave}
+                className="bg-brand-600 hover:bg-brand-700"
+              >
+                {saved ? (
+                  <>
+                    <Check className="mr-2 h-4 w-4" />
+                    Saved!
+                  </>
+                ) : (
+                  "Save Configuration"
+                )}
               </Button>
             </div>
           </CardContent>
@@ -138,10 +176,16 @@ export default function PlatformSettingsPage() {
                   Primary Color
                 </Label>
                 <div className="flex gap-3">
-                  <div className="h-11 w-11 flex-shrink-0 rounded-lg border-2 border-gray-300 bg-brand-600 shadow-sm"></div>
+                  <div
+                    className="h-11 w-11 flex-shrink-0 rounded-lg border-2 border-gray-300 shadow-sm"
+                    style={{ backgroundColor: localSettings.primaryColor }}
+                  ></div>
                   <Input
                     id="primary-color"
-                    defaultValue="#465fff"
+                    value={localSettings.primaryColor}
+                    onChange={(e) =>
+                      handleChange("primaryColor", e.target.value)
+                    }
                     className="h-11 font-mono"
                   />
                 </div>
@@ -154,10 +198,16 @@ export default function PlatformSettingsPage() {
                   Accent Color
                 </Label>
                 <div className="flex gap-3">
-                  <div className="h-11 w-11 flex-shrink-0 rounded-lg border-2 border-gray-300 bg-success-600 shadow-sm"></div>
+                  <div
+                    className="h-11 w-11 flex-shrink-0 rounded-lg border-2 border-gray-300 shadow-sm"
+                    style={{ backgroundColor: localSettings.accentColor }}
+                  ></div>
                   <Input
                     id="accent-color"
-                    defaultValue="#12b76a"
+                    value={localSettings.accentColor}
+                    onChange={(e) =>
+                      handleChange("accentColor", e.target.value)
+                    }
                     className="h-11 font-mono"
                   />
                 </div>
@@ -165,8 +215,18 @@ export default function PlatformSettingsPage() {
             </div>
 
             <div className="flex justify-end">
-              <Button className="bg-brand-600 hover:bg-brand-700">
-                Save Branding
+              <Button
+                onClick={handleSave}
+                className="bg-brand-600 hover:bg-brand-700"
+              >
+                {saved ? (
+                  <>
+                    <Check className="mr-2 h-4 w-4" />
+                    Saved!
+                  </>
+                ) : (
+                  "Save Branding"
+                )}
               </Button>
             </div>
           </CardContent>

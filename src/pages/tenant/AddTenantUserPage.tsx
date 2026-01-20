@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
@@ -13,12 +14,14 @@ import {
 import { Stepper } from "../../components/ui/Stepper";
 import { useUsersStore } from "../../stores/users.store";
 import { useAuthStore } from "../../stores/auth.store";
+import { useTenantUsersScreen } from "../../hooks/useTenantUsersScreen";
 import {
   ChevronLeft,
   ChevronRight,
   UserCircle,
   Shield,
   CheckCircle,
+  AlertTriangle,
 } from "lucide-react";
 import PageBreadcrumb from "../../components/common/PageBreadcrumb";
 import type { UserRole, UserStatus } from "../../types";
@@ -50,6 +53,7 @@ const STEPS = [
 
 export default function AddTenantUserPage() {
   const navigate = useNavigate();
+  const { vm } = useTenantUsersScreen();
   const { addTenantUser, tenantUsers } = useUsersStore();
   const { activeTenantId } = useAuthStore();
   const [currentStep, setCurrentStep] = useState(1);
@@ -65,6 +69,33 @@ export default function AddTenantUserPage() {
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Guard: if over limit, redirect back (unless loading)
+  useEffect(() => {
+    if (!vm.canAddMore) {
+      // Just to be safe, we could show a toast or message here
+    }
+  }, [vm.canAddMore, navigate]);
+
+  if (!vm.canAddMore) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] text-center p-6 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm">
+        <div className="w-16 h-16 bg-red-50 dark:bg-red-900/10 rounded-full flex items-center justify-center mb-4">
+          <AlertTriangle className="w-8 h-8 text-red-500" />
+        </div>
+        <h2 className="text-xl font-bold text-gray-800 dark:text-white/90 mb-2">
+          User Limit Reached
+        </h2>
+        <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-sm">
+          Your current plan allows for a maximum of <b>{vm.maxUsers}</b> team
+          members. Please upgrade your plan to add more.
+        </p>
+        <Button onClick={() => navigate("/tenant/users")} variant="primary">
+          Back to Users
+        </Button>
+      </div>
+    );
+  }
 
   const handleCancel = () => {
     navigate("/tenant/users");
@@ -147,6 +178,7 @@ export default function AddTenantUserPage() {
       status: formData.status,
       phone: null,
       avatarUrl: null,
+      createdBy: "tenant",
     });
 
     navigate("/tenant/users");

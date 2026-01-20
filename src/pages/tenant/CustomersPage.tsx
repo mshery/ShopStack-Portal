@@ -14,13 +14,11 @@ import { useCustomersScreen } from "../../hooks/useCustomersScreen";
 import { UserCircleIcon } from "../../components/ui/Icons";
 import EditCustomerModal from "../../components/tenant/EditCustomerModal";
 import DeleteConfirmationModal from "../../components/common/DeleteConfirmationModal";
-import { useCustomersStore } from "../../stores/customers.store";
 import { Pencil, Trash2 } from "lucide-react";
 import type { Customer } from "../../types";
 
 export default function CustomersPage() {
   const { status, vm, actions } = useCustomersScreen();
-  const { removeCustomer } = useCustomersStore();
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
     null,
   );
@@ -172,7 +170,7 @@ export default function CustomersPage() {
         onClose={() => setCustomerToDelete(null)}
         onConfirm={() => {
           if (customerToDelete) {
-            removeCustomer(customerToDelete.id);
+            actions.deleteCustomer(customerToDelete.id);
           }
         }}
         title="Delete Customer"

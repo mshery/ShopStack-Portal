@@ -576,6 +576,36 @@ function StepOwner({
                   </motion.p>
                 )}
               </div>
+              <div className="space-y-2">
+                <Label
+                  htmlFor="ownerPassword"
+                  className="text-sm font-semibold text-gray-700"
+                >
+                  Owner Password <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="ownerPassword"
+                  type="password"
+                  placeholder="Minimum 8 characters"
+                  value={formData.ownerPassword}
+                  onChange={(e) =>
+                    updateFormData({ ownerPassword: e.target.value })
+                  }
+                  className="h-11 border-gray-300 bg-white"
+                />
+                <p className="text-xs text-gray-500">
+                  This password will be used by the owner to login
+                </p>
+                {errors.ownerPassword && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-sm text-red-600 flex items-center gap-1"
+                  >
+                    <span className="text-lg">⚠️</span> {errors.ownerPassword}
+                  </motion.p>
+                )}
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -717,6 +747,10 @@ function StepReview({ formData }: { formData: CreateTenantData }) {
               <div className="flex justify-between">
                 <dt className="text-gray-600">Email:</dt>
                 <dd className="text-gray-900">{formData.ownerEmail}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-gray-600">Password:</dt>
+                <dd className="text-gray-900 font-mono">••••••••</dd>
               </div>
             </dl>
           </div>

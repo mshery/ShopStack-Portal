@@ -24,6 +24,7 @@ export function usePOSCartLogic() {
   const { tenants } = useTenantsStore();
   const { categories: allCategories } = useCategoriesStore();
   const {
+    sales,
     cart,
     addToCart,
     removeFromCart,
@@ -107,6 +108,25 @@ export function usePOSCartLogic() {
       }));
   }, [cart]);
 
+  // Check order limits
+  const orderStats = useMemo(() => {
+    if (!activeTenantId || !tenantSettings) {
+      return { canAddMore: true, maxOrders: Infinity, currentCount: 0 };
+    }
+
+    const tenant = tenants.find((t) => t.id === activeTenantId);
+    const maxOrders = tenant?.maxOrders ?? 100;
+    const currentCount = sales.filter(
+      (s) => s.tenant_id === activeTenantId,
+    ).length;
+
+    return {
+      canAddMore: currentCount < maxOrders,
+      maxOrders,
+      currentCount,
+    };
+  }, [activeTenantId, tenantSettings, tenants, sales]);
+
   const vm = useMemo(
     () => ({
       products: tenantProducts, // Return all tenant products, filtering handled by useProductFilters
@@ -125,6 +145,7 @@ export function usePOSCartLogic() {
       discount: currentDiscount,
       heldOrders,
       tenantSettings,
+      orderStats,
     }),
     [
       tenantProducts,
@@ -142,6 +163,7 @@ export function usePOSCartLogic() {
       currentDiscount,
       heldOrders,
       tenantSettings,
+      orderStats,
     ],
   );
 
@@ -192,6 +214,22 @@ export function usePOSCartLogic() {
    */
   const handleCheckout = useCallback(async () => {
     if (!activeTenantId || !currentUser || cart.length === 0) return;
+
+    // Check order limits
+    const currentSales = usePOSStore
+      .getState()
+      .sales.filter((s) => s.tenant_id === activeTenantId);
+    const tenant = useTenantsStore
+      .getState()
+      .tenants.find((t) => t.id === activeTenantId);
+    const maxOrders = tenant?.maxOrders ?? 100;
+
+    if (currentSales.length >= maxOrders) {
+      alert(
+        `Order limit reached (${currentSales.length}/${maxOrders}). Please upgrade your plan to process more orders.`,
+      );
+      return;
+    }
 
     // Check stock availability
     if (stockWarnings.length > 0) {

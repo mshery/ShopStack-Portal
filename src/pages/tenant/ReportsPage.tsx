@@ -1,4 +1,5 @@
 import { useReportsScreen } from "@/hooks/useReportsScreen";
+import { useTenantCurrency } from "@/hooks/useTenantCurrency";
 import {
   Card,
   CardContent,
@@ -14,7 +15,6 @@ import {
   TableRow,
   TableCell,
 } from "@/components/ui/table";
-import { formatCurrency } from "@/utils/format";
 import {
   DollarSign,
   TrendingUp,
@@ -25,6 +25,7 @@ import PageBreadcrumb from "@/components/common/PageBreadcrumb";
 
 export default function ReportsPage() {
   const { vm } = useReportsScreen();
+  const { formatPrice } = useTenantCurrency();
 
   return (
     <>
@@ -34,12 +35,12 @@ export default function ReportsPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard
           title="Net Revenue"
-          value={formatCurrency(vm.netRevenue)}
+          value={formatPrice(vm.netRevenue)}
           icon={<DollarSign className="size-6 text-brand-500" />}
         />
         <MetricCard
           title="Total Profit"
-          value={formatCurrency(vm.totalProfit)}
+          value={formatPrice(vm.totalProfit)}
           icon={<TrendingUp className="size-6 text-emerald-500" />}
         />
         <MetricCard
@@ -105,7 +106,7 @@ export default function ReportsPage() {
                     Inventory Value (Cost)
                   </span>
                   <span className="text-lg font-bold text-gray-900 dark:text-white">
-                    {formatCurrency(vm.totalInventoryValue)}
+                    {formatPrice(vm.totalInventoryValue)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between mt-2">
@@ -113,7 +114,7 @@ export default function ReportsPage() {
                     Retail Value
                   </span>
                   <span className="text-lg font-bold text-gray-900 dark:text-white">
-                    {formatCurrency(vm.totalRetailValue)}
+                    {formatPrice(vm.totalRetailValue)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between mt-2">
@@ -121,7 +122,7 @@ export default function ReportsPage() {
                     Potential Profit
                   </span>
                   <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
-                    {formatCurrency(vm.potentialProfit)}
+                    {formatPrice(vm.potentialProfit)}
                   </span>
                 </div>
               </div>
@@ -153,7 +154,7 @@ export default function ReportsPage() {
                     {vm.cashSales}
                   </div>
                   <div className="text-xs text-gray-500">
-                    {formatCurrency(vm.cashRevenue)}
+                    {formatPrice(vm.cashRevenue)}
                   </div>
                 </div>
               </div>
@@ -163,7 +164,7 @@ export default function ReportsPage() {
                     Total Revenue
                   </span>
                   <span className="text-lg font-bold text-gray-900 dark:text-white">
-                    {formatCurrency(vm.cashRevenue)}
+                    {formatPrice(vm.cashRevenue)}
                   </span>
                 </div>
               </div>
@@ -242,7 +243,7 @@ export default function ReportsPage() {
                         </TableCell>
                         <TableCell className="px-6 py-4">
                           <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
-                            {formatCurrency(product.revenue)}
+                            {formatPrice(product.revenue)}
                           </span>
                         </TableCell>
                       </TableRow>
@@ -319,12 +320,12 @@ export default function ReportsPage() {
                           </TableCell>
                           <TableCell className="px-6 py-4">
                             <span className="text-sm font-bold text-gray-900 dark:text-white">
-                              {formatCurrency(month.revenue)}
+                              {formatPrice(month.revenue)}
                             </span>
                           </TableCell>
                           <TableCell className="px-6 py-4">
                             <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
-                              {formatCurrency(month.profit)}
+                              {formatPrice(month.profit)}
                             </span>
                           </TableCell>
                           <TableCell className="px-6 py-4">

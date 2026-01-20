@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { useCustomersStore } from "../stores/customers.store";
 import { useAuthStore } from "../stores/auth.store";
 import { useParams } from "react-router-dom";
@@ -28,21 +28,35 @@ export function useCustomersScreen() {
     );
   }, [tenantCustomers, search]);
 
+  const { userType, isImpersonating } = useAuthStore();
+  const isSuperAdmin = userType === "platform" || isImpersonating;
+
   const vm = useMemo(
     () => ({
       customers: filteredCustomers,
       search,
       isEmpty: filteredCustomers.length === 0,
       tenantId,
+      isSuperAdmin,
     }),
-    [filteredCustomers, search, tenantId],
+    [filteredCustomers, search, tenantId, isSuperAdmin],
+  );
+
+  const { removeCustomer } = useCustomersStore();
+
+  const deleteCustomer = useCallback(
+    (customerId: string) => {
+      removeCustomer(customerId);
+    },
+    [removeCustomer],
   );
 
   const actions = useMemo(
     () => ({
       setSearch,
+      deleteCustomer,
     }),
-    [],
+    [deleteCustomer],
   );
 
   const status: CustomersStatus = !tenantId

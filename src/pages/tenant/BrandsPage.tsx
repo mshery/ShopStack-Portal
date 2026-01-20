@@ -68,7 +68,7 @@ export default function BrandsPage() {
             tenant_id: activeTenantId,
             name: newBrandName.trim(),
             createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
         };
         addBrand(newBr);
         setNewBrandName("");

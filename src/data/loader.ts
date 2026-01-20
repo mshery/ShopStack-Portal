@@ -12,6 +12,8 @@ import { useVendorsStore } from "@/stores/vendors.store";
 import { usePurchasesStore } from "@/stores/purchases.store";
 import { useExpensesStore } from "@/stores/expenses.store";
 import { useInventoryStore } from "@/stores/inventory.store";
+import { useBillingsStore } from "@/stores/billings.store";
+import { usePlatformSettingsStore } from "@/stores/platformSettings.store";
 
 /**
  * Initialize all stores with seed data.
@@ -23,8 +25,17 @@ import { useInventoryStore } from "@/stores/inventory.store";
 export function initializeStores(): void {
   const data = seedData as unknown as SeedData;
 
+  // Load platform settings
+  if (data.platformSettings) {
+    usePlatformSettingsStore.getState().setSettings(data.platformSettings);
+  }
+
   // Load tenants
   useTenantsStore.getState().setTenants(data.tenants ?? []);
+
+  // Load billing data
+  useBillingsStore.getState().setBillings(data.tenantBillings ?? []);
+  useBillingsStore.getState().setInvoices(data.billingInvoices ?? []);
 
   // Load users
   useUsersStore.getState().setPlatformUsers(data.platformUsers ?? []);
@@ -111,6 +122,9 @@ export function exportCurrentState(): SeedData {
     platformUsers: useUsersStore.getState().platformUsers,
     platformActivityLogs: useActivityLogsStore.getState().platformLogs,
     tenants: useTenantsStore.getState().tenants,
+    tenantBillings: useBillingsStore.getState().billings,
+    billingInvoices: useBillingsStore.getState().invoices,
+    platformSettings: usePlatformSettingsStore.getState().settings,
     users: useUsersStore.getState().tenantUsers,
     products: useProductsStore.getState().products,
     categories: useCategoriesStore.getState().categories,

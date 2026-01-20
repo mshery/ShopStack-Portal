@@ -18,11 +18,22 @@ interface AuthStoreState {
   userType: AuthUserType;
   activeTenantId: string | null;
 
+  // Impersonation state
+  isImpersonating: boolean;
+  originalPlatformUser: PlatformUser | null;
+
   // Setters
   setCurrentUser: (user: PlatformUser | TenantUser | null) => void;
   setUserType: (type: AuthUserType) => void;
   setActiveTenantId: (id: string | null) => void;
   logout: () => void;
+
+  // Impersonation actions
+  startImpersonation: (
+    tenantUser: TenantUser,
+    originalUser: PlatformUser,
+  ) => void;
+  endImpersonation: () => void;
 }
 
 export const useAuthStore = create<AuthStoreState>()(
@@ -32,6 +43,8 @@ export const useAuthStore = create<AuthStoreState>()(
       currentUser: null,
       userType: null,
       activeTenantId: null,
+      isImpersonating: false,
+      originalPlatformUser: null,
 
       // Setters
       setCurrentUser: (user) => set({ currentUser: user }),
@@ -43,7 +56,28 @@ export const useAuthStore = create<AuthStoreState>()(
           currentUser: null,
           userType: null,
           activeTenantId: null,
+          isImpersonating: false,
+          originalPlatformUser: null,
         }),
+
+      // Impersonation actions
+      startImpersonation: (tenantUser, originalUser) =>
+        set({
+          currentUser: tenantUser,
+          userType: "tenant",
+          activeTenantId: tenantUser.tenant_id,
+          isImpersonating: true,
+          originalPlatformUser: originalUser,
+        }),
+
+      endImpersonation: () =>
+        set((state) => ({
+          currentUser: state.originalPlatformUser,
+          userType: "platform",
+          activeTenantId: null,
+          isImpersonating: false,
+          originalPlatformUser: null,
+        })),
     }),
     {
       name: "saas-auth-storage", // localStorage key

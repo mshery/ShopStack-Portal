@@ -36,6 +36,7 @@ import { Separator } from "@/components/ui/separator";
 import { useAuthStore } from "@/stores/auth.store";
 import { useTenantsStore } from "@/stores/tenants.store";
 import { TenantStatusGuard } from "@/components/guards/TenantStatusGuard";
+import { ImpersonationBanner } from "@/components/platform/ImpersonationBanner";
 import { getInitials } from "@/utils/format";
 import type { TenantUser } from "@/types";
 
@@ -243,6 +244,7 @@ export function TenantLayout() {
 
   return (
     <TenantStatusGuard>
+      <ImpersonationBanner />
       <div className="flex h-screen bg-[hsl(var(--background))]">
         {/* Desktop Sidebar */}
         <aside

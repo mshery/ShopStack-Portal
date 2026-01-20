@@ -14,14 +14,12 @@ import { useTenantUsersScreen } from "../../hooks/useTenantUsersScreen";
 import { UserCircleIcon } from "../../components/ui/Icons";
 import EditUserModal from "../../components/tenant/EditUserModal";
 import DeleteConfirmationModal from "../../components/common/DeleteConfirmationModal";
-import { useUsersStore } from "../../stores/users.store";
 import { usePermissions } from "../../hooks/usePermissions";
 import { Pencil, Trash2 } from "lucide-react";
 import type { TenantUser } from "../../types";
 
 export default function TenantUsersPage() {
   const { status, vm, actions } = useTenantUsersScreen();
-  const { removeTenantUser } = useUsersStore();
   const { can } = usePermissions();
   const [selectedUser, setSelectedUser] = useState<TenantUser | null>(null);
   const [userToDelete, setUserToDelete] = useState<TenantUser | null>(null);
@@ -42,14 +40,35 @@ export default function TenantUsersPage() {
             onChange={(e) => actions.setSearch(e.target.value)}
           />
         </div>
-        {can("users:create") && (
-          <Link to="/tenant/users/new">
-            <Button variant="primary">Add New User</Button>
-          </Link>
-          // <Button variant="primary" onClick={() => setIsAddModalOpen(true)}>
-          //   Add New User
-          // </Button>
-        )}
+        <div className="flex items-center gap-3">
+          <div className="hidden sm:block text-right">
+            <span className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              Usage
+            </span>
+            <span
+              className={`text-sm font-bold ${!vm.canAddMore ? "text-red-500" : "text-gray-700"
+                }`}
+            >
+              {vm.currentCount} / {vm.maxUsers}
+            </span>
+          </div>
+
+          {can("users:create") && (
+            <Link
+              to={vm.canAddMore ? "/tenant/users/new" : "#"}
+              className={!vm.canAddMore ? "cursor-not-allowed opacity-50" : ""}
+              onClick={(e) => !vm.canAddMore && e.preventDefault()}
+            >
+              <Button
+                variant="primary"
+                disabled={!vm.canAddMore}
+                title={!vm.canAddMore ? "User limit reached for your plan" : ""}
+              >
+                Add New User
+              </Button>
+            </Link>
+          )}
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
@@ -144,13 +163,15 @@ export default function TenantUsersPage() {
                       >
                         <Pencil className="h-4 w-4" />
                       </button>
-                      <button
-                        onClick={() => setUserToDelete(user)}
-                        className="p-2 rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                        title="Delete user"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      {(vm.isSuperAdmin || user.createdBy === "tenant") && (
+                        <button
+                          onClick={() => setUserToDelete(user)}
+                          className="p-2 rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                          title="Delete user"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -183,7 +204,7 @@ export default function TenantUsersPage() {
         onClose={() => setUserToDelete(null)}
         onConfirm={() => {
           if (userToDelete) {
-            removeTenantUser(userToDelete.id);
+            actions.deleteUser(userToDelete.id);
           }
         }}
         title="Delete User"

@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { useUsersStore } from "../stores/users.store";
+import { useTenantsStore } from "../stores/tenants.store";
 import { useAuthStore } from "../stores/auth.store";
 import { useParams } from "react-router-dom";
 import type { TenantUser } from "../types";
@@ -9,10 +10,16 @@ export type UsersStatus = "loading" | "error" | "empty" | "success";
 export function useTenantUsersScreen() {
   const { tenantId: paramTenantId } = useParams<{ tenantId: string }>();
   const { activeTenantId } = useAuthStore();
+  const { tenants } = useTenantsStore();
   const { tenantUsers: allUsers } = useUsersStore();
   const [search, setSearch] = useState("");
 
   const tenantId = paramTenantId || activeTenantId;
+
+  const tenant = useMemo(
+    () => tenants.find((t) => t.id === tenantId),
+    [tenants, tenantId],
+  );
 
   const tenantUsers = useMemo(() => {
     if (!tenantId) return [];
@@ -27,21 +34,42 @@ export function useTenantUsersScreen() {
     );
   }, [tenantUsers, search]);
 
+  const { userType, isImpersonating } = useAuthStore();
+  const isSuperAdmin = userType === "platform" || isImpersonating;
+
   const vm = useMemo(
     () => ({
       users: filteredUsers,
       search,
       isEmpty: filteredUsers.length === 0,
       tenantId,
+      canAddMore: tenant ? tenantUsers.length < tenant.maxUsers : false,
+      maxUsers: tenant?.maxUsers ?? 0,
+      currentCount: tenantUsers.length,
+      isSuperAdmin,
     }),
-    [filteredUsers, search, tenantId],
+    [filteredUsers, search, tenantId, tenant, tenantUsers.length, isSuperAdmin],
+  );
+
+  const { removeTenantUser } = useUsersStore();
+
+  const deleteUser = useCallback(
+    (userId: string) => {
+      if (!isSuperAdmin) {
+        alert("Only Super Admins can delete users.");
+        return;
+      }
+      removeTenantUser(userId);
+    },
+    [isSuperAdmin, removeTenantUser],
   );
 
   const actions = useMemo(
     () => ({
       setSearch,
+      deleteUser,
     }),
-    [],
+    [deleteUser],
   );
 
   const status: UsersStatus = !tenantId

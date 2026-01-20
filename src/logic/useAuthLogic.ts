@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/auth.store";
 import { useUsersStore } from "@/stores/users.store";
+import { useTenantsStore } from "@/stores/tenants.store";
 import type { AsyncStatus } from "@/types";
 
 /**
@@ -16,6 +17,7 @@ export function useAuthLogic() {
   const navigate = useNavigate();
   const { setCurrentUser, setUserType, setActiveTenantId } = useAuthStore();
   const { platformUsers, tenantUsers } = useUsersStore();
+  const { tenants } = useTenantsStore();
 
   const [status, setStatus] = useState<AsyncStatus>("success");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -36,6 +38,11 @@ export function useAuthLogic() {
       );
 
       if (platformUser) {
+        if (platformUser.status !== "active") {
+          setErrorMessage("Your account is inactive. Please contact support.");
+          setStatus("error");
+          return;
+        }
         setCurrentUser(platformUser);
         setUserType("platform");
         setActiveTenantId(null);
@@ -51,6 +58,30 @@ export function useAuthLogic() {
       );
 
       if (tenantUser) {
+        if (tenantUser.status !== "active") {
+          setErrorMessage(
+            "Your account is inactive. Please contact your administrator.",
+          );
+          setStatus("error");
+          return;
+        }
+
+        const tenant = tenants.find((t) => t.id === tenantUser.tenant_id);
+        if (tenant) {
+          if (tenant.status === "suspended") {
+            setErrorMessage(
+              "Your organization's account has been suspended. Please contact support.",
+            );
+            setStatus("error");
+            return;
+          }
+          if (tenant.status === "inactive") {
+            setErrorMessage("Your organization's account is inactive.");
+            setStatus("error");
+            return;
+          }
+        }
+
         setCurrentUser(tenantUser);
         setUserType("tenant");
         setActiveTenantId(tenantUser.tenant_id);
@@ -65,6 +96,7 @@ export function useAuthLogic() {
     [
       platformUsers,
       tenantUsers,
+      tenants,
       setCurrentUser,
       setUserType,
       setActiveTenantId,

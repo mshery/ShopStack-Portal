@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { usePOSStore } from "@/stores/pos.store";
 import { useProductsStore } from "@/stores/products.store";
+import { useAuthStore } from "@/stores/auth.store";
 import type { AsyncStatus } from "@/types";
 
 /**
@@ -8,8 +9,24 @@ import type { AsyncStatus } from "@/types";
  * Provides analytics and reporting data
  */
 export function useReportsScreen() {
-  const { sales, refunds } = usePOSStore();
-  const { products } = useProductsStore();
+  const { sales: allSales, refunds: allRefunds } = usePOSStore();
+  const { products: allProducts } = useProductsStore();
+  const { activeTenantId } = useAuthStore();
+
+  const sales = useMemo(
+    () => allSales.filter((s) => s.tenant_id === activeTenantId),
+    [allSales, activeTenantId],
+  );
+
+  const refunds = useMemo(
+    () => allRefunds.filter((r) => r.tenant_id === activeTenantId),
+    [allRefunds, activeTenantId],
+  );
+
+  const products = useMemo(
+    () => allProducts.filter((p) => p.tenant_id === activeTenantId),
+    [allProducts, activeTenantId],
+  );
 
   const status: AsyncStatus = "success";
 

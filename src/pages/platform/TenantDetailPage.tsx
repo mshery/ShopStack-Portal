@@ -16,6 +16,8 @@ import {
 } from "../../components/ui/Icons";
 import { EditTenantModal } from "../../components/tenant/EditTenantModal";
 import { DeleteTenantModal } from "../../components/tenant/DeleteTenantModal";
+import { TenantBillingTab } from "../../components/platform/TenantBillingTab";
+import { useImpersonation } from "../../hooks/useImpersonation";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../stores/auth.store";
@@ -27,6 +29,8 @@ import type {
   PlatformActivityLog,
 } from "../../types";
 
+type TabType = "overview" | "billing" | "activity";
+
 export default function TenantDetailPage() {
   const { tenantId } = useParams<{ tenantId: string }>();
   const { tenants } = useTenantsStore();
@@ -36,8 +40,10 @@ export default function TenantDetailPage() {
   const { currentUser } = useAuthStore();
   const navigate = useNavigate();
   const { removeTenant } = useTenantsStore();
+  const { actions: impersonationActions } = useImpersonation();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabType>("overview");
 
   const tenant = useMemo(
     () => tenants.find((t) => t.id === tenantId),
@@ -72,7 +78,7 @@ export default function TenantDetailPage() {
         slug: tenant!.slug,
       },
       createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
     addPlatformLog(log);
 
@@ -107,6 +113,12 @@ export default function TenantDetailPage() {
       change: { value: "Recent", isUp: true },
       icon: <ListIcon className="size-6" />,
     },
+  ];
+
+  const tabs: { id: TabType; label: string }[] = [
+    { id: "overview", label: "Overview" },
+    { id: "billing", label: "Billing" },
+    { id: "activity", label: "Activity" },
   ];
 
   return (
@@ -148,30 +160,60 @@ export default function TenantDetailPage() {
           >
             Delete Tenant
           </Button>
-          <Button variant="primary">Access as Admin</Button>
+          <Button
+            variant="primary"
+            onClick={() => impersonationActions.impersonateTenant(tenantId!)}
+          >
+            Access as Admin
+          </Button>
         </div>
       </div>
 
       <PageBreadcrumb pageTitle="Tenant Details" />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-6 lg:grid-cols-3">
-        {metrics.map((metric) => (
-          <MetricCard
-            key={metric.title}
-            title={metric.title}
-            value={metric.value}
-            change={metric.change}
-            icon={metric.icon}
-          />
-        ))}
+      {/* Tab Navigation */}
+      <div className="mb-6 border-b border-gray-200 dark:border-gray-700">
+        <nav className="-mb-px flex space-x-8">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === tab.id
+                ? "border-brand-500 text-brand-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
       </div>
 
-      <div className="mt-6">
+      {/* Tab Content */}
+      {activeTab === "overview" && (
+        <>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-6 lg:grid-cols-3">
+            {metrics.map((metric) => (
+              <MetricCard
+                key={metric.title}
+                title={metric.title}
+                value={metric.value}
+                change={metric.change}
+                icon={metric.icon}
+              />
+            ))}
+          </div>
+        </>
+      )}
+
+      {activeTab === "billing" && <TenantBillingTab tenantId={tenantId!} />}
+
+      {activeTab === "activity" && (
         <RecentActivities
           logs={tenantLogs.slice(0, 10)}
           title="Tenant Activity Audit"
         />
-      </div>
+      )}
 
       {/* Edit Modal */}
       <EditTenantModal

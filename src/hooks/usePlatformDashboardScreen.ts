@@ -47,12 +47,51 @@ export function usePlatformDashboardScreen() {
       .slice(0, 5);
   }, [platformLogs]);
 
+  const planDistribution = useMemo(() => {
+    const counts = tenants.reduce(
+      (acc, tenant) => {
+        acc[tenant.plan] = (acc[tenant.plan] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
+
+    return Object.entries(counts).map(([name, value]) => ({
+      name: name.charAt(0).toUpperCase() + name.slice(1),
+      value,
+    }));
+  }, [tenants]);
+
+  const tenantGrowth = useMemo(() => {
+    const growth = tenants
+      .sort(
+        (a, b) =>
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+      )
+      .reduce(
+        (acc, tenant, index) => {
+          const date = new Date(tenant.createdAt).toLocaleDateString("en-US", {
+            month: "short",
+            year: "2-digit",
+          });
+          // Simplistic growth chart: incremental count
+          acc.push({ name: date, count: index + 1 });
+          return acc;
+        },
+        [] as { name: string; count: number }[],
+      );
+
+    return growth;
+  }, [tenants]);
+
   const vm = useMemo(
     () => ({
       metrics,
       recentLogs,
+      planDistribution,
+      tenantGrowth,
     }),
-    [metrics, recentLogs],
+    [metrics, recentLogs, planDistribution, tenantGrowth],
   );
 
   const actions = useMemo(

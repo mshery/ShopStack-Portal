@@ -3,12 +3,21 @@
     "version": "1.0.0",
     "seededAt": "2026-01-04T00:00:00Z"
   },
+  "platformSettings": {
+    "platformName": "ShopStack Console",
+    "supportEmail": "support@shopstack.com",
+    "maintenanceMode": false,
+    "allowNewRegistrations": true,
+    "primaryColor": "#465fff",
+    "accentColor": "#12b76a"
+  },
   "platformUsers": [
     {
       "id": "platform-user-1",
       "email": "sherri@shopstack.com",
       "password": "12345678",
       "name": "Shahroz Ijaz",
+      "status": "active",
       "role": "super_admin",
       "avatarUrl": null,
       "createdAt": "2025-01-01T00:00:00Z",
@@ -186,6 +195,126 @@
       "updatedAt": "2025-11-01T09:00:00Z"
     }
   ],
+  "tenantBillings": [
+    {
+      "id": "billing-1",
+      "tenant_id": "tenant-1",
+      "plan": "enterprise",
+      "status": "active",
+      "monthlyAmount": 199.0,
+      "billingCycle": "monthly",
+      "nextBillingDate": "2026-02-01T00:00:00Z",
+      "lastPaymentDate": "2026-01-01T00:00:00Z",
+      "lastPaymentAmount": 199.0,
+      "trialEndsAt": null,
+      "createdAt": "2025-06-01T10:00:00Z",
+      "updatedAt": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "billing-2",
+      "tenant_id": "tenant-2",
+      "plan": "starter",
+      "status": "active",
+      "monthlyAmount": 29.0,
+      "billingCycle": "monthly",
+      "nextBillingDate": "2026-02-15T00:00:00Z",
+      "lastPaymentDate": "2026-01-15T00:00:00Z",
+      "lastPaymentAmount": 29.0,
+      "trialEndsAt": null,
+      "createdAt": "2025-07-15T14:30:00Z",
+      "updatedAt": "2026-01-15T00:00:00Z"
+    },
+    {
+      "id": "billing-3",
+      "tenant_id": "tenant-3",
+      "plan": "enterprise",
+      "status": "cancelled",
+      "monthlyAmount": 199.0,
+      "billingCycle": "monthly",
+      "nextBillingDate": null,
+      "lastPaymentDate": "2025-11-20T00:00:00Z",
+      "lastPaymentAmount": 199.0,
+      "trialEndsAt": null,
+      "createdAt": "2025-10-20T11:00:00Z",
+      "updatedAt": "2025-12-01T16:00:00Z"
+    },
+    {
+      "id": "billing-4",
+      "tenant_id": "tenant-4",
+      "plan": "enterprise",
+      "status": "trial",
+      "monthlyAmount": 199.0,
+      "billingCycle": "monthly",
+      "nextBillingDate": "2026-02-01T00:00:00Z",
+      "lastPaymentDate": null,
+      "lastPaymentAmount": null,
+      "trialEndsAt": "2026-02-01T00:00:00Z",
+      "createdAt": "2025-11-01T09:00:00Z",
+      "updatedAt": "2025-11-01T09:00:00Z"
+    }
+  ],
+  "billingInvoices": [
+    {
+      "id": "invoice-1",
+      "tenant_id": "tenant-1",
+      "invoiceNumber": "INV-2026-0101",
+      "amount": 199.0,
+      "status": "paid",
+      "dueDate": "2026-01-05T00:00:00Z",
+      "paidAt": "2026-01-01T10:30:00Z",
+      "createdAt": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "invoice-2",
+      "tenant_id": "tenant-1",
+      "invoiceNumber": "INV-2025-1201",
+      "amount": 199.0,
+      "status": "paid",
+      "dueDate": "2025-12-05T00:00:00Z",
+      "paidAt": "2025-12-01T09:15:00Z",
+      "createdAt": "2025-12-01T00:00:00Z"
+    },
+    {
+      "id": "invoice-3",
+      "tenant_id": "tenant-1",
+      "invoiceNumber": "INV-2025-1101",
+      "amount": 199.0,
+      "status": "paid",
+      "dueDate": "2025-11-05T00:00:00Z",
+      "paidAt": "2025-11-01T11:00:00Z",
+      "createdAt": "2025-11-01T00:00:00Z"
+    },
+    {
+      "id": "invoice-4",
+      "tenant_id": "tenant-2",
+      "invoiceNumber": "INV-2026-0115",
+      "amount": 29.0,
+      "status": "paid",
+      "dueDate": "2026-01-20T00:00:00Z",
+      "paidAt": "2026-01-15T14:00:00Z",
+      "createdAt": "2026-01-15T00:00:00Z"
+    },
+    {
+      "id": "invoice-5",
+      "tenant_id": "tenant-3",
+      "invoiceNumber": "INV-2025-1120",
+      "amount": 199.0,
+      "status": "paid",
+      "dueDate": "2025-11-25T00:00:00Z",
+      "paidAt": "2025-11-20T16:00:00Z",
+      "createdAt": "2025-11-20T00:00:00Z"
+    },
+    {
+      "id": "invoice-6",
+      "tenant_id": "tenant-3",
+      "invoiceNumber": "INV-2025-1220",
+      "amount": 199.0,
+      "status": "failed",
+      "dueDate": "2025-12-25T00:00:00Z",
+      "paidAt": null,
+      "createdAt": "2025-12-20T00:00:00Z"
+    }
+  ],
   "users": [
     {
       "id": "user-1",
@@ -196,6 +325,7 @@
       "role": "owner",
       "status": "active",
       "avatarUrl": null,
+      "createdBy": "platform",
       "createdAt": "2025-06-01T10:05:00Z",
       "updatedAt": "2025-06-01T10:05:00Z",
       "phone": null
@@ -209,6 +339,7 @@
       "role": "owner",
       "status": "active",
       "avatarUrl": null,
+      "createdBy": "platform",
       "createdAt": "2025-06-10T09:00:00Z",
       "updatedAt": "2025-06-10T09:00:00Z",
       "phone": null
@@ -222,6 +353,7 @@
       "role": "cashier",
       "status": "active",
       "avatarUrl": null,
+      "createdBy": "platform",
       "createdAt": "2025-06-15T09:00:00Z",
       "updatedAt": "2025-06-15T09:00:00Z",
       "phone": null

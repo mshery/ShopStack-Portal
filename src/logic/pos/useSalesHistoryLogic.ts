@@ -1,5 +1,6 @@
 import { useMemo, useCallback } from "react";
 import { useAuthStore } from "@/stores/auth.store";
+import { useTenantsStore } from "@/stores/tenants.store";
 import { usePOSStore } from "@/stores/pos.store";
 import { useProductsStore } from "@/stores/products.store";
 import type { AsyncStatus, RefundLineItem } from "@/types";
@@ -10,6 +11,7 @@ import type { AsyncStatus, RefundLineItem } from "@/types";
 export function useSalesHistoryLogic() {
   const { activeTenantId, currentUser } = useAuthStore();
   const { sales, refunds, processRefund } = usePOSStore();
+  const { tenants } = useTenantsStore();
   const { updateStock } = useProductsStore();
 
   const status: AsyncStatus = "success";
@@ -23,6 +25,23 @@ export function useSalesHistoryLogic() {
     if (!activeTenantId) return [];
     return refunds.filter((r) => r.tenant_id === activeTenantId).reverse();
   }, [activeTenantId, refunds]);
+
+  // Check order limits
+  const orderStats = useMemo(() => {
+    if (!activeTenantId) {
+      return { canAddMore: true, maxOrders: Infinity, currentCount: 0 };
+    }
+
+    const tenant = tenants.find((t) => t.id === activeTenantId);
+    const maxOrders = tenant?.maxOrders ?? 100;
+    const currentCount = tenantSales.length;
+
+    return {
+      canAddMore: currentCount < maxOrders,
+      maxOrders,
+      currentCount,
+    };
+  }, [activeTenantId, tenants, tenantSales]);
 
   const profitStats = useMemo(() => {
     let totalProfit = 0;
@@ -60,8 +79,16 @@ export function useSalesHistoryLogic() {
       margin: profitStats.margin,
       activeTenantId,
       currentUser,
+      orderStats,
     }),
-    [tenantSales, tenantRefunds, profitStats, activeTenantId, currentUser],
+    [
+      tenantSales,
+      tenantRefunds,
+      profitStats,
+      activeTenantId,
+      currentUser,
+      orderStats,
+    ],
   );
 
   const handleRefund = useCallback(

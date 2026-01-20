@@ -42,6 +42,15 @@ export interface PlatformActivityLog {
   updatedAt: string;
 }
 
+export interface PlatformSettings {
+  platformName: string;
+  supportEmail: string;
+  maintenanceMode: boolean;
+  allowNewRegistrations: boolean;
+  primaryColor: string;
+  accentColor: string;
+}
+
 // ============================================
 // Tenant Types
 // ============================================
@@ -81,6 +90,40 @@ export interface Tenant {
 }
 
 // ============================================
+// Tenant Billing Types
+// ============================================
+
+export type BillingStatus = "active" | "past_due" | "cancelled" | "trial";
+export type BillingCycle = "monthly" | "yearly";
+export type InvoiceStatus = "paid" | "pending" | "failed";
+
+export interface TenantBilling {
+  id: string;
+  tenant_id: string;
+  plan: TenantPlan;
+  status: BillingStatus;
+  monthlyAmount: number;
+  billingCycle: BillingCycle;
+  nextBillingDate: string;
+  lastPaymentDate: string | null;
+  lastPaymentAmount: number | null;
+  trialEndsAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BillingInvoice {
+  id: string;
+  tenant_id: string;
+  invoiceNumber: string;
+  amount: number;
+  status: InvoiceStatus;
+  dueDate: string;
+  paidAt: string | null;
+  createdAt: string;
+}
+
+// ============================================
 // Tenant User Types
 // ============================================
 
@@ -97,6 +140,7 @@ export interface TenantUser {
   status: UserStatus;
   phone: string | null;
   avatarUrl: string | null;
+  createdBy: "platform" | "tenant";
   createdAt: string;
   updatedAt: string;
 }
@@ -428,6 +472,9 @@ export interface SeedData {
   platformUsers: PlatformUser[];
   platformActivityLogs: PlatformActivityLog[];
   tenants: Tenant[];
+  tenantBillings: TenantBilling[];
+  billingInvoices: BillingInvoice[];
+  platformSettings: PlatformSettings;
   users: TenantUser[];
   products: Product[];
   categories: ProductCategory[];

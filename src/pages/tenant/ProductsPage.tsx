@@ -14,7 +14,6 @@ import { useProductsScreen } from "../../hooks/useProductsScreen";
 import { BoxCubeIcon } from "../../components/ui/Icons";
 import EditProductModal from "../../components/tenant/EditProductModal";
 import DeleteConfirmationModal from "../../components/common/DeleteConfirmationModal";
-import { useProductsStore } from "../../stores/products.store";
 import { useCategoriesStore } from "../../stores/categories.store";
 import { useBrandsStore } from "../../stores/brands.store";
 import { Pencil, Trash2 } from "lucide-react";
@@ -24,7 +23,6 @@ import Pagination from "../../components/common/Pagination";
 
 export default function ProductsPage() {
   const { status, vm, actions } = useProductsScreen();
-  const { removeProduct } = useProductsStore();
   const { categories } = useCategoriesStore();
   const { brands } = useBrandsStore();
   const { formatPrice } = useTenantCurrency();
@@ -58,9 +56,35 @@ export default function ProductsPage() {
             onChange={(e) => actions.setSearch(e.target.value)}
           />
         </div>
-        <Link to="/tenant/products/new">
-          <Button variant="primary">Add New Product</Button>
-        </Link>
+        <div className="flex items-center gap-3">
+          <div className="hidden sm:block text-right">
+            <span className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              Usage
+            </span>
+            <span
+              className={`text-sm font-bold ${!vm.canAddMore ? "text-red-500" : "text-gray-700"
+                }`}
+            >
+              {vm.currentCount} / {vm.maxProducts}
+            </span>
+          </div>
+
+          <Link
+            to={vm.canAddMore ? "/tenant/products/new" : "#"}
+            className={!vm.canAddMore ? "cursor-not-allowed opacity-50" : ""}
+            onClick={(e) => !vm.canAddMore && e.preventDefault()}
+          >
+            <Button
+              variant="primary"
+              disabled={!vm.canAddMore}
+              title={
+                !vm.canAddMore ? "Product limit reached for your plan" : ""
+              }
+            >
+              Add New Product
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
@@ -266,7 +290,7 @@ export default function ProductsPage() {
         onClose={() => setProductToDelete(null)}
         onConfirm={() => {
           if (productToDelete) {
-            removeProduct(productToDelete.id);
+            actions.deleteProduct(productToDelete.id);
           }
         }}
         title="Delete Product"

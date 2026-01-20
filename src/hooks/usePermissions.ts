@@ -83,5 +83,7 @@ export function usePermissions() {
     isRole,
     isCashier: role === "cashier",
     isOwner: role === "owner",
+    isSuperAdmin:
+      userType === "platform" || useAuthStore.getState().isImpersonating,
   };
 }

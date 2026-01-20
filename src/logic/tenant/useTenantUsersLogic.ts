@@ -45,7 +45,7 @@ export function useTenantUsersLogic() {
 
   const createUser = useCallback(
     (data: { name: string; email: string; role: UserRole }) => {
-      if (!activeTenantId) return;
+      if (!activeTenantId || !vm.canAddMore) return;
 
       const newUser: TenantUser = {
         id: generateId("user"),
@@ -57,13 +57,14 @@ export function useTenantUsersLogic() {
         status: "active",
         phone: null,
         avatarUrl: null,
+        createdBy: "tenant",
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
 
       addTenantUser(newUser);
     },
-    [activeTenantId, addTenantUser],
+    [activeTenantId, addTenantUser, vm.canAddMore],
   );
 
   const toggleStatus = useCallback(
@@ -75,14 +76,33 @@ export function useTenantUsersLogic() {
     [updateTenantUser],
   );
 
+  const { userType, isImpersonating } = useAuthStore();
+  const isSuperAdmin = userType === "platform" || isImpersonating;
+
+  const deleteUser = useCallback(
+    (userId: string) => {
+      const userToDelete = tenantUsers.find((u) => u.id === userId);
+      if (!userToDelete) return;
+
+      const canDelete = isSuperAdmin || userToDelete.createdBy === "tenant";
+
+      if (!canDelete) {
+        alert("Only Super Admins can delete platform-created users.");
+        return;
+      }
+      removeTenantUser(userId);
+    },
+    [isSuperAdmin, removeTenantUser, tenantUsers],
+  );
+
   const actions = useMemo(
     () => ({
       setSearch,
       createUser,
       toggleStatus,
-      deleteUser: removeTenantUser,
+      deleteUser,
     }),
-    [createUser, toggleStatus, removeTenantUser],
+    [createUser, toggleStatus, deleteUser],
   );
 
   return { status, vm, actions };

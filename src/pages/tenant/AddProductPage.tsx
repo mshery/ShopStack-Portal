@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/auth.store";
 import { useProductsStore } from "@/stores/products.store";
 import { useCategoriesStore } from "@/stores/categories.store";
 import { useBrandsStore } from "@/stores/brands.store";
+import { useProductsScreen } from "@/hooks/useProductsScreen";
 import {
   Card,
   CardContent,
@@ -22,11 +23,13 @@ import {
   Tag,
   DollarSign,
   ChevronDown,
+  AlertTriangle,
 } from "lucide-react";
 import type { Product } from "@/types";
 
 export default function AddProductPage() {
   const navigate = useNavigate();
+  const { vm } = useProductsScreen();
   const { activeTenantId } = useAuthStore();
   const { addProduct } = useProductsStore();
   const { categories } = useCategoriesStore();
@@ -48,6 +51,33 @@ export default function AddProductPage() {
     minimumStock: "",
     description: "",
   });
+
+  // Guard: if over limit, redirect back (unless loading)
+  useEffect(() => {
+    if (!vm.canAddMore) {
+      // Just to be safe, we could show a toast or message here
+    }
+  }, [vm.canAddMore, navigate]);
+
+  if (!vm.canAddMore) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] text-center p-6 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm">
+        <div className="w-16 h-16 bg-red-50 dark:bg-red-900/10 rounded-full flex items-center justify-center mb-4">
+          <AlertTriangle className="w-8 h-8 text-red-500" />
+        </div>
+        <h2 className="text-xl font-bold text-gray-800 dark:text-white/90 mb-2">
+          Product Limit Reached
+        </h2>
+        <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-sm">
+          Your current plan allows for a maximum of <b>{vm.maxProducts}</b>{" "}
+          products. Please upgrade your plan to add more.
+        </p>
+        <Button onClick={() => navigate("/tenant/products")} variant="primary">
+          Back to Products
+        </Button>
+      </div>
+    );
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

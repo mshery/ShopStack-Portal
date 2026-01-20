@@ -17,9 +17,11 @@ import { useTenantsStore } from "@/stores/tenants.store";
 import { useCategoriesStore } from "@/stores/categories.store";
 import { useBrandsStore } from "@/stores/brands.store";
 import PageBreadcrumb from "@/components/common/PageBreadcrumb";
-import { Check, ChevronRight, Package, Tag } from "lucide-react";
+import { Check, ChevronRight, Package, Tag, ShieldAlert } from "lucide-react";
+import { usePermissions } from "@/hooks/usePermissions";
 
 export default function TenantSettingsPage() {
+  const { isSuperAdmin } = usePermissions();
   const { activeTenantId } = useAuthStore();
   const { tenants, updateTenantSettings } = useTenantsStore();
   const tenant = tenants.find((t) => t.id === activeTenantId);
@@ -321,16 +323,22 @@ export default function TenantSettingsPage() {
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between rounded-lg border border-red-200 dark:border-red-900/50 bg-white dark:bg-red-950/10 p-4">
-                <div>
+                <div className="flex-1">
                   <p className="font-medium text-gray-900 dark:text-white/90">
                     Delete All Data
                   </p>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                    This action cannot be undone. All your data will be
-                    permanently deleted.
+                    {isSuperAdmin
+                      ? "This action cannot be undone. All your data will be permanently deleted."
+                      : "Only a Super Admin can perform this action. Please contact support if you need to delete your data."}
                   </p>
                 </div>
-                <Button variant="destructive" className="ml-4 h-11 px-6">
+                <Button
+                  variant="destructive"
+                  className="ml-4 h-11 px-6 gap-2"
+                  disabled={!isSuperAdmin}
+                >
+                  {!isSuperAdmin && <ShieldAlert className="w-4 h-4" />}
                   Delete All Data
                 </Button>
               </div>

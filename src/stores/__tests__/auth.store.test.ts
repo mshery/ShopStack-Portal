@@ -25,6 +25,7 @@ describe("Auth Store", () => {
         status: "active",
         phone: null,
         avatarUrl: null,
+        createdBy: "tenant",
         createdAt: "2025-01-01T00:00:00Z",
         updatedAt: "2025-01-01T00:00:00Z",
       };

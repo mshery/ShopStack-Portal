@@ -13,6 +13,7 @@ import {
 import { Stepper } from "../ui/Stepper";
 import { useUsersStore } from "../../stores/users.store";
 import { useAuthStore } from "../../stores/auth.store";
+import { useTenantsStore } from "../../stores/tenants.store";
 import {
   ChevronLeft,
   ChevronRight,
@@ -149,8 +150,24 @@ export default function AddUserModal({ isOpen, onClose }: AddUserModalProps) {
     setCurrentStep((prev) => Math.max(prev - 1, 1));
   };
 
+  const { tenants } = useTenantsStore();
+
   const handleSubmit = () => {
     if (!activeTenantId) return;
+
+    // Check user limits
+    const tenant = tenants.find((t) => t.id === activeTenantId);
+    const maxUsers = tenant?.maxUsers ?? 1;
+    const currentCount = tenantUsers.filter(
+      (u) => u.tenant_id === activeTenantId
+    ).length;
+
+    if (currentCount >= maxUsers) {
+      alert(
+        `User limit reached (${currentCount}/${maxUsers}). Please upgrade your plan to add more users.`
+      );
+      return;
+    }
 
     const fullName =
       `${formData.firstName.trim()} ${formData.lastName.trim()}`.trim();
@@ -165,6 +182,7 @@ export default function AddUserModal({ isOpen, onClose }: AddUserModalProps) {
       status: formData.status,
       phone: null,
       avatarUrl: null,
+      createdBy: "tenant",
     });
 
     handleClose();

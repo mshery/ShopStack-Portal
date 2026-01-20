@@ -80,6 +80,29 @@ export default function SalesHistoryPage() {
             Completed sales and transaction records
           </p>
         </div>
+
+        {/* Usage Summary */}
+        <div className="flex items-center gap-4">
+          <div className="text-right">
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              Order Usage
+            </p>
+            <p
+              className={`text-sm font-bold ${!vm.orderStats.canAddMore
+                  ? "text-rose-600 dark:text-rose-400"
+                  : "text-gray-900 dark:text-white"
+                }`}
+            >
+              {vm.orderStats.currentCount} /{" "}
+              {vm.orderStats.maxOrders === Infinity
+                ? "∞"
+                : vm.orderStats.maxOrders}
+            </p>
+          </div>
+          <div className="h-10 w-10 rounded-xl bg-brand-50 dark:bg-brand-900/20 flex items-center justify-center">
+            <Banknote className="h-5 w-5 text-brand-600 dark:text-brand-400" />
+          </div>
+        </div>
       </div>
 
       <Tabs defaultValue="orders" className="w-full">

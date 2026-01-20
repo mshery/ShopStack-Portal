@@ -25,15 +25,16 @@ export interface CreateTenantData {
   createOwner: boolean;
   ownerName: string;
   ownerEmail: string;
+  ownerPassword: string;
 }
 
 const initialData: CreateTenantData = {
   slug: "",
   companyName: "",
   plan: "starter",
-  maxUsers: 5,
-  maxProducts: 100,
-  maxOrders: 500,
+  maxUsers: 1,
+  maxProducts: 20,
+  maxOrders: 100,
   features: {
     posEnabled: false,
     reportsEnabled: false,
@@ -42,6 +43,7 @@ const initialData: CreateTenantData = {
   createOwner: false,
   ownerName: "",
   ownerEmail: "",
+  ownerPassword: "",
 };
 
 const STEPS = [
@@ -98,6 +100,12 @@ export function useCreateTenantLogic() {
               newErrors.ownerEmail = "Owner email is required";
             } else if (!/\S+@\S+\.\S+/.test(formData.ownerEmail)) {
               newErrors.ownerEmail = "Invalid email format";
+            }
+            if (!formData.ownerPassword.trim()) {
+              newErrors.ownerPassword = "Password is required";
+            } else if (formData.ownerPassword.length < 8) {
+              newErrors.ownerPassword =
+                "Password must be at least 8 characters";
             }
           }
           break;
@@ -176,12 +184,13 @@ export function useCreateTenantLogic() {
         id: ownerId,
         tenant_id: tenantId,
         email: formData.ownerEmail,
-        password: "", // Password should be set separately in a real app
+        password: formData.ownerPassword,
         name: formData.ownerName,
         role: "owner",
         status: "active",
         phone: null,
         avatarUrl: null,
+        createdBy: "platform",
         createdAt: now,
         updatedAt: now,
       };
