@@ -46,7 +46,7 @@ export interface PlatformActivityLog {
 // Tenant Types
 // ============================================
 
-export type TenantPlan = "starter" | "professional" | "enterprise";
+export type TenantPlan = "starter" | "enterprise";
 export type TenantStatus = "active" | "inactive" | "suspended";
 
 export interface TenantFeatures {

@@ -25,7 +25,6 @@ import {
   Package,
   ShoppingCart,
   Sparkles,
-  Zap,
   Globe,
 } from "lucide-react";
 import { formatPlanName } from "@/utils/format";
@@ -242,27 +241,23 @@ function StepPlanLimits({
     limits: { users: number; products: number; orders: number };
     icon: React.ReactNode;
     color: string;
+    description: string;
   }[] = [
       {
         value: "starter",
         label: "Starter",
-        limits: { users: 5, products: 100, orders: 500 },
+        limits: { users: 1, products: 20, orders: 100 },
         icon: <Sparkles className="h-5 w-5" />,
         color: "success-600",
-      },
-      {
-        value: "professional",
-        label: "Professional",
-        limits: { users: 25, products: 1000, orders: 10000 },
-        icon: <Zap className="h-5 w-5" />,
-        color: "brand-600",
+        description: "For small businesses getting started",
       },
       {
         value: "enterprise",
         label: "Enterprise",
-        limits: { users: 100, products: 10000, orders: 100000 },
+        limits: { users: 999999, products: 999999, orders: 999999 },
         icon: <Building2 className="h-5 w-5" />,
-        color: "warning-600",
+        color: "brand-600",
+        description: "Unlimited access with full control",
       },
     ];
 
@@ -307,8 +302,8 @@ function StepPlanLimits({
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 className={`group relative overflow-hidden rounded-xl border-2 p-4 text-left transition-all ${formData.plan === plan.value
-                    ? "border-brand-500 bg-brand-50 shadow-md"
-                    : "border-gray-200 bg-white hover:border-brand-300 hover:shadow-sm"
+                  ? "border-brand-500 bg-brand-50 shadow-md"
+                  : "border-gray-200 bg-white hover:border-brand-300 hover:shadow-sm"
                   }`}
               >
                 <div
@@ -453,8 +448,8 @@ function StepFeatures({
             key={feature.key}
             whileHover={{ scale: 1.01 }}
             className={`flex items-center justify-between rounded-xl border-2 p-4 transition-all ${formData.features[feature.key]
-                ? "border-brand-500 bg-brand-50 shadow-sm"
-                : "border-gray-200 bg-white hover:border-gray-300"
+              ? "border-brand-500 bg-brand-50 shadow-sm"
+              : "border-gray-200 bg-white hover:border-gray-300"
               }`}
           >
             <div className="flex items-center gap-3">
