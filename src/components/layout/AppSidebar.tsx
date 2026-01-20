@@ -13,6 +13,7 @@ import {
   UserGroupIcon,
   ChartBarIcon,
   CogIcon,
+  HorizontaLDots,
 } from "../ui/Icons";
 import { useSidebar } from "../../app/context/SidebarContext";
 import { useAuthStore } from "../../stores/auth.store";
@@ -235,29 +236,38 @@ const AppSidebar: React.FC = () => {
 
               return (
                 <div key={category}>
-                  {category && (isExpanded || isHovered || isMobileOpen) && (
-                    <h2 className="mb-3 text-xs uppercase font-semibold text-gray-400 px-2">
-                      {category}
-                    </h2>
+                  {(isExpanded || isHovered || isMobileOpen) ? (
+                    category && (
+                      <h2 className="mb-4 text-xs uppercase flex leading-[20px] text-gray-400 px-3">
+                        {category}
+                      </h2>
+                    )
+                  ) : (
+                    category && (
+                      <div className="flex justify-center mb-4">
+                        <HorizontaLDots className="size-6 text-gray-400" />
+                      </div>
+                    )
                   )}
                   <ul className="flex flex-col gap-2">
                     {items.map((item) => (
                       <li key={item.path}>
                         <Link
                           to={item.path}
-                          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive(item.path)
-                            ? "bg-brand-50 text-brand-600 dark:bg-brand-900/20 dark:text-brand-400"
-                            : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                          className={`menu-item group ${isActive(item.path) ? "menu-item-active" : "menu-item-inactive"
                             } ${!isExpanded && !isHovered && !isMobileOpen
                               ? "lg:justify-center"
                               : ""
                             }`}
                         >
-                          <span className="w-5 h-5 flex-shrink-0">
+                          <span className={`menu-item-icon-size ${isActive(item.path)
+                            ? "menu-item-icon-active"
+                            : "menu-item-icon-inactive"
+                            }`}>
                             {item.icon}
                           </span>
                           {(isExpanded || isHovered || isMobileOpen) && (
-                            <span className="text-sm font-medium">
+                            <span className="menu-item-text">
                               {item.name}
                             </span>
                           )}
