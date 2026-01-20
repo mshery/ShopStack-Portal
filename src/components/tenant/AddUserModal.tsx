@@ -163,6 +163,7 @@ export default function AddUserModal({ isOpen, onClose }: AddUserModalProps) {
       password: formData.password,
       role: formData.role,
       status: formData.status,
+      phone: null,
       avatarUrl: null,
     });
 

@@ -193,13 +193,12 @@ const AppSidebar: React.FC = () => {
 
   return (
     <aside
-      className={`fixed mt-16 flex flex-col lg:mt-0 top-0 px-5 left-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-50 border-r border-gray-200 
-        ${
-          isExpanded || isMobileOpen
+      className={`fixed flex flex-col lg:mt-0 top-0 px-5 left-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-50 border-r border-gray-200 
+        ${isExpanded || isMobileOpen
+          ? "w-[290px]"
+          : isHovered
             ? "w-[290px]"
-            : isHovered
-              ? "w-[290px]"
-              : "w-[90px]"
+            : "w-[90px]"
         }
         ${isMobileOpen ? "translate-x-0" : "-translate-x-full"}
         lg:translate-x-0`}
@@ -207,26 +206,25 @@ const AppSidebar: React.FC = () => {
       onMouseLeave={() => setIsHovered(false)}
     >
       <div
-        className={`py-8 flex ${
-          !isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
-        }`}
+        className={`py-8 flex ${!isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
+          }`}
       >
-        <Link to="/">
-          {isExpanded || isHovered || isMobileOpen ? (
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center text-white font-bold">
-                S
-              </div>
-              <span className="text-xl font-bold dark:text-white">
-                ShopStack
-              </span>
-            </div>
-          ) : (
+
+        {isExpanded || isHovered || isMobileOpen ? (
+          <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center text-white font-bold">
-              SS
+              S
             </div>
-          )}
-        </Link>
+            <span className="text-xl font-bold dark:text-white">
+              ShopStack
+            </span>
+          </div>
+        ) : (
+          <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center text-white font-bold">
+            SS
+          </div>
+        )}
+
       </div>
       <div className="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar">
         <nav className="mb-6">
@@ -247,15 +245,13 @@ const AppSidebar: React.FC = () => {
                       <li key={item.path}>
                         <Link
                           to={item.path}
-                          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                            isActive(item.path)
-                              ? "bg-brand-50 text-brand-600 dark:bg-brand-900/20 dark:text-brand-400"
-                              : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
-                          } ${
-                            !isExpanded && !isHovered && !isMobileOpen
+                          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive(item.path)
+                            ? "bg-brand-50 text-brand-600 dark:bg-brand-900/20 dark:text-brand-400"
+                            : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                            } ${!isExpanded && !isHovered && !isMobileOpen
                               ? "lg:justify-center"
                               : ""
-                          }`}
+                            }`}
                         >
                           <span className="w-5 h-5 flex-shrink-0">
                             {item.icon}
@@ -274,6 +270,8 @@ const AppSidebar: React.FC = () => {
             })}
           </div>
         </nav>
+        {/* Added spacer to ensure last item is visible on scroll */}
+        <div className="mt-auto pb-10"></div>
       </div>
     </aside>
   );

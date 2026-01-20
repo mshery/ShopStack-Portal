@@ -55,6 +55,7 @@ export function useTenantUsersLogic() {
         name: data.name,
         role: data.role,
         status: "active",
+        phone: null,
         avatarUrl: null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),

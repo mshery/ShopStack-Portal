@@ -12,7 +12,8 @@
       "role": "super_admin",
       "avatarUrl": null,
       "createdAt": "2025-01-01T00:00:00Z",
-      "updatedAt": "2025-01-01T00:00:00Z"
+      "updatedAt": "2025-01-01T00:00:00Z",
+      "phone": null
     }
   ],
   "platformActivityLogs": [
@@ -196,7 +197,8 @@
       "status": "active",
       "avatarUrl": null,
       "createdAt": "2025-06-01T10:05:00Z",
-      "updatedAt": "2025-06-01T10:05:00Z"
+      "updatedAt": "2025-06-01T10:05:00Z",
+      "phone": null
     },
     {
       "id": "user-2",
@@ -208,7 +210,8 @@
       "status": "active",
       "avatarUrl": null,
       "createdAt": "2025-06-10T09:00:00Z",
-      "updatedAt": "2025-06-10T09:00:00Z"
+      "updatedAt": "2025-06-10T09:00:00Z",
+      "phone": null
     },
     {
       "id": "user-3",
@@ -220,7 +223,8 @@
       "status": "active",
       "avatarUrl": null,
       "createdAt": "2025-06-15T09:00:00Z",
-      "updatedAt": "2025-06-15T09:00:00Z"
+      "updatedAt": "2025-06-15T09:00:00Z",
+      "phone": null
     }
   ],
   "products": [

@@ -145,6 +145,7 @@ export default function AddTenantUserPage() {
       password: formData.password,
       role: formData.role,
       status: formData.status,
+      phone: null,
       avatarUrl: null,
     });
 

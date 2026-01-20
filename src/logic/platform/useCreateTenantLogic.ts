@@ -180,6 +180,7 @@ export function useCreateTenantLogic() {
         name: formData.ownerName,
         role: "owner",
         status: "active",
+        phone: null,
         avatarUrl: null,
         createdAt: now,
         updatedAt: now,

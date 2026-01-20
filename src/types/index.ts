@@ -25,6 +25,7 @@ export interface PlatformUser {
   name: string;
   role: "super_admin";
   status: UserStatus;
+  phone: string | null;
   avatarUrl: string | null;
   createdAt: string;
   updatedAt: string;
@@ -94,6 +95,7 @@ export interface TenantUser {
   name: string;
   role: UserRole;
   status: UserStatus;
+  phone: string | null;
   avatarUrl: string | null;
   createdAt: string;
   updatedAt: string;
