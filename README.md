@@ -1,147 +1,170 @@
-# React + TypeScript + Vite
+# ShopStack Portal
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+ShopStack Portal is a modern, world-class **multi-tenant Point-of-Sale (POS) and Business Management** platform built for performance, reliability, and scale.
 
-Currently, two official plugins are available:
+## 🚀 Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Framework:** React 19 (Vite)
+- **Language:** TypeScript (Strict Mode)
+- **State Management:** **Zustand** (Boring stores, reactive UI)
+- **Styling:** Tailwind CSS 4 + Shadcn/UI (Radix Primitives)
+- **Animations:** Framer Motion (Motion)
+- **Forms:** React Hook Form + Zod
+- **Data Table:** TanStack Table
+- **Infrastructure:** clean, domain-driven modular architecture
 
-## React Compiler
+## 📁 Project Structure
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+This project follows a **domain-driven modular architecture** designed for strict tenant isolation and high developer velocity:
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
 ```
-
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
-
-# FRONTEND RULES — React Router + Zustand
-## Clean • Simple • Pro-Level • Crash-Free
-
-THIS FILE IS THE **ONLY SOURCE OF TRUTH**  
-EVERYTHING — RULES, EXPLANATION, AND CODE — IS **INSIDE THIS FILE**  
-IF CODE DOES NOT FOLLOW THIS FILE → **DO NOT MERGE**
-
----
-
-## 1) WHY THIS APPROACH
-
-This structure is used by **senior / pro-level frontend engineers** because:
-
-- UI files stay clean and readable
-- Logic is not scattered across components
-- State is predictable and safe
-- Null / undefined never crash the app
-- Every screen behaves the same
-
-**Mental model**
-
-- Pages → render UI only  
-- Hooks → decide what happens  
-- Stores → store state safely  
-- API → talk to server  
-- Components → reusable UI  
-
----
-
-## 2) FOLDER STRUCTURE (MANDATORY)
-
-```txt
 src/
-  app/
-    App.tsx
-    router.tsx
-    layouts/
-      AppLayout.tsx
-      AuthLayout.tsx
+├── core/                          # Cross-cutting app infrastructure
+│   ├── api/                       # HTTP client, interceptors, error handling
+│   │   ├── httpClient.ts          # Base fetch/axios wrapper
+│   │   └── interceptors.ts        # Auth token injection, error mapping
+│   ├── config/                    # Environment, feature flags
+│   │   ├── env.ts                 # Environment variables
+│   │   └── features.ts            # Feature flag helpers
+│   ├── routing/                   # App-level routing
+│   │   ├── router.tsx             # Root router config
+│   │   ├── guards/                # Route guards
+│   │   │   ├── AuthGuard.tsx      # Authentication check
+│   │   │   ├── PlatformGuard.tsx  # Platform access check
+│   │   │   └── TenantGuard.tsx    # Tenant + RBAC check
+│   │   └── layouts/               # Layout shells
+│   │       ├── AuthLayout.tsx     # Login/signup layout
+│   │       ├── PlatformLayout.tsx # Platform admin layout
+│   │       └── TenantLayout.tsx   # Tenant app layout
+│   ├── security/                  # Auth & RBAC
+│   │   ├── rbac.config.ts         # Role → Permission mappings
+│   │   ├── permissions.ts         # Permission check utilities
+│   │   └── tenantContext.ts       # Active tenant context
+│   └── providers/                 # App-level providers
+│       └── AppProviders.tsx       # Toast, Theme, Query providers
+│
+├── shared/                        # Reusable UI + utilities (domain-agnostic)
+│   ├── components/                # Generic UI components
+│   │   ├── ui/                    # Primitives (Button, Input, Modal, Select)
+│   │   ├── feedback/              # Toast, Alert, EmptyState, ErrorState
+│   │   ├── data-display/          # Table, DataGrid, Card, Badge
+│   │   └── skeletons/             # Loading skeletons
+│   ├── hooks/                     # Generic hooks
+│   │   ├── useDebounce.ts
+│   │   ├── useModal.ts
+│   │   └── usePagination.ts
+│   ├── utils/                     # Pure utility functions
+│   │   ├── format.ts              # Date, number, currency formatters
+│   │   ├── normalize.ts           # Data normalization helpers
+│   │   ├── validate.ts            # Validation utilities
+│   │   └── cn.ts                  # Tailwind class merger
+│   └── types/                     # Shared type definitions
+│       ├── common.ts              # AsyncStatus, Pagination, etc.
+│       └── ui.ts                  # UI component prop types
+│
+├── modules/                       # Feature modules (domain-based)
+│   │
+│   ├── auth/                      # Authentication module
+│   │   ├── api/                   # Auth API calls
+│   │   ├── components/            # Auth-specific components
+│   │   ├── hooks/                 # Auth logic hooks
+│   │   ├── store/                 # Auth state
+│   │   └── index.ts               # Public API
+│   │
+│   ├── platform/                  # Platform (Super Admin) module
+│   │   ├── api/
+│   │   ├── components/
+│   │   ├── hooks/
+│   │   ├── store/
+│   │   └── index.ts
+│   │
+│   ├── tenant/                    # Tenant core module (dashboard, settings, users)
+│   │   ├── api/
+│   │   ├── components/
+│   │   ├── hooks/
+│   │   ├── store/
+│   │   └── index.ts
+│   │
+│   ├── products/                  # Products module
+│   │   ├── api/
+│   │   ├── components/
+│   │   ├── hooks/
+│   │   ├── store/
+│   │   └── index.ts
+│   │
+│   ├── pos/                       # Point of Sale module
+│   │   ├── api/
+│   │   ├── components/
+│   │   ├── hooks/
+│   │   ├── store/
+│   │   └── index.ts
+│   │
+│   └── reports/                   # Reports & Analytics module
+│       ├── api/
+│       ├── components/
+│       ├── hooks/
+│       ├── store/
+│       └── index.ts
+│
+├── App.tsx                        # Root component
+├── main.tsx                       # Entry point
+├── index.css                      # Global styles
+└── vite-env.d.ts                  # Vite types
+```
 
-  api/
-    http.ts              # fetch / axios wrapper
-    auth.ts
-    users.ts
+### Module Rules
+- **Modules cannot import from other modules' internals.**
+- **Always import via the module's Public API (`index.ts`).**
+- **Strict Tenant Isolation:** Data fetching must always be scoped by `activeTenantId`.
 
-  stores/
-    auth.store.ts
-    users.store.ts
+## 🏗️ Architectural Patterns
 
-  hooks/
-    useAuth.ts
-    useUsers.ts
+### 1. Screen Hook Pattern (The Brain)
+Every screen is orchestrated by exactly one logic hook that produces three outputs:
+- **status:** `loading | error | empty | success`
+- **vm (View Model):** Derived, UI-ready data (memoized)
+- **actions:** Stable callback functions for user interactions
 
-  pages/
-    LoginPage.tsx        # UI only
-    UsersPage.tsx        # UI only
+### 2. Multi-Tenant Guarding
+The system uses `TenantGuard` and `PlatformGuard` to ensure that users only access data and features they are authorized for. Permissions are managed via a robust **RBAC (Role-Based Access Control)** system.
 
-  components/
-    ui/                  # Button, Input, Modal
-    common/              # ErrorState, EmptyState, PageHeader
-    skeletons/           # modern shimmer skeletons
+### 3. Null-Safety & Normalization
+- **All external data is considered hostile.**
+- Data is normalized at the API boundary.
+- UI components are pure and dumb—they never handle null checks or business logic.
 
-  utils/
-    format.ts
-    validate.ts
+## 📏 Coding Standards
 
-  styles/
-    globals.css
-    skeleton.css
+To maintain "world-class" quality, all developers must adhere to the following:
+- **Zero "any":** TypeScript strict mode is mandatory.
+- **Stable Actions:** All actions passed to UI components must be memoized with `useCallback`.
+- **UI Placeholders:** Every async screen must implement Loading, Empty, and Error states.
+- **Design System:** Use pre-defined tokens and variables from the CSS-first design system.
 
+For a detailed breakdown of our coding rules, please see [CODING_STYLE.md](./CODING_STYLE.md) and [NEW_ARCHITECTURE_PLAN.md](./NEW_ARCHITECTURE_PLAN.md).
 
+## 🛠️ Getting Started
 
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+2. **Setup Environment:**
+   Create `.env.local` based on `.env.example`.
+3. **Start development server:**
+   ```bash
+   npm run dev
+   ```
 
+### Environment Variables
+Vite loads environment variables from:
+- `.env.development` (when running `npm run dev`)
+- `.env.production` (when running `npm run build`)
+- `.env.local` (ignored by git)
+
+## 📝 Summary for Dev Team
+
+- **UI renders, hooks decide.** Do not put logic in components.
+- **Normalize early.** Protect the UI from backend inconsistency.
+- **Memoize intentionally.** Stability over micro-optimization.
+- **Fail safe.** Always provide a fallback UI for edge cases.
