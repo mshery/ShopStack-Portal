@@ -312,7 +312,7 @@ export interface Sale {
   number: string;
   tenant_id: string;
   registerId: string;
-  shiftId: string;
+  shiftId?: string; // Optional - no longer required
   cashierUserId: string;
   customerId: string;
   lineItems: SaleLineItem[];
@@ -340,7 +340,7 @@ export interface Payment {
 
 export interface POSData {
   registers: Register[];
-  shifts: Shift[];
+  shifts?: Shift[]; // Optional - no longer used
   sales: Sale[];
   payments: Payment[];
   receipts: Receipt[];

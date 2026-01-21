@@ -2,17 +2,16 @@ import { useMemo, useCallback } from "react";
 import { useAuthStore } from "@/modules/auth";
 import { useTenantsStore } from "@/modules/platform";
 import { usePOSStore } from "@/modules/pos";
-import { useProductsStore } from "@/modules/products";
 import type { AsyncStatus, RefundLineItem } from "@/shared/types/models";
+import { createRefund, restoreInventory } from "../logic/refund.logic";
 
 /**
  * useSalesHistoryLogic - Sales history screen hook
  */
 export function useSalesHistoryLogic() {
   const { activeTenantId, currentUser } = useAuthStore();
-  const { sales, refunds, processRefund } = usePOSStore();
+  const { sales, refunds, addRefund } = usePOSStore();
   const { tenants } = useTenantsStore();
-  const { updateStock } = useProductsStore();
 
   const status: AsyncStatus = "success";
 
@@ -95,7 +94,8 @@ export function useSalesHistoryLogic() {
     (saleId: string, items: RefundLineItem[], reason: string) => {
       if (!activeTenantId || !currentUser) return;
 
-      const refundId = processRefund(
+      // Create refund using logic module
+      const refund = createRefund(
         saleId,
         items,
         reason,
@@ -103,14 +103,15 @@ export function useSalesHistoryLogic() {
         activeTenantId,
       );
 
-      // Restore stock for refunded items
-      items.forEach((item) => {
-        updateStock(item.productId, item.quantity);
-      });
+      // Add to store
+      addRefund(refund);
 
-      return refundId;
+      // Restore inventory (logic module handles this)
+      restoreInventory(items);
+
+      return refund.id;
     },
-    [activeTenantId, currentUser, processRefund, updateStock],
+    [activeTenantId, currentUser, addRefund],
   );
 
   const actions = useMemo(

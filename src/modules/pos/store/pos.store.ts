@@ -1,7 +1,6 @@
 import { create } from "zustand";
 import type {
   Register,
-  Shift,
   Sale,
   Payment,
   CartItem,
@@ -9,26 +8,18 @@ import type {
   SaleLineItem,
   Receipt,
   Refund,
-  RefundLineItem,
   HeldOrder,
   Discount,
 } from "@/shared/types/models";
-import { generateId } from "@/shared/utils/normalize";
-import { useProductsStore } from "@/modules/products/store/products.store";
-import { useAuditStore } from "@/modules/products/store/audit.store";
 
 /**
- * POS Store - Registers, Shifts, Sales, Payments, Cart, Receipts, Refunds
+ * POS Store - Registers, Sales, Payments, Cart, Receipts, Refunds
  */
 
 interface POSStoreState {
   // Registers
   registers: Register[];
   activeRegisterId: string | null;
-
-  // Shifts
-  shifts: Shift[];
-  activeShiftId: string | null;
 
   // Sales & Payments
   sales: Sale[];
@@ -52,17 +43,6 @@ interface POSStoreState {
   setRegisters: (registers: Register[]) => void;
   setActiveRegisterId: (id: string | null) => void;
 
-  // Shift setters
-  setShifts: (shifts: Shift[]) => void;
-  setActiveShiftId: (id: string | null) => void;
-  openShift: (
-    registerId: string,
-    cashierUserId: string,
-    tenantId: string,
-    openingCash: number,
-  ) => string;
-  closeShift: (shiftId: string, closingCash: number) => void;
-
   // Sales & Payments setters
   setSales: (sales: Sale[]) => void;
   addSale: (sale: Sale) => void;
@@ -85,36 +65,17 @@ interface POSStoreState {
   updateCartItemQuantity: (productId: string, quantity: number) => void;
   removeFromCart: (productId: string) => void;
   clearCart: () => void;
-  completeSale: (
-    saleData: Omit<Sale, "id" | "number" | "createdAt" | "updatedAt">,
-  ) => { saleId: string; receiptId: string };
 
   // Held Orders setters
-  holdCurrentOrder: (
-    cart: CartItem[],
-    customerId: string | null,
-    discount: Discount | null,
-    userId: string,
-  ) => string;
-  recallOrder: (orderId: string) => void;
-  deleteHeldOrder: (orderId: string) => void;
-
-  // Refund helper
-  processRefund: (
-    originalSaleId: string,
-    items: RefundLineItem[],
-    reason: string,
-    processedBy: string,
-    tenantId: string,
-  ) => string;
+  addHeldOrder: (order: HeldOrder) => void;
+  removeHeldOrder: (orderId: string) => void;
+  setHeldOrders: (orders: HeldOrder[]) => void;
 }
 
-export const usePOSStore = create<POSStoreState>((set, get) => ({
+export const usePOSStore = create<POSStoreState>((set) => ({
   // Initial state
   registers: [],
   activeRegisterId: null,
-  shifts: [],
-  activeShiftId: null,
   sales: [],
   payments: [],
   receipts: [],
@@ -127,63 +88,6 @@ export const usePOSStore = create<POSStoreState>((set, get) => ({
   // Register methods
   setRegisters: (registers) => set({ registers: registers ?? [] }),
   setActiveRegisterId: (id) => set({ activeRegisterId: id }),
-
-  // Shift methods
-  setShifts: (shifts) => set({ shifts: shifts ?? [] }),
-  setActiveShiftId: (id) => set({ activeShiftId: id }),
-
-  openShift: (registerId, cashierUserId, tenantId, openingCash) => {
-    const shiftId = generateId("shift");
-    const newShift: Shift = {
-      id: shiftId,
-      tenant_id: tenantId,
-      registerId,
-      cashierUserId,
-      openingCash,
-      closingCash: null,
-      expectedCash: null,
-      status: "open",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    set((state) => ({
-      shifts: [...state.shifts, newShift],
-      activeShiftId: shiftId,
-    }));
-    return shiftId;
-  },
-
-  closeShift: (shiftId, closingCash) => {
-    const { sales, payments, shifts } = get();
-    const shift = shifts.find((s) => s.id === shiftId);
-    if (!shift) return;
-
-    // Calculate expected cash
-    const shiftSales = sales.filter((s) => s.shiftId === shiftId);
-    const shiftPayments = payments.filter((p) =>
-      shiftSales.some((s) => s.id === p.saleId),
-    );
-    const totalCashIn = shiftPayments.reduce(
-      (sum, p) => sum + p.amountTendered - p.changeGiven,
-      0,
-    );
-    const expectedCash = shift.openingCash + totalCashIn;
-
-    set((state) => ({
-      shifts: state.shifts.map((s) =>
-        s.id === shiftId
-          ? {
-              ...s,
-              closingCash,
-              expectedCash,
-              status: "closed" as const,
-              updatedAt: new Date().toISOString(),
-            }
-          : s,
-      ),
-      activeShiftId: null,
-    }));
-  },
 
   // Sales methods
   setSales: (sales) => set({ sales: sales ?? [] }),
@@ -214,37 +118,6 @@ export const usePOSStore = create<POSStoreState>((set, get) => ({
   setRefunds: (refunds) => set({ refunds: refunds ?? [] }),
   addRefund: (refund) =>
     set((state) => ({ refunds: [...state.refunds, refund] })),
-
-  processRefund: (originalSaleId, items, reason, processedBy, tenantId) => {
-    const refundId = generateId("refund");
-    const refundNumber = `REF-${Date.now().toString().slice(-6)}`;
-    const refundTotal = items.reduce((sum, item) => sum + item.refundAmount, 0);
-
-    const newRefund: Refund = {
-      id: refundId,
-      tenant_id: tenantId,
-      originalSaleId,
-      refundNumber,
-      refundedItems: items,
-      refundTotal,
-      reason,
-      processedBy,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    set((state) => ({
-      refunds: [...state.refunds, newRefund],
-    }));
-
-    // Restore inventory for refunded items
-    const { updateStock } = useProductsStore.getState();
-    items.forEach((item) => {
-      updateStock(item.productId, item.quantity); // Add back to stock
-    });
-
-    return refundId;
-  },
 
   // Cart methods
   setSelectedCustomerId: (id) => set({ selectedCustomerId: id }),
@@ -306,158 +179,13 @@ export const usePOSStore = create<POSStoreState>((set, get) => ({
   setDiscount: (discount) => set({ currentDiscount: discount }),
 
   // Held Orders methods
-  holdCurrentOrder: (cart, customerId, discount, userId) => {
-    const orderId = generateId("held-order");
-    const newHeldOrder: HeldOrder = {
-      id: orderId,
-      cart: [...cart], // Clone the cart
-      customerId,
-      discount,
-      heldAt: new Date().toISOString(),
-      heldBy: userId,
-    };
-
-    set((state) => ({
-      heldOrders: [...state.heldOrders, newHeldOrder],
-      cart: [],
-      selectedCustomerId: null,
-      currentDiscount: null,
-    }));
-
-    // Log order hold
-    useAuditStore.getState().addLog({
-      tenant_id: cart[0]?.product.tenant_id || "",
-      action: "order_held",
-      entityType: "held_order",
-      entityId: orderId,
-      userId,
-      userName: "User",
-      before: null,
-      after: { order: newHeldOrder },
-      metadata: {
-        itemCount: cart.length,
-        customerId: customerId || "walk-in",
-        hasDiscount: !!discount,
-      },
-    });
-
-    return orderId;
-  },
-
-  recallOrder: (orderId) => {
-    const { heldOrders } = get();
-    const order = heldOrders.find((o) => o.id === orderId);
-    if (!order) return;
-
-    set((state) => ({
-      cart: [...order.cart], // Restore the cart
-      selectedCustomerId: order.customerId,
-      currentDiscount: order.discount,
-      heldOrders: state.heldOrders.filter((o) => o.id !== orderId),
-    }));
-
-    // Log order recall
-    useAuditStore.getState().addLog({
-      tenant_id: order.cart[0]?.product.tenant_id || "",
-      action: "order_recalled",
-      entityType: "held_order",
-      entityId: orderId,
-      userId: "system",
-      userName: "System",
-      before: { order },
-      after: null,
-      metadata: {
-        itemCount: order.cart.length,
-        heldBy: order.heldBy,
-      },
-    });
-  },
-
-  deleteHeldOrder: (orderId) => {
+  addHeldOrder: (order) =>
+    set((state) => ({ heldOrders: [...state.heldOrders, order] })),
+  removeHeldOrder: (orderId) =>
     set((state) => ({
       heldOrders: state.heldOrders.filter((o) => o.id !== orderId),
-    }));
-  },
-
-  completeSale: (saleData) => {
-    const saleId = generateId("sale");
-    const saleNumber = `SALE-${Date.now().toString().slice(-6)}`;
-    const receiptId = generateId("receipt");
-    const receiptNumber = `RCP-${Date.now().toString().slice(-8)}`;
-    const currentDiscount = get().currentDiscount;
-
-    const newSale: Sale = {
-      ...saleData,
-      id: saleId,
-      number: saleNumber,
-      discount: currentDiscount, // Include current discount
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    const newReceipt: Receipt = {
-      id: receiptId,
-      saleId,
-      receiptNumber,
-      tenant_id: saleData.tenant_id,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    set((state) => ({
-      sales: [...state.sales, newSale],
-      receipts: [...state.receipts, newReceipt],
-      cart: [],
-      selectedCustomerId: null,
-      currentDiscount: null,
-    }));
-
-    // Reduce inventory for each item sold
-    const { updateStock } = useProductsStore.getState();
-    saleData.lineItems.forEach((item) => {
-      updateStock(item.productId, -item.quantity); // Subtract from stock
-    });
-
-    // Log sale completion
-    useAuditStore.getState().addLog({
-      tenant_id: saleData.tenant_id,
-      action: "sale_completed",
-      entityType: "sale",
-      entityId: saleId,
-      userId: saleData.cashierUserId,
-      userName: "Cashier",
-      before: null,
-      after: { sale: newSale },
-      metadata: {
-        saleNumber,
-        itemCount: saleData.lineItems.length,
-        grandTotal: saleData.grandTotal,
-        paymentMethod: saleData.paymentMethod,
-        customerId: saleData.customerId,
-      },
-    });
-
-    // Log discount if applied
-    if (currentDiscount) {
-      useAuditStore.getState().addLog({
-        tenant_id: saleData.tenant_id,
-        action: "discount_applied",
-        entityType: "sale",
-        entityId: saleId,
-        userId: saleData.cashierUserId,
-        userName: "Cashier",
-        before: null,
-        after: { discount: currentDiscount },
-        metadata: {
-          discountType: currentDiscount.type,
-          discountValue: currentDiscount.value,
-          reason: currentDiscount.reason,
-        },
-      });
-    }
-
-    return { saleId, receiptId };
-  },
+    })),
+  setHeldOrders: (orders) => set({ heldOrders: orders ?? [] }),
 }));
 
 /**

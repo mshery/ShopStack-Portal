@@ -77,7 +77,6 @@ export function initializeStores(): void {
 
   if (rawPos) {
     posStore.setRegisters(rawPos.registers ?? []);
-    posStore.setShifts(rawPos.shifts ?? []);
 
     // Fix missing fields in sales data
     const payments = rawPos.payments ?? [];
@@ -99,7 +98,6 @@ export function initializeStores(): void {
     posStore.setRefunds(rawPos.refunds ?? []);
   } else {
     posStore.setRegisters([]);
-    posStore.setShifts([]);
     posStore.setSales([]);
     posStore.setPayments([]);
     posStore.setReceipts([]);
@@ -142,7 +140,6 @@ export function exportCurrentState(): SeedData {
     inventoryAdjustments: useInventoryStore.getState().inventoryAdjustments,
     pos: {
       registers: usePOSStore.getState().registers,
-      shifts: usePOSStore.getState().shifts,
       sales: usePOSStore.getState().sales,
       payments: usePOSStore.getState().payments,
       receipts: usePOSStore.getState().receipts,

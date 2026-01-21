@@ -6,7 +6,6 @@ interface CartHeaderProps {
   search: string;
   onSearchChange: (value: string) => void;
   registerId: string;
-  shiftId: string;
   viewMode?: "grid" | "list";
   onViewModeChange?: (mode: "grid" | "list") => void;
 }

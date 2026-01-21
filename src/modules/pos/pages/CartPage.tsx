@@ -160,7 +160,6 @@ export default function CartPage() {
                     search={filters.search}
                     onSearchChange={setSearch}
                     registerId={vm.registerId || ""}
-                    shiftId={vm.shiftId || ""}
                     viewMode={viewMode}
                     onViewModeChange={setViewMode}
                 />

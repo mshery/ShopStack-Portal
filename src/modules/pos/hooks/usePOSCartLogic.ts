@@ -7,6 +7,17 @@ import { useCustomersStore } from "@/modules/customers";
 import { useTenantsStore } from "@/modules/platform";
 import { useCategoriesStore } from "@/modules/catalog";
 import type { AsyncStatus, Product, Sale, Receipt } from "@/shared/types/models";
+import {
+  createSale,
+  reduceInventory,
+  logSaleCompletion,
+  logDiscountApplication,
+} from "../logic/checkout.logic";
+import {
+  createHeldOrder,
+  logOrderHold,
+  logOrderRecall,
+} from "../logic/order.logic";
 
 /**
  * usePOSCartLogic - POS Cart screen hook
@@ -16,7 +27,6 @@ import type { AsyncStatus, Product, Sale, Receipt } from "@/shared/types/models"
 export function usePOSCartLogic() {
   const location = useLocation();
   const registerId = location.state?.registerId || "default-register";
-  const shiftId = location.state?.shiftId || "default-shift";
 
   const { activeTenantId, currentUser } = useAuthStore();
   const { products } = useProductsStore();
@@ -30,13 +40,13 @@ export function usePOSCartLogic() {
     removeFromCart,
     updateCartItemQuantity,
     clearCart,
-    completeSale,
     currentDiscount,
     setDiscount,
     heldOrders,
-    holdCurrentOrder,
-    recallOrder,
-    deleteHeldOrder,
+    addHeldOrder,
+    removeHeldOrder,
+    addSale,
+    addReceipt,
   } = usePOSStore();
 
   const [search, setSearch] = useState("");
@@ -137,7 +147,6 @@ export function usePOSCartLogic() {
       search,
       selectedCustomerId,
       registerId,
-      shiftId,
       stockWarnings,
       hasStockWarnings: stockWarnings.length > 0,
       lastCheckout,
@@ -156,7 +165,6 @@ export function usePOSCartLogic() {
       search,
       selectedCustomerId,
       registerId,
-      shiftId,
       stockWarnings,
       lastCheckout,
       currentUser,
@@ -216,17 +224,12 @@ export function usePOSCartLogic() {
     if (!activeTenantId || !currentUser || cart.length === 0) return;
 
     // Check order limits
-    const currentSales = usePOSStore
-      .getState()
-      .sales.filter((s) => s.tenant_id === activeTenantId);
-    const tenant = useTenantsStore
-      .getState()
-      .tenants.find((t) => t.id === activeTenantId);
+    const tenant = tenants.find((t) => t.id === activeTenantId);
     const maxOrders = tenant?.maxOrders ?? 100;
 
-    if (currentSales.length >= maxOrders) {
+    if (sales.filter((s) => s.tenant_id === activeTenantId).length >= maxOrders) {
       alert(
-        `Order limit reached (${currentSales.length}/${maxOrders}). Please upgrade your plan to process more orders.`,
+        `Order limit reached. Please upgrade your plan to process more orders.`,
       );
       return;
     }
@@ -239,50 +242,42 @@ export function usePOSCartLogic() {
 
     const lineItems = cart.map((item) => ({
       productId: item.productId,
-      productName: item.product.name,
-      quantity: item.quantity,
-      unitPrice: item.product.unitPrice,
-      subtotal: item.subtotal,
       nameSnapshot: item.product.name,
       unitPriceSnapshot: item.product.unitPrice,
       costPriceSnapshot: item.product.costPrice || 0,
+      quantity: item.quantity,
+      subtotal: item.subtotal,
     }));
 
-    const saleData = {
+    const saleData: Omit<Sale, "id" | "number" | "createdAt" | "updatedAt"> = {
       tenant_id: activeTenantId,
       registerId,
-      shiftId,
       cashierUserId: currentUser.id,
-      customerId: selectedCustomerId || "", // Convert null to empty string
+      customerId: selectedCustomerId || "",
       lineItems,
       subtotal: cartTotals.subtotal,
       tax: cartTotals.tax,
       grandTotal: cartTotals.total,
       paymentMethod: "CASH" as const,
-      discount: null, // Will be set by completeSale
+      discount: null,
     };
 
-    const { saleId, receiptId } = completeSale(saleData);
+    // Create sale and receipt using logic module
+    const { sale, receipt } = createSale(saleData, currentDiscount);
 
-    // Set last checkout for receipt display
-    const sale: Sale = {
-      ...saleData,
-      id: saleId,
-      number: `SALE-${Date.now().toString().slice(-6)}`,
-      customerId: selectedCustomerId || "", // Ensure it's a string
-      discount: currentDiscount,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    // Update store
+    addSale(sale);
+    addReceipt(receipt);
+    clearCart();
 
-    const receipt: Receipt = {
-      id: receiptId,
-      saleId,
-      receiptNumber: `RCP-${Date.now().toString().slice(-8)}`,
-      tenant_id: activeTenantId,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    // Reduce inventory
+    reduceInventory(sale.lineItems);
+
+    // Log audit events
+    logSaleCompletion(sale, currentUser.id);
+    if (currentDiscount) {
+      logDiscountApplication(sale, currentDiscount, currentUser.id);
+    }
 
     setLastCheckout({ sale, receipt });
   }, [
@@ -292,11 +287,71 @@ export function usePOSCartLogic() {
     selectedCustomerId,
     cartTotals,
     registerId,
-    shiftId,
     stockWarnings,
-    completeSale,
+    sales,
+    tenants,
     currentDiscount,
+    addSale,
+    addReceipt,
+    clearCart,
   ]);
+
+  const handleHoldOrder = useCallback(() => {
+    if (cart.length === 0 || !currentUser || !activeTenantId) return;
+
+    const order = createHeldOrder(
+      cart,
+      selectedCustomerId,
+      currentDiscount,
+      currentUser.id,
+    );
+
+    addHeldOrder(order);
+    clearCart();
+
+    // Log audit event
+    const tenantId = cart[0]?.product.tenant_id || activeTenantId;
+    logOrderHold(order, currentUser.id, tenantId);
+  }, [
+    cart,
+    currentUser,
+    activeTenantId,
+    selectedCustomerId,
+    currentDiscount,
+    addHeldOrder,
+    clearCart,
+  ]);
+
+  const handleRecallOrder = useCallback(
+    (orderId: string) => {
+      const order = heldOrders.find((o) => o.id === orderId);
+      if (!order || !activeTenantId) return;
+
+      // Restore cart from held order
+      order.cart.forEach((item) => {
+        addToCart(item.product, item.quantity);
+      });
+      setSelectedCustomerId(order.customerId);
+      if (order.discount) {
+        setDiscount(order.discount);
+      }
+
+      // Remove from held orders
+      removeHeldOrder(orderId);
+
+      // Log audit event
+      const tenantId = order.cart[0]?.product.tenant_id || activeTenantId;
+      logOrderRecall(order, tenantId);
+    },
+    [
+      heldOrders,
+      activeTenantId,
+      addToCart,
+      setSelectedCustomerId,
+      setDiscount,
+      removeHeldOrder,
+    ],
+  );
 
   const actions = useMemo(
     () => ({
@@ -309,18 +364,9 @@ export function usePOSCartLogic() {
       checkout: handleCheckout,
       clearLastCheckout: () => setLastCheckout(null),
       setDiscount,
-      holdOrder: () => {
-        if (cart.length > 0 && currentUser) {
-          holdCurrentOrder(
-            cart,
-            selectedCustomerId,
-            currentDiscount,
-            currentUser.id,
-          );
-        }
-      },
-      recallOrder,
-      deleteHeldOrder,
+      holdOrder: handleHoldOrder,
+      recallOrder: handleRecallOrder,
+      deleteHeldOrder: removeHeldOrder,
     }),
     [
       handleAddToCart,
@@ -329,13 +375,9 @@ export function usePOSCartLogic() {
       clearCart,
       handleCheckout,
       setDiscount,
-      cart,
-      selectedCustomerId,
-      currentDiscount,
-      currentUser,
-      holdCurrentOrder,
-      recallOrder,
-      deleteHeldOrder,
+      handleHoldOrder,
+      handleRecallOrder,
+      removeHeldOrder,
     ],
   );
 
