@@ -1,19 +1,19 @@
 import seedData from "@/data/seed.json";
-import type { SeedData } from "@/types";
-import { useTenantsStore } from "@/stores/tenants.store";
-import { useUsersStore } from "@/stores/users.store";
-import { useProductsStore } from "@/stores/products.store";
-import { useCategoriesStore } from "@/stores/categories.store";
-import { useBrandsStore } from "@/stores/brands.store";
-import { useCustomersStore } from "@/stores/customers.store";
-import { usePOSStore } from "@/stores/pos.store";
-import { useActivityLogsStore } from "@/stores/activityLogs.store";
-import { useVendorsStore } from "@/stores/vendors.store";
-import { usePurchasesStore } from "@/stores/purchases.store";
-import { useExpensesStore } from "@/stores/expenses.store";
-import { useInventoryStore } from "@/stores/inventory.store";
-import { useBillingsStore } from "@/stores/billings.store";
-import { usePlatformSettingsStore } from "@/stores/platformSettings.store";
+import type { SeedData } from "@/shared/types/models";
+import { useTenantsStore } from "@/modules/platform";
+import { useUsersStore } from "@/modules/tenant";
+import { useProductsStore } from "@/modules/products";
+import { useCategoriesStore } from "@/modules/catalog";
+import { useBrandsStore } from "@/modules/catalog";
+import { useCustomersStore } from "@/modules/customers";
+import { usePOSStore } from "@/modules/pos";
+import { useActivityLogsStore } from "@/modules/platform";
+import { useVendorsStore } from "@/modules/vendors";
+import { usePurchasesStore } from "@/modules/purchases";
+import { useExpensesStore } from "@/modules/expenses";
+import { useInventoryStore } from "@/modules/inventory";
+import { useBillingsStore } from "@/modules/billing/store/billings.store";
+import { usePlatformSettingsStore } from "@/modules/platform";
 
 /**
  * Initialize all stores with seed data.

@@ -1,6 +1,6 @@
 import { RouterProvider } from "react-router-dom";
 import { useRef } from "react";
-import { router } from "./router";
+import { router } from "@/core/routing/router";
 import { initializeStores } from "@/data/loader";
 import { ThemeProvider } from "./context/ThemeContext";
 import { SidebarProvider } from "./context/SidebarContext";
