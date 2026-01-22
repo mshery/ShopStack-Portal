@@ -85,7 +85,7 @@ export const rolePermissions: Record<TenantRole, Permission[]> = {
         "pos:complete_sale",
         "pos:refund",
         "sales:view",
-        "sales:view_own", // Can only view their own shift sales
+        "sales:view_own", // Can only view their own sales
     ],
 };
 
@@ -101,17 +101,15 @@ export const ROUTE_PERMISSIONS: Record<string, Permission> = {
     "/tenant/customers/new": "customers:create",
     "/tenant/vendors": "vendors:view",
     "/tenant/purchases": "purchases:view",
-    "/tenant/pos/register": "pos:access",
     "/tenant/pos/cart": "pos:access",
+    "/tenant/pos/sell": "pos:access",
     "/tenant/pos/sales": "sales:view",
-    "/tenant/pos/shifts": "pos:access",
     "/tenant/users": "users:view",
     "/tenant/users/new": "users:create",
     "/tenant/settings": "settings:view",
     "/tenant/reports": "reports:view",
     "/tenant/expenses": "expenses:view",
     "/tenant/inventory": "inventory:view",
-    "/tenant/pos/sell": "pos:access",
     "/tenant/billing": "billing:view",
 };
 

@@ -1,5 +1,4 @@
 import { useMemo, useCallback, useState } from "react";
-import { useLocation } from "react-router-dom";
 import { useAuthStore } from "@/modules/auth";
 import { useProductsStore } from "@/modules/products";
 import { usePOSStore } from "@/modules/pos";
@@ -25,9 +24,6 @@ import {
  * Handles cart operations, checkout, and inventory management
  */
 export function usePOSCartLogic() {
-  const location = useLocation();
-  const registerId = location.state?.registerId || "default-register";
-
   const { activeTenantId, currentUser } = useAuthStore();
   const { products } = useProductsStore();
   const { customers } = useCustomersStore();
@@ -146,7 +142,6 @@ export function usePOSCartLogic() {
       totals: cartTotals,
       search,
       selectedCustomerId,
-      registerId,
       stockWarnings,
       hasStockWarnings: stockWarnings.length > 0,
       lastCheckout,
@@ -164,7 +159,6 @@ export function usePOSCartLogic() {
       cartTotals,
       search,
       selectedCustomerId,
-      registerId,
       stockWarnings,
       lastCheckout,
       currentUser,
@@ -251,7 +245,6 @@ export function usePOSCartLogic() {
 
     const saleData: Omit<Sale, "id" | "number" | "createdAt" | "updatedAt"> = {
       tenant_id: activeTenantId,
-      registerId,
       cashierUserId: currentUser.id,
       customerId: selectedCustomerId || "",
       lineItems,
@@ -286,7 +279,6 @@ export function usePOSCartLogic() {
     cart,
     selectedCustomerId,
     cartTotals,
-    registerId,
     stockWarnings,
     sales,
     tenants,

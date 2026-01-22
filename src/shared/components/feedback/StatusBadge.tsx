@@ -3,11 +3,10 @@ import type {
   TenantStatus,
   UserStatus,
   ProductStatus,
-  ShiftStatus,
 } from "@/shared/types/models";
 
 interface StatusBadgeProps {
-  status: TenantStatus | UserStatus | ProductStatus | ShiftStatus | string;
+  status: TenantStatus | UserStatus | ProductStatus | string;
 }
 
 export function StatusBadge({ status }: StatusBadgeProps) {

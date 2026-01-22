@@ -159,7 +159,6 @@ export default function CartPage() {
                 <CartHeader
                     search={filters.search}
                     onSearchChange={setSearch}
-                    registerId={vm.registerId || ""}
                     viewMode={viewMode}
                     onViewModeChange={setViewMode}
                 />

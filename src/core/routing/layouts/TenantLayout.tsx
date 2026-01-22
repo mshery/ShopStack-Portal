@@ -122,8 +122,8 @@ export function TenantLayout() {
                 badge: "NEW",
                 children: [
                     {
-                        label: "Register",
-                        href: "/tenant/pos/register",
+                        label: "Sell",
+                        href: "/tenant/pos/sell",
                         icon: <ShoppingCart className="h-4 w-4" />,
                     },
                     {

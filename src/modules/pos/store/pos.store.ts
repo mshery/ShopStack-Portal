@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import type {
-  Register,
   Sale,
   Payment,
   CartItem,
@@ -13,14 +12,10 @@ import type {
 } from "@/shared/types/models";
 
 /**
- * POS Store - Registers, Sales, Payments, Cart, Receipts, Refunds
+ * POS Store - Sales, Payments, Cart, Receipts, Refunds
  */
 
 interface POSStoreState {
-  // Registers
-  registers: Register[];
-  activeRegisterId: string | null;
-
   // Sales & Payments
   sales: Sale[];
   payments: Payment[];
@@ -38,10 +33,6 @@ interface POSStoreState {
 
   // Held Orders
   heldOrders: HeldOrder[];
-
-  // Register setters
-  setRegisters: (registers: Register[]) => void;
-  setActiveRegisterId: (id: string | null) => void;
 
   // Sales & Payments setters
   setSales: (sales: Sale[]) => void;
@@ -74,8 +65,6 @@ interface POSStoreState {
 
 export const usePOSStore = create<POSStoreState>((set) => ({
   // Initial state
-  registers: [],
-  activeRegisterId: null,
   sales: [],
   payments: [],
   receipts: [],
@@ -84,10 +73,6 @@ export const usePOSStore = create<POSStoreState>((set) => ({
   selectedCustomerId: null,
   currentDiscount: null,
   heldOrders: [],
-
-  // Register methods
-  setRegisters: (registers) => set({ registers: registers ?? [] }),
-  setActiveRegisterId: (id) => set({ activeRegisterId: id }),
 
   // Sales methods
   setSales: (sales) => set({ sales: sales ?? [] }),
@@ -131,10 +116,10 @@ export const usePOSStore = create<POSStoreState>((set) => ({
           cart: state.cart.map((item) =>
             item.productId === product.id
               ? {
-                  ...item,
-                  quantity: newQuantity,
-                  subtotal: newQuantity * product.unitPrice,
-                }
+                ...item,
+                quantity: newQuantity,
+                subtotal: newQuantity * product.unitPrice,
+              }
               : item,
           ),
         };
@@ -159,10 +144,10 @@ export const usePOSStore = create<POSStoreState>((set) => ({
         cart: state.cart.map((item) =>
           item.productId === productId
             ? {
-                ...item,
-                quantity,
-                subtotal: quantity * item.product.unitPrice,
-              }
+              ...item,
+              quantity,
+              subtotal: quantity * item.product.unitPrice,
+            }
             : item,
         ),
       };

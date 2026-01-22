@@ -28,15 +28,6 @@ const formatActivityDetails = (action: string, details: any): string => {
     const payment = details.paymentMethod || "";
     return payment ? `${total} (${payment})` : total;
   }
-  if (actionLower.includes("shift")) {
-    const register = details.registerId || "";
-    const cash = details.openingCash
-      ? `$${details.openingCash.toFixed(2)}`
-      : "";
-    return register && cash
-      ? `${register}, Opening: ${cash}`
-      : register || cash;
-  }
   if (actionLower.includes("tenant")) {
     return details.companyName || details.oldPlan || details.newPlan || "";
   }

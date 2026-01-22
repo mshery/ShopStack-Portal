@@ -76,8 +76,6 @@ export function initializeStores(): void {
   const rawPos = data.pos;
 
   if (rawPos) {
-    posStore.setRegisters(rawPos.registers ?? []);
-
     // Fix missing fields in sales data
     const payments = rawPos.payments ?? [];
     const sales = (rawPos.sales ?? []).map((sale) => {
@@ -96,12 +94,13 @@ export function initializeStores(): void {
     posStore.setPayments(payments);
     posStore.setReceipts(rawPos.receipts ?? []);
     posStore.setRefunds(rawPos.refunds ?? []);
+    posStore.setHeldOrders(rawPos.heldOrders ?? []);
   } else {
-    posStore.setRegisters([]);
     posStore.setSales([]);
     posStore.setPayments([]);
     posStore.setReceipts([]);
     posStore.setRefunds([]);
+    posStore.setHeldOrders([]);
   }
 
   // Load activity logs
@@ -139,7 +138,6 @@ export function exportCurrentState(): SeedData {
     expenses: useExpensesStore.getState().expenses,
     inventoryAdjustments: useInventoryStore.getState().inventoryAdjustments,
     pos: {
-      registers: usePOSStore.getState().registers,
       sales: usePOSStore.getState().sales,
       payments: usePOSStore.getState().payments,
       receipts: usePOSStore.getState().receipts,

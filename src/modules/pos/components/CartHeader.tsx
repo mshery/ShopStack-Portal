@@ -5,7 +5,6 @@ import { Search, ScanBarcode, LayoutGrid, List } from "lucide-react";
 interface CartHeaderProps {
   search: string;
   onSearchChange: (value: string) => void;
-  registerId: string;
   viewMode?: "grid" | "list";
   onViewModeChange?: (mode: "grid" | "list") => void;
 }
@@ -78,8 +77,8 @@ export function CartHeader({
           <button
             onClick={() => onViewModeChange?.("grid")}
             className={`flex h-full items-center justify-center px-3 md:px-4 rounded-lg transition-all ${viewMode === "grid"
-                ? "bg-brand-500 text-white"
-                : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+              ? "bg-brand-500 text-white"
+              : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
               }`}
             title="Grid view"
           >
@@ -88,8 +87,8 @@ export function CartHeader({
           <button
             onClick={() => onViewModeChange?.("list")}
             className={`flex h-full items-center justify-center px-3 md:px-4 rounded-lg transition-all ${viewMode === "list"
-                ? "bg-brand-500 text-white"
-                : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+              ? "bg-brand-500 text-white"
+              : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
               }`}
             title="List view"
           >

@@ -263,32 +263,6 @@ export interface Customer {
 // POS Types
 // ============================================
 
-export type RegisterStatus = "active" | "inactive";
-
-export interface Register {
-  id: string;
-  tenant_id: string;
-  name: string;
-  location: string;
-  status: RegisterStatus;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export type ShiftStatus = "open" | "closed";
-
-export interface Shift {
-  id: string;
-  tenant_id: string;
-  registerId: string;
-  cashierUserId: string;
-  openingCash: number;
-  closingCash: number | null;
-  expectedCash: number | null;
-  status: ShiftStatus;
-  createdAt: string;
-  updatedAt: string;
-}
 
 export interface SaleLineItem {
   productId: string;
@@ -311,8 +285,6 @@ export interface Sale {
   id: string;
   number: string;
   tenant_id: string;
-  registerId: string;
-  shiftId?: string; // Optional - no longer required
   cashierUserId: string;
   customerId: string;
   lineItems: SaleLineItem[];
@@ -320,12 +292,24 @@ export interface Sale {
   tax: number;
   grandTotal: number;
   discount: Discount | null;
-  paymentMethod: "CASH";
+  paymentMethod: PaymentMethod;
   createdAt: string;
   updatedAt: string;
 }
 
-export type PaymentMethod = "CASH";
+export type PaymentMethod = "CASH" | "CARD" | "MOBILE" | "SPLIT";
+
+export interface CardDetails {
+  brand: "visa" | "mastercard" | "amex" | "discover";
+  last4: string;
+  authCode?: string;
+}
+
+export interface SplitPaymentItem {
+  method: "CASH" | "CARD" | "MOBILE";
+  amount: number;
+  cardDetails?: CardDetails;
+}
 
 export interface Payment {
   id: string;
@@ -334,17 +318,18 @@ export interface Payment {
   method: PaymentMethod;
   amountTendered: number;
   changeGiven: number;
+  cardDetails?: CardDetails;
+  splitPayments?: SplitPaymentItem[];
   createdAt: string;
   updatedAt: string;
 }
 
 export interface POSData {
-  registers: Register[];
-  shifts?: Shift[]; // Optional - no longer used
   sales: Sale[];
   payments: Payment[];
   receipts: Receipt[];
   refunds: Refund[];
+  heldOrders?: HeldOrder[];
 }
 
 // ============================================
