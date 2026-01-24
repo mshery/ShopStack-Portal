@@ -1,48 +1,102 @@
-/**
- * HTTP Client
- *
- * Centralized HTTP client for API communication.
- * Currently uses local data - will be connected to real backend in the future.
- */
-
+import axios, {
+  AxiosError,
+  type AxiosInstance,
+  type InternalAxiosRequestConfig,
+} from "axios";
+import { env } from "@/core/config/env";
+import { endpoints } from "@/core/config/endpoints";
+import { tokenStorage } from "@/core/security/storage";
+import type { ApiError } from "@/shared/types/api";
 import seedData from "@/data/seed.json";
 
-// Re-export seed data for use by API modules
+// Re-export seed data for backward compatibility during migration
 export { seedData };
 
 /**
- * Simulates an API delay for realistic UX
+ * Simulates an API delay for realistic UX (backward compatibility)
  */
 export async function simulateDelay(ms: number = 300): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/**
- * HTTP client placeholder for future backend integration
- * Currently all data operations work with local seed data
- */
-export const httpClient = {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async get<T>(_endpoint: string): Promise<T> {
-    await simulateDelay();
-    throw new Error("HTTP client not implemented - use local data");
+// Shared Axios instance for app-wide API calls
+export const httpClient: AxiosInstance = axios.create({
+  baseURL: env.API_BASE_URL,
+  timeout: env.API_TIMEOUT,
+  headers: {
+    "Content-Type": "application/json",
+    "ngrok-skip-browser-warning": "true",
   },
+});
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async post<T>(_endpoint: string, _data: unknown): Promise<T> {
-    await simulateDelay();
-    throw new Error("HTTP client not implemented - use local data");
+// Attach auth token when available
+httpClient.interceptors.request.use(
+  (config: InternalAxiosRequestConfig) => {
+    const token = tokenStorage.getAccessToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
   },
+  (error: AxiosError) => Promise.reject(error),
+);
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async put<T>(_endpoint: string, _data: unknown): Promise<T> {
-    await simulateDelay();
-    throw new Error("HTTP client not implemented - use local data");
-  },
+// Handle auth errors and retries
+httpClient.interceptors.response.use(
+  (response) => response,
+  async (error: AxiosError<ApiError>) => {
+    const originalRequest = error.config;
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async delete<T>(_endpoint: string): Promise<T> {
-    await simulateDelay();
-    throw new Error("HTTP client not implemented - use local data");
+    if (error.response?.status === 401 && originalRequest) {
+      // Skip login failures
+      if (originalRequest.url?.includes(endpoints.auth.login)) {
+        return Promise.reject(error);
+      }
+
+      const refreshToken = tokenStorage.getRefreshToken();
+
+      if (refreshToken && !originalRequest.headers["X-Retry"]) {
+        try {
+          const response = await axios.post(
+            `${env.API_BASE_URL}${endpoints.auth.refreshToken}`,
+            { refreshToken },
+            {
+              headers: {
+                "Content-Type": "application/json",
+                "ngrok-skip-browser-warning": "true",
+              },
+            },
+          );
+
+          const { accessToken, refreshToken: newRefreshToken } =
+            response.data.data;
+          tokenStorage.setTokens({
+            accessToken,
+            refreshToken: newRefreshToken,
+          });
+
+          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+          originalRequest.headers["X-Retry"] = "true";
+          return httpClient(originalRequest);
+        } catch {
+          tokenStorage.clearTokens();
+          window.location.href = "/login";
+          return Promise.reject(error);
+        }
+      } else {
+        tokenStorage.clearTokens();
+        window.location.href = "/login";
+      }
+    }
+
+    const errorMessage =
+      error.response?.data?.error ??
+      error.response?.data?.message ??
+      error.message ??
+      "An error occurred";
+    return Promise.reject(new Error(errorMessage));
   },
-};
+);
+
+// export default httpClient;
+export type { AxiosInstance };
