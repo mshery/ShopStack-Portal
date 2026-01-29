@@ -26,6 +26,7 @@ export const endpoints = {
   platform: {
     settings: "/platform/settings",
     activityLogs: "/platform/activity-logs",
+    stats: "/platform/stats",
     plans: {
       list: "/platform/plans",
       byId: (id: string) => `/platform/plans/${id}`,
@@ -35,6 +36,7 @@ export const endpoints = {
       byId: (id: string) => `/platform/tenants/${id}`,
       impersonate: (id: string) => `/platform/tenants/${id}/impersonate`,
       suspend: (id: string) => `/platform/tenants/${id}/suspend`,
+      billing: (id: string) => `/platform/tenants/${id}/billing`,
     },
   },
 

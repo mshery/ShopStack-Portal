@@ -16,14 +16,36 @@ import {
   YAxis,
   CartesianGrid,
 } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/shared/components/ui/card";
+import { Skeleton } from "@/shared/components/ui/skeleton";
 
 const COLORS = ["#465fff", "#12b76a", "#f59e0b", "#ef4444", "#8b5cf6"];
 
 export default function PlatformDashboardPage() {
   const { status, vm } = usePlatformDashboardScreen();
 
-  if (status === "loading") return <div>Loading...</div>;
+  if (status === "loading") {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-8 w-48" />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-6 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-32 rounded-xl" />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <Skeleton className="h-[350px] rounded-xl" />
+          <Skeleton className="h-[350px] rounded-xl" />
+        </div>
+      </div>
+    );
+  }
+
   if (status === "error") return <div>Error loading dashboard</div>;
 
   const metricIcons = [
@@ -63,7 +85,9 @@ export default function PlatformDashboardPage() {
         {/* Plan Distribution */}
         <Card className="border-gray-200 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-lg font-bold">Plan Distribution</CardTitle>
+            <CardTitle className="text-lg font-bold">
+              Plan Distribution
+            </CardTitle>
           </CardHeader>
           <CardContent className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">

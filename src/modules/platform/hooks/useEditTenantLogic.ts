@@ -3,8 +3,15 @@ import { useUpdateTenant } from "../api/queries";
 import { useActivityLogsStore } from "../store/activityLogs.store";
 import { useAuthStore } from "@/modules/auth";
 import { generateId } from "@/shared/utils/normalize";
-import type { Tenant, TenantStatus, PlatformActivityLog } from "@/shared/types/models";
+import type {
+  Tenant,
+  TenantStatus,
+  PlatformActivityLog,
+} from "@/shared/types/models";
 import toast from "react-hot-toast";
+import { useSearchParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { refetchTenantListPage } from "../utils/tenantQueriesUtils";
 
 export interface EditTenantData {
   companyName: string;
@@ -17,8 +24,15 @@ export interface EditTenantData {
  */
 export function useEditTenantLogic(tenant: Tenant, onClose: () => void) {
   const updateTenantMutation = useUpdateTenant();
+  const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
+
   const { addPlatformLog } = useActivityLogsStore();
   const { currentUser } = useAuthStore();
+
+  const pageFromParams = Number(searchParams.get("page") ?? 1);
+  const limitFromParams = Number(searchParams.get("limit") ?? 10);
+  const searchFromParams = searchParams.get("search") ?? "";
 
   const [formData, setFormData] = useState<EditTenantData>({
     companyName: tenant.companyName,
@@ -103,10 +117,16 @@ export function useEditTenantLogic(tenant: Tenant, onClose: () => void) {
         addPlatformLog(log);
       }
 
+      await refetchTenantListPage(queryClient, {
+        page: pageFromParams,
+        limit: limitFromParams,
+        search: searchFromParams,
+      });
       toast.success("Tenant updated successfully");
       onClose();
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to update tenant";
+      const message =
+        error instanceof Error ? error.message : "Failed to update tenant";
       toast.error(message);
       console.error("Failed to update tenant:", error);
     }
@@ -118,6 +138,10 @@ export function useEditTenantLogic(tenant: Tenant, onClose: () => void) {
     addPlatformLog,
     currentUser,
     onClose,
+    queryClient,
+    pageFromParams,
+    limitFromParams,
+    searchFromParams,
   ]);
 
   const vm = useMemo(
@@ -131,7 +155,13 @@ export function useEditTenantLogic(tenant: Tenant, onClose: () => void) {
         formData.status !== tenant.status,
       isSubmitting: updateTenantMutation.isPending,
     }),
-    [formData, errors, showStatusWarning, tenant, updateTenantMutation.isPending],
+    [
+      formData,
+      errors,
+      showStatusWarning,
+      tenant,
+      updateTenantMutation.isPending,
+    ],
   );
 
   const actions = useMemo(

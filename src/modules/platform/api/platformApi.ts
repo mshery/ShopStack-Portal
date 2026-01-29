@@ -46,16 +46,41 @@ export interface ApiSubscriptionPlan {
   isActive: boolean;
 }
 
+import type {
+  BillingInvoice,
+  BillingPaymentMethod,
+} from "@/shared/types/models";
+
 export interface ApiTenant {
   id: string;
   slug: string;
   companyName: string;
   status: "active" | "inactive" | "suspended";
   planId: string;
-  plan: { id: string; name: string; monthlyPrice: number };
-  billing: { status: string; plan: string; monthlyAmount: number };
-  _count: { users: number; products: number; sales: number };
+  invoices: BillingInvoice[];
+  paymentMethods: BillingPaymentMethod[];
+  _count: {
+    users: number;
+    products: number;
+    sales: number;
+    customers: number;
+  };
   createdAt: string;
+}
+
+export interface ApiTenantBilling {
+  id: string;
+  tenantId: string;
+  plan: string;
+  status: "active" | "trial" | "past_due" | "cancelled";
+  monthlyAmount: number;
+  billingCycle: "monthly" | "yearly";
+  nextBillingDate: string | null;
+  lastPaymentDate: string | null;
+  lastPaymentAmount: number | null;
+  trialEndsAt: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ApiActivityLog {
@@ -211,16 +236,31 @@ export const platformApi = {
   },
 
   // ============ TENANTS ============
-  getTenants: async () => {
-    const res = await httpClient.get<ApiResponse<ApiTenant[]>>(
-      endpoints.platform.tenants.list,
-    );
+  getTenants: async (params?: { page?: number; limit?: number }) => {
+    const res = await httpClient.get<
+      ApiResponse<{
+        items: ApiTenant[];
+        pagination: {
+          page: number;
+          limit: number;
+          total: number;
+          totalPages: number;
+        };
+      }>
+    >(endpoints.platform.tenants.list, { params });
     return res.data.data;
   },
 
   getTenant: async (id: string) => {
     const res = await httpClient.get<ApiResponse<ApiTenant>>(
       endpoints.platform.tenants.byId(id),
+    );
+    return res.data.data;
+  },
+
+  getTenantBilling: async (id: string) => {
+    const res = await httpClient.get<ApiResponse<ApiTenantBilling>>(
+      endpoints.platform.tenants.billing(id),
     );
     return res.data.data;
   },
@@ -246,6 +286,10 @@ export const platformApi = {
       data,
     );
     return res.data.data;
+  },
+
+  deleteTenant: async (id: string) => {
+    await httpClient.delete(endpoints.platform.tenants.byId(id));
   },
 
   suspendTenant: async (id: string) => {
@@ -280,4 +324,23 @@ export const platformApi = {
     >(endpoints.platform.activityLogs, { params });
     return res.data.data;
   },
+
+  // ============ DASHBOARD STATS ============
+  getDashboardStats: async () => {
+    const res = await httpClient.get<ApiResponse<DashboardStats>>(
+      endpoints.platform.stats,
+    );
+    return res.data.data;
+  },
 };
+
+export interface DashboardStats {
+  metrics: {
+    title: string;
+    value: string | number;
+    change: { value: string; isUp: boolean };
+  }[];
+  planDistribution: { name: string; value: number }[];
+  recentActivity: ApiActivityLog[];
+  tenantGrowth: { name: string; count: number }[];
+}

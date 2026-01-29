@@ -26,9 +26,9 @@ import {
   ShoppingCart,
   Sparkles,
   Globe,
+  Loader2,
 } from "lucide-react";
-import { formatPlanName } from "@/shared/utils/format";
-import type { TenantPlan } from "@/shared/types/models";
+import type { ApiSubscriptionPlan } from "../api/platformApi";
 
 export default function CreateTenantPage() {
   const { vm, actions } = useCreateTenantLogic();
@@ -90,6 +90,8 @@ export default function CreateTenantPage() {
               <StepPlanLimits
                 formData={vm.formData}
                 updateFormData={actions.updateFormData}
+                plans={vm.plans}
+                plansLoading={vm.plansLoading}
               />
             )}
             {vm.currentStep === 2 && (
@@ -124,10 +126,20 @@ export default function CreateTenantPage() {
           {vm.isLastStep ? (
             <Button
               onClick={actions.submit}
+              disabled={vm.isSubmitting}
               className="bg-brand-600 hover:bg-brand-700"
             >
-              <Check className="mr-2 h-4 w-4" />
-              Create Tenant
+              {vm.isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <Check className="mr-2 h-4 w-4" />
+                  Create Tenant
+                </>
+              )}
             </Button>
           ) : (
             <Button
@@ -162,8 +174,12 @@ function StepBasics({
             <Building2 className="h-5 w-5 text-brand-600" />
           </div>
           <div>
-            <CardTitle className="text-xl dark:text-white/90">Basic Information</CardTitle>
-            <CardDescription className="dark:text-white/90">Enter the company details</CardDescription>
+            <CardTitle className="text-xl dark:text-white/90">
+              Basic Information
+            </CardTitle>
+            <CardDescription className="dark:text-white/90">
+              Enter the company details
+            </CardDescription>
           </div>
         </div>
       </CardHeader>
@@ -231,47 +247,46 @@ function StepBasics({
 function StepPlanLimits({
   formData,
   updateFormData,
+  plans,
+  plansLoading,
 }: {
   formData: CreateTenantData;
   updateFormData: (updates: Partial<CreateTenantData>) => void;
+  plans: ApiSubscriptionPlan[];
+  plansLoading: boolean;
 }) {
-  const plans: {
-    value: TenantPlan;
-    label: string;
-    limits: { users: number; products: number; orders: number };
-    icon: React.ReactNode;
-    color: string;
-    description: string;
-  }[] = [
-      {
-        value: "starter",
-        label: "Starter",
-        limits: { users: 1, products: 20, orders: 100 },
-        icon: <Sparkles className="h-5 w-5" />,
-        color: "success-600",
-        description: "For small businesses getting started",
-      },
-      {
-        value: "enterprise",
-        label: "Enterprise",
-        limits: { users: 999999, products: 999999, orders: 999999 },
-        icon: <Building2 className="h-5 w-5" />,
-        color: "brand-600",
-        description: "Unlimited access with full control",
-      },
-    ];
-
-  const handlePlanChange = (plan: TenantPlan) => {
-    const selectedPlan = plans.find((p) => p.value === plan);
-    if (selectedPlan) {
-      updateFormData({
-        plan,
-        maxUsers: selectedPlan.limits.users,
-        maxProducts: selectedPlan.limits.products,
-        maxOrders: selectedPlan.limits.orders,
-      });
-    }
+  const handlePlanChange = (plan: ApiSubscriptionPlan) => {
+    updateFormData({
+      planId: plan.id,
+      maxUsers: plan.limits.maxUsers,
+      maxProducts: plan.limits.maxProducts,
+      maxOrders: plan.limits.maxOrders,
+    });
   };
+
+  if (plansLoading) {
+    return (
+      <>
+        <CardHeader className="space-y-1 pb-6">
+          <div className="flex items-center gap-2">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50">
+              <Package className="h-5 w-5 text-brand-600" />
+            </div>
+            <div>
+              <CardTitle className="text-xl">Plan & Limits</CardTitle>
+              <CardDescription>Loading available plans...</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="animate-pulse space-y-3">
+            <div className="h-24 rounded-xl bg-gray-200" />
+            <div className="h-24 rounded-xl bg-gray-200" />
+          </div>
+        </CardContent>
+      </>
+    );
+  }
 
   return (
     <>
@@ -296,28 +311,32 @@ function StepPlanLimits({
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
             {plans.map((plan) => (
               <motion.button
-                key={plan.value}
+                key={plan.id}
                 type="button"
-                onClick={() => handlePlanChange(plan.value)}
+                onClick={() => handlePlanChange(plan)}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className={`group relative overflow-hidden rounded-xl border-2 p-4 text-left transition-all ${formData.plan === plan.value
-                  ? "border-brand-500 bg-brand-50 shadow-md"
-                  : "border-gray-200 bg-white hover:border-brand-300 hover:shadow-sm"
-                  }`}
+                className={`group relative overflow-hidden rounded-xl border-2 p-4 text-left transition-all ${
+                  formData.planId === plan.id
+                    ? "border-brand-500 bg-brand-50 shadow-md"
+                    : "border-gray-200 bg-white hover:border-brand-300 hover:shadow-sm"
+                }`}
               >
-                <div
-                  className={`mb-3 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-${plan.color} text-white shadow-sm`}
-                >
-                  {plan.icon}
+                <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-brand-600 text-white shadow-sm">
+                  {plan.isPopular ? (
+                    <Sparkles className="h-5 w-5" />
+                  ) : (
+                    <Package className="h-5 w-5" />
+                  )}
                 </div>
-                <p className="text-base font-bold text-gray-900">
-                  {plan.label}
-                </p>
+                <p className="text-base font-bold text-gray-900">{plan.name}</p>
                 <p className="mt-1 text-sm text-gray-600">
-                  Up to {plan.limits.users} users
+                  Up to {plan.limits.maxUsers} users
                 </p>
-                {formData.plan === plan.value && (
+                <p className="mt-1 text-xs text-brand-600 font-semibold">
+                  ${plan.monthlyPrice}/mo
+                </p>
+                {formData.planId === plan.id && (
                   <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
@@ -327,6 +346,11 @@ function StepPlanLimits({
                       <Check className="h-4 w-4 text-white" />
                     </div>
                   </motion.div>
+                )}
+                {plan.isPopular && (
+                  <Badge className="absolute left-3 top-3 bg-brand-600 text-white">
+                    Popular
+                  </Badge>
                 )}
               </motion.button>
             ))}
@@ -447,10 +471,11 @@ function StepFeatures({
           <motion.div
             key={feature.key}
             whileHover={{ scale: 1.01 }}
-            className={`flex items-center justify-between rounded-xl border-2 p-4 transition-all ${formData.features[feature.key]
-              ? "border-brand-500 bg-brand-50 shadow-sm"
-              : "border-gray-200 bg-white hover:border-gray-300"
-              }`}
+            className={`flex items-center justify-between rounded-xl border-2 p-4 transition-all ${
+              formData.features[feature.key]
+                ? "border-brand-500 bg-brand-50 shadow-sm"
+                : "border-gray-200 bg-white hover:border-gray-300"
+            }`}
           >
             <div className="flex items-center gap-3">
               <div
@@ -493,122 +518,93 @@ function StepOwner({
           <div>
             <CardTitle className="text-xl">Owner Setup</CardTitle>
             <CardDescription>
-              Optionally create an owner user account
+              Set up the owner account for this tenant
             </CardDescription>
           </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex items-center justify-between rounded-xl border-2 border-gray-200 bg-white p-4">
-          <div className="space-y-0.5">
-            <p className="font-semibold text-gray-900">Create owner account</p>
-            <p className="text-sm text-gray-600">
-              Set up an initial admin user for this tenant
-            </p>
-          </div>
-          <Switch
-            checked={formData.createOwner}
-            onCheckedChange={(checked) =>
-              updateFormData({ createOwner: checked })
-            }
-          />
-        </div>
-
-        <AnimatePresence>
-          {formData.createOwner && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.3 }}
-              className="space-y-4 overflow-hidden rounded-xl border border-brand-200 bg-brand-50/50 p-4"
+        <div className="space-y-4 rounded-xl border border-brand-200 bg-brand-50/50 p-4">
+          <div className="space-y-2">
+            <Label
+              htmlFor="ownerName"
+              className="text-sm font-semibold text-gray-700"
             >
-              <div className="space-y-2">
-                <Label
-                  htmlFor="ownerName"
-                  className="text-sm font-semibold text-gray-700"
-                >
-                  Owner Name <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="ownerName"
-                  placeholder="John Doe"
-                  value={formData.ownerName}
-                  onChange={(e) =>
-                    updateFormData({ ownerName: e.target.value })
-                  }
-                  className="h-11 border-gray-300 bg-white"
-                />
-                {errors.ownerName && (
-                  <motion.p
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="text-sm text-red-600 flex items-center gap-1"
-                  >
-                    <span className="text-lg">⚠️</span> {errors.ownerName}
-                  </motion.p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label
-                  htmlFor="ownerEmail"
-                  className="text-sm font-semibold text-gray-700"
-                >
-                  Owner Email <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="ownerEmail"
-                  type="email"
-                  placeholder="john@example.com"
-                  value={formData.ownerEmail}
-                  onChange={(e) =>
-                    updateFormData({ ownerEmail: e.target.value })
-                  }
-                  className="h-11 border-gray-300 bg-white"
-                />
-                {errors.ownerEmail && (
-                  <motion.p
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="text-sm text-red-600 flex items-center gap-1"
-                  >
-                    <span className="text-lg">⚠️</span> {errors.ownerEmail}
-                  </motion.p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label
-                  htmlFor="ownerPassword"
-                  className="text-sm font-semibold text-gray-700"
-                >
-                  Owner Password <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="ownerPassword"
-                  type="password"
-                  placeholder="Minimum 8 characters"
-                  value={formData.ownerPassword}
-                  onChange={(e) =>
-                    updateFormData({ ownerPassword: e.target.value })
-                  }
-                  className="h-11 border-gray-300 bg-white"
-                />
-                <p className="text-xs text-gray-500">
-                  This password will be used by the owner to login
-                </p>
-                {errors.ownerPassword && (
-                  <motion.p
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="text-sm text-red-600 flex items-center gap-1"
-                  >
-                    <span className="text-lg">⚠️</span> {errors.ownerPassword}
-                  </motion.p>
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              Owner Name <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="ownerName"
+              placeholder="John Doe"
+              value={formData.ownerName}
+              onChange={(e) => updateFormData({ ownerName: e.target.value })}
+              className="h-11 border-gray-300 bg-white"
+            />
+            {errors.ownerName && (
+              <motion.p
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-sm text-red-600 flex items-center gap-1"
+              >
+                <span className="text-lg">⚠️</span> {errors.ownerName}
+              </motion.p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label
+              htmlFor="ownerEmail"
+              className="text-sm font-semibold text-gray-700"
+            >
+              Owner Email <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="ownerEmail"
+              type="email"
+              placeholder="john@example.com"
+              value={formData.ownerEmail}
+              onChange={(e) => updateFormData({ ownerEmail: e.target.value })}
+              className="h-11 border-gray-300 bg-white"
+            />
+            {errors.ownerEmail && (
+              <motion.p
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-sm text-red-600 flex items-center gap-1"
+              >
+                <span className="text-lg">⚠️</span> {errors.ownerEmail}
+              </motion.p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label
+              htmlFor="ownerPassword"
+              className="text-sm font-semibold text-gray-700"
+            >
+              Owner Password <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="ownerPassword"
+              type="password"
+              placeholder="Minimum 8 characters"
+              value={formData.ownerPassword}
+              onChange={(e) =>
+                updateFormData({ ownerPassword: e.target.value })
+              }
+              className="h-11 border-gray-300 bg-white"
+            />
+            <p className="text-xs text-gray-500">
+              This password will be used by the owner to login
+            </p>
+            {errors.ownerPassword && (
+              <motion.p
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-sm text-red-600 flex items-center gap-1"
+              >
+                <span className="text-lg">⚠️</span> {errors.ownerPassword}
+              </motion.p>
+            )}
+          </div>
+        </div>
       </CardContent>
     </>
   );
@@ -667,7 +663,7 @@ function StepReview({ formData }: { formData: CreateTenantData }) {
           </div>
           <div className="mb-3">
             <Badge className="bg-brand-600 text-white hover:bg-brand-600">
-              {formatPlanName(formData.plan)}
+              Plan ID: {formData.planId || "Not selected"}
             </Badge>
           </div>
           <dl className="grid grid-cols-3 gap-3 text-sm">
@@ -727,34 +723,34 @@ function StepReview({ formData }: { formData: CreateTenantData }) {
         </div>
 
         {/* Owner */}
-        {formData.createOwner && (
-          <div className="rounded-xl border border-gray-200 bg-white p-4">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-success-600">
-                <Users className="h-5 w-5 text-white" />
-              </div>
-              <h4 className="text-base font-semibold text-gray-900">
-                Owner Account
-              </h4>
+        <div className="rounded-xl border border-gray-200 bg-white p-4">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-success-600">
+              <Users className="h-5 w-5 text-white" />
             </div>
-            <dl className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <dt className="text-gray-600">Name:</dt>
-                <dd className="font-medium text-gray-900">
-                  {formData.ownerName}
-                </dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-gray-600">Email:</dt>
-                <dd className="text-gray-900">{formData.ownerEmail}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-gray-600">Password:</dt>
-                <dd className="text-gray-900 font-mono">••••••••</dd>
-              </div>
-            </dl>
+            <h4 className="text-base font-semibold text-gray-900">
+              Owner Account
+            </h4>
           </div>
-        )}
+          <dl className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <dt className="text-gray-600">Name:</dt>
+              <dd className="font-medium text-gray-900">
+                {formData.ownerName || "Not set"}
+              </dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-gray-600">Email:</dt>
+              <dd className="text-gray-900">
+                {formData.ownerEmail || "Not set"}
+              </dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-gray-600">Password:</dt>
+              <dd className="text-gray-900 font-mono">••••••••</dd>
+            </div>
+          </dl>
+        </div>
       </CardContent>
     </>
   );
