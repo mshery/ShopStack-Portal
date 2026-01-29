@@ -1,11 +1,11 @@
 import { useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { useTenantsStore } from "../store/tenants.store";
-import { useUsersStore } from "@/modules/tenant";
+import { useCreateTenant } from "../api/queries";
 import { useActivityLogsStore } from "../store/activityLogs.store";
 import { useAuthStore } from "@/modules/auth";
 import { generateId } from "@/shared/utils/normalize";
-import type { Tenant, TenantUser, TenantPlan, TenantFeatures } from "@/shared/types/models";
+import type { TenantPlan, TenantFeatures } from "@/shared/types/models";
+import toast from "react-hot-toast";
 
 export interface CreateTenantData {
   // Step 1: Basics
@@ -55,14 +55,13 @@ const STEPS = [
 ];
 
 /**
- * useCreateTenantLogic - Create tenant stepper logic hook
+ * useCreateTenantLogic - Create tenant stepper logic hook with TanStack Query
  */
 export function useCreateTenantLogic() {
   const navigate = useNavigate();
-  const { addTenant } = useTenantsStore();
-  const { addTenantUser } = useUsersStore();
   const { addPlatformLog } = useActivityLogsStore();
   const { currentUser } = useAuthStore();
+  const createTenantMutation = useCreateTenant();
 
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<CreateTenantData>(initialData);
@@ -148,72 +147,39 @@ export function useCreateTenantLogic() {
     });
   }, []);
 
-  const submit = useCallback(() => {
-    const tenantId = generateId("tenant");
-    const now = new Date().toISOString();
+  const submit = useCallback(async () => {
+    try {
+      // Call real API via TanStack Query mutation
+      await createTenantMutation.mutateAsync({
+        slug: formData.slug,
+        companyName: formData.companyName,
+        planId: "plan-id-placeholder", // TODO: Get from selected plan
+        ownerEmail: formData.ownerEmail,
+        ownerName: formData.ownerName,
+        ownerPassword: formData.ownerPassword,
+      });
 
-    // Create tenant
-    const newTenant: Tenant = {
-      id: tenantId,
-      slug: formData.slug,
-      companyName: formData.companyName,
-      plan: formData.plan,
-      status: "active",
-      maxUsers: formData.maxUsers,
-      maxProducts: formData.maxProducts,
-      maxOrders: formData.maxOrders,
-      features: formData.features,
-      settings: {
-        taxRate: 0.1,
-        currency: "USD",
-        currencySymbol: "$",
-        timezone: "America/New_York",
-        businessName: formData.companyName,
-        businessAddress: "",
-        businessPhone: "",
-      },
-      createdAt: now,
-      updatedAt: now,
-    };
-    addTenant(newTenant);
-
-    // Create owner if specified
-    if (formData.createOwner) {
-      const ownerId = generateId("user");
-      const newOwner: TenantUser = {
-        id: ownerId,
-        tenant_id: tenantId,
-        email: formData.ownerEmail,
-        password: formData.ownerPassword,
-        name: formData.ownerName,
-        role: "owner",
-        status: "active",
-        phone: null,
-        avatarUrl: null,
-        createdBy: "platform",
-        createdAt: now,
-        updatedAt: now,
+      // Log activity
+      const log = {
+        id: generateId("plog"),
+        action: "tenant_created",
+        actorId: currentUser?.id ?? "unknown",
+        targetType: "tenant",
+        targetId: "new-tenant",
+        details: { companyName: formData.companyName },
       };
-      addTenantUser(newOwner);
+      addPlatformLog(log);
+
+      toast.success("Tenant created successfully");
+      navigate("/platform/tenants");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to create tenant";
+      toast.error(message);
+      console.error("Failed to create tenant:", error);
     }
-
-    // Log activity
-    const log = {
-      id: generateId("plog"),
-      action: "tenant_created",
-      actorId: currentUser?.id ?? "unknown",
-      targetType: "tenant",
-      targetId: tenantId,
-      details: { companyName: formData.companyName },
-    };
-    addPlatformLog(log);
-
-    // Navigate to tenants list
-    navigate("/platform/tenants");
   }, [
     formData,
-    addTenant,
-    addTenantUser,
+    createTenantMutation,
     addPlatformLog,
     currentUser,
     navigate,
@@ -228,8 +194,9 @@ export function useCreateTenantLogic() {
       isFirstStep: currentStep === 0,
       isLastStep: currentStep === STEPS.length - 1,
       canGoNext: currentStep < STEPS.length - 1,
+      isSubmitting: createTenantMutation.isPending,
     }),
-    [currentStep, formData, errors],
+    [currentStep, formData, errors, createTenantMutation.isPending],
   );
 
   const actions = useMemo(
