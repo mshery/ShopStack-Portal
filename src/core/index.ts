@@ -11,23 +11,23 @@ export { httpClient, seedData, simulateDelay } from "./api/httpClient";
 export { env } from "./config/env";
 export type { Env } from "./config/env";
 
-// Security
+// Security - RBAC Configuration
 export {
-    type Permission,
-    type TenantRole,
-    rolePermissions,
-    ROLE_PERMISSIONS,
-    ROUTE_PERMISSIONS,
-    hasPermission,
-    canAccessRoute,
-    getAccessibleRoutes,
+  type Permission,
+  type TenantRole,
+  type PlatformRole,
+  type Role,
+  rolePermissions,
+  platformPermissions,
+  routePermissions,
 } from "./security/rbac.config";
 
+// Security - Permission Utilities
 export {
-    hasPermission as checkPermission,
-    hasAnyPermission,
-    hasAllPermissions,
-    getPermissionsForRole,
+  hasPermission,
+  hasAnyPermission,
+  hasAllPermissions,
+  getPermissionsForRole,
 } from "./security/permissions";
 
 // Routing

@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSettingsFetch, useUpdateSettings } from "../api/queries";
 import { usePlatformSettingsStore } from "@/modules/platform/store/platformSettings.store";
+import { PlatformSettingsSkeleton } from "../components/skeletons";
 import {
   Card,
   CardContent,
@@ -12,22 +14,65 @@ import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { Switch } from "@/shared/components/ui/switch";
 import { Separator } from "@/shared/components/ui/separator";
-import { Settings, Mail, Palette, Shield, Check } from "lucide-react";
+import { Settings, Mail, Palette, Shield, Check, AlertCircle, RefreshCw } from "lucide-react";
+import toast from "react-hot-toast";
 
 export default function PlatformSettingsPage() {
-  const { settings, updateSettings } = usePlatformSettingsStore();
-  const [localSettings, setLocalSettings] = useState(settings);
+  // Fetch settings from API - syncs to store
+  const { data: apiSettings, isLoading, isError, refetch } = useSettingsFetch();
+  const { settings } = usePlatformSettingsStore();
+  const updateSettingsMutation = useUpdateSettings();
+
+  // Initialize local settings with API data or fallback to store
+  const [localSettings, setLocalSettings] = useState(apiSettings || settings);
   const [saved, setSaved] = useState(false);
 
-  const handleSave = () => {
-    updateSettings(localSettings);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  // Update local settings when API data changes (happens once on load)
+  const effectiveSettings = apiSettings || settings;
+  useEffect(() => {
+    setLocalSettings(effectiveSettings);
+  }, [effectiveSettings]);
+
+  const handleSave = async () => {
+    try {
+      await updateSettingsMutation.mutateAsync(localSettings);
+      setSaved(true);
+      toast.success("Settings saved successfully");
+      setTimeout(() => setSaved(false), 2000);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to save settings";
+      toast.error(message);
+      console.error("Failed to save settings:", error);
+    }
   };
 
   const handleChange = (key: keyof typeof settings, value: string | boolean) => {
     setLocalSettings((prev) => ({ ...prev, [key]: value }));
   };
+
+  // Loading state
+  if (isLoading) {
+    return <PlatformSettingsSkeleton />;
+  }
+
+  // Error state
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+          Failed to load settings
+        </h3>
+        <p className="text-gray-500 dark:text-gray-400 mb-4">
+          Something went wrong. Please try again.
+        </p>
+        <Button variant="outline" onClick={() => refetch()}>
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Retry
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 p-6">
@@ -136,6 +181,7 @@ export default function PlatformSettingsPage() {
             <div className="flex justify-end">
               <Button
                 onClick={handleSave}
+                disabled={updateSettingsMutation.isPending}
                 className="bg-brand-600 hover:bg-brand-700"
               >
                 {saved ? (
@@ -143,6 +189,8 @@ export default function PlatformSettingsPage() {
                     <Check className="mr-2 h-4 w-4" />
                     Saved!
                   </>
+                ) : updateSettingsMutation.isPending ? (
+                  "Saving..."
                 ) : (
                   "Save Configuration"
                 )}
@@ -217,6 +265,7 @@ export default function PlatformSettingsPage() {
             <div className="flex justify-end">
               <Button
                 onClick={handleSave}
+                disabled={updateSettingsMutation.isPending}
                 className="bg-brand-600 hover:bg-brand-700"
               >
                 {saved ? (
@@ -224,6 +273,8 @@ export default function PlatformSettingsPage() {
                     <Check className="mr-2 h-4 w-4" />
                     Saved!
                   </>
+                ) : updateSettingsMutation.isPending ? (
+                  "Saving..."
                 ) : (
                   "Save Branding"
                 )}

@@ -1,140 +1,198 @@
 /**
  * RBAC Configuration
- * Role-Based Access Control for tenant users
+ *
+ * Defines roles, permissions, and role-permission mappings for the application.
+ * This is the single source of truth for authorization rules.
  */
 
-import type { UserRole } from "@/shared/types/models";
+// ============================================
+// PERMISSION TYPES
+// ============================================
 
-// Permission types for granular access control
+/**
+ * All available permissions in the system.
+ * Format: "resource:action"
+ */
 export type Permission =
-    | "dashboard:view"
-    | "products:view"
-    | "products:create"
-    | "products:edit"
-    | "products:delete"
-    | "customers:view"
-    | "customers:create"
-    | "customers:edit"
-    | "vendors:view"
-    | "vendors:create"
-    | "vendors:edit"
-    | "purchases:view"
-    | "purchases:create"
-    | "purchases:edit"
-    | "pos:access"
-    | "pos:complete_sale"
-    | "pos:refund"
-    | "sales:view"
-    | "sales:view_all"
-    | "sales:view_own"
-    | "reports:view"
-    | "users:view"
-    | "users:create"
-    | "users:edit"
-    | "settings:view"
-    | "settings:edit"
-    | "expenses:view"
-    | "expenses:create"
-    | "expenses:edit"
-    | "inventory:view"
-    | "inventory:adjust"
-    | "billing:view";
+  // Platform permissions
+  | "platform:access"
 
-// Tenant role type alias for use in permission functions
-export type TenantRole = UserRole;
+  // Dashboard
+  | "dashboard:view"
 
-// Role permission mappings
+  // Users
+  | "users:view"
+  | "users:create"
+  | "users:edit"
+  | "users:delete"
+
+  // Products
+  | "products:view"
+  | "products:create"
+  | "products:edit"
+  | "products:delete"
+
+  // Categories & Brands (part of settings)
+  | "settings:view"
+  | "settings:edit"
+
+  // Customers
+  | "customers:view"
+  | "customers:create"
+  | "customers:edit"
+  | "customers:delete"
+
+  // Vendors
+  | "vendors:view"
+  | "vendors:create"
+  | "vendors:edit"
+  | "vendors:delete"
+
+  // Purchases
+  | "purchases:view"
+  | "purchases:create"
+  | "purchases:edit"
+  | "purchases:delete"
+
+  // Inventory
+  | "inventory:view"
+  | "inventory:create"
+  | "inventory:edit"
+
+  // Expenses
+  | "expenses:view"
+  | "expenses:create"
+  | "expenses:edit"
+  | "expenses:delete"
+
+  // Sales
+  | "sales:view"
+  | "sales:create"
+  | "sales:edit"
+  | "sales:delete"
+
+  // POS
+  | "pos:access"
+
+  // Reports
+  | "reports:view"
+
+  // Billing
+  | "billing:view"
+  | "billing:manage";
+
+// ============================================
+// ROLE TYPES
+// ============================================
+
+/**
+ * Platform roles (super admins)
+ */
+export type PlatformRole = "super_admin";
+
+/**
+ * Tenant roles (only owner and cashier - admin removed)
+ */
+export type TenantRole = "owner" | "cashier";
+
+/**
+ * All roles combined
+ */
+export type Role = PlatformRole | TenantRole;
+
+// ============================================
+// ROLE-PERMISSION MAPPINGS
+// ============================================
+
+/**
+ * Permissions granted to each tenant role
+ * Note: admin role removed - only owner and cashier exist
+ */
 export const rolePermissions: Record<TenantRole, Permission[]> = {
-    owner: [
-        // Full access to everything
-        "dashboard:view",
-        "products:view",
-        "products:create",
-        "products:edit",
-        "products:delete",
-        "customers:view",
-        "customers:create",
-        "customers:edit",
-        "vendors:view",
-        "vendors:create",
-        "vendors:edit",
-        "purchases:view",
-        "purchases:create",
-        "purchases:edit",
-        "pos:access",
-        "pos:complete_sale",
-        "pos:refund",
-        "sales:view",
-        "sales:view_all",
-        "reports:view",
-        "users:view",
-        "users:create",
-        "users:edit",
-        "settings:view",
-        "settings:edit",
-        "expenses:view",
-        "expenses:create",
-        "expenses:edit",
-        "inventory:view",
-        "inventory:adjust",
-        "billing:view",
-    ],
-    cashier: [
-        // POS access - can use register, cart, complete sales, view own sales
-        "pos:access",
-        "pos:complete_sale",
-        "pos:refund",
-        "sales:view",
-        "sales:view_own", // Can only view their own sales
-    ],
-};
+  owner: [
+    // Full access
+    "dashboard:view",
+    "users:view",
+    "users:create",
+    "users:edit",
+    "users:delete",
+    "products:view",
+    "products:create",
+    "products:edit",
+    "products:delete",
+    "settings:view",
+    "settings:edit",
+    "customers:view",
+    "customers:create",
+    "customers:edit",
+    "customers:delete",
+    "vendors:view",
+    "vendors:create",
+    "vendors:edit",
+    "vendors:delete",
+    "purchases:view",
+    "purchases:create",
+    "purchases:edit",
+    "purchases:delete",
+    "inventory:view",
+    "inventory:create",
+    "inventory:edit",
+    "expenses:view",
+    "expenses:create",
+    "expenses:edit",
+    "expenses:delete",
+    "sales:view",
+    "sales:create",
+    "sales:edit",
+    "sales:delete",
+    "pos:access",
+    "reports:view",
+    "billing:view",
+    "billing:manage",
+  ],
 
-// Legacy export for backward compatibility
-export const ROLE_PERMISSIONS = rolePermissions;
-
-// Route to permission mapping
-export const ROUTE_PERMISSIONS: Record<string, Permission> = {
-    "/tenant": "dashboard:view",
-    "/tenant/products": "products:view",
-    "/tenant/products/new": "products:create",
-    "/tenant/customers": "customers:view",
-    "/tenant/customers/new": "customers:create",
-    "/tenant/vendors": "vendors:view",
-    "/tenant/purchases": "purchases:view",
-    "/tenant/pos/cart": "pos:access",
-    "/tenant/pos/sell": "pos:access",
-    "/tenant/pos/sales": "sales:view",
-    "/tenant/users": "users:view",
-    "/tenant/users/new": "users:create",
-    "/tenant/settings": "settings:view",
-    "/tenant/reports": "reports:view",
-    "/tenant/expenses": "expenses:view",
-    "/tenant/inventory": "inventory:view",
-    "/tenant/billing": "billing:view",
+  cashier: [
+    // Limited access for POS operations
+    "dashboard:view",
+    "products:view",
+    "customers:view",
+    "customers:create",
+    "sales:view",
+    "sales:create",
+    "pos:access",
+  ],
 };
 
 /**
- * Check if a role has a specific permission
+ * Platform role permissions (super admins have access to everything)
  */
-export function hasPermission(role: UserRole, permission: Permission): boolean {
-    const permissions = rolePermissions[role];
-    return permissions.includes(permission);
-}
+export const platformPermissions: Permission[] = [
+  "platform:access",
+  // Include all tenant permissions as well for impersonation
+  ...rolePermissions.owner,
+];
+
+// ============================================
+// ROUTE-PERMISSION MAPPING
+// ============================================
 
 /**
- * Check if a role can access a specific route
+ * Maps route patterns to required permissions
  */
-export function canAccessRoute(role: UserRole, route: string): boolean {
-    const permission = ROUTE_PERMISSIONS[route];
-    if (!permission) return true; // Allow access if no permission defined
-    return hasPermission(role, permission);
-}
-
-/**
- * Get all accessible routes for a role
- */
-export function getAccessibleRoutes(role: UserRole): string[] {
-    return Object.keys(ROUTE_PERMISSIONS).filter((route) =>
-        canAccessRoute(role, route),
-    );
-}
+export const routePermissions: Record<string, Permission> = {
+  "/tenant": "dashboard:view",
+  "/tenant/users": "users:view",
+  "/tenant/products": "products:view",
+  "/tenant/categories": "settings:view",
+  "/tenant/brands": "settings:view",
+  "/tenant/customers": "customers:view",
+  "/tenant/vendors": "vendors:view",
+  "/tenant/purchases": "purchases:view",
+  "/tenant/inventory": "inventory:view",
+  "/tenant/expenses": "expenses:view",
+  "/tenant/pos/sell": "pos:access",
+  "/tenant/pos/sales": "sales:view",
+  "/tenant/reports": "reports:view",
+  "/tenant/settings": "settings:view",
+  "/tenant/billing": "billing:view",
+};

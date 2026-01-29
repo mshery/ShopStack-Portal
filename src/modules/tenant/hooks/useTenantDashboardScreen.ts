@@ -8,7 +8,11 @@ import { useCustomersStore } from "@/modules/customers";
 import { useAuthStore } from "@/modules/auth";
 import { usePOSStore } from "@/modules/pos";
 import { useParams } from "react-router-dom";
-import type { TenantUser, Product, TenantActivityLog } from "@/shared/types/models";
+import type {
+  TenantUser,
+  Product,
+  TenantActivityLog,
+} from "@/shared/types/models";
 
 export type DashboardStatus = "loading" | "error" | "empty" | "success";
 
@@ -54,7 +58,7 @@ export function useTenantDashboardScreen(): {
   vm: any;
 } {
   const { tenantId: paramTenantId } = useParams<{ tenantId: string }>();
-  const { activeTenantId } = useAuthStore();
+  const { activeTenantId, currentTenant } = useAuthStore();
   const { tenants } = useTenantsStore();
   const { tenantUsers: allUsers } = useUsersStore();
   const { products } = useProductsStore();
@@ -64,10 +68,24 @@ export function useTenantDashboardScreen(): {
 
   const tenantId = paramTenantId || activeTenantId;
 
-  const tenant = useMemo(
-    () => tenants.find((t) => t.id === tenantId),
-    [tenants, tenantId],
-  );
+  // Use currentTenant from auth store (set during login) if available
+  // Fall back to tenantsStore lookup for platform admin viewing tenant details
+  const tenant = useMemo(() => {
+    // First check if we have currentTenant from login (for tenant users)
+    if (currentTenant && currentTenant.id === tenantId) {
+      // Convert AuthTenant to Tenant-like object for compatibility
+      return {
+        id: currentTenant.id,
+        slug: currentTenant.slug,
+        companyName: currentTenant.companyName,
+        status: currentTenant.status,
+        features: currentTenant.features,
+        settings: currentTenant.settings,
+      };
+    }
+    // Fall back to tenantsStore for platform admin impersonation/viewing
+    return tenants.find((t) => t.id === tenantId);
+  }, [currentTenant, tenants, tenantId]);
 
   const tenantUsers = useMemo(
     () => allUsers.filter((u: TenantUser) => u.tenant_id === tenantId),

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
-import { useAuthStore } from "@/modules/auth";
+import { useAuthStore, useAuthHydrated } from "@/modules/auth";
 import { usePermissions } from "@/shared/hooks/usePermissions";
 import type { Permission } from "@/core/security/rbac.config";
 
@@ -12,9 +12,11 @@ interface ProtectedRouteProps {
 
 /**
  * Protected Route Component
- * 1. Checks if user is authenticated
- * 2. Checks if user has required permission before rendering children
- * 3. Redirects to login if not authenticated, or to fallback if no permission
+ *
+ * 1. Waits for Zustand to rehydrate from localStorage
+ * 2. Checks if user is authenticated
+ * 3. Checks if user has required permission before rendering children
+ * 4. Redirects to login if not authenticated, or to fallback if no permission
  */
 export function ProtectedRoute({
   children,
@@ -22,7 +24,13 @@ export function ProtectedRoute({
   fallbackPath,
 }: ProtectedRouteProps) {
   const { currentUser, userType } = useAuthStore();
+  const hasHydrated = useAuthHydrated();
   const { hasPermission } = usePermissions();
+
+  // Wait for Zustand to rehydrate before making decisions
+  if (!hasHydrated) {
+    return null; // Show nothing while hydrating
+  }
 
   // First check: Is user authenticated?
   if (!currentUser || !userType) {

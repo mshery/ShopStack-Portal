@@ -21,8 +21,21 @@ import { usePlatformSettingsStore } from "@/modules/platform";
  *
  * This is the ONLY place where seed data is loaded.
  * All downstream code uses normalized store data.
+ *
+ * Note: Mock data is conditionally loaded based on VITE_USE_MOCK_DATA env var.
+ * When using real APIs, set VITE_USE_MOCK_DATA=false.
  */
 export function initializeStores(): void {
+  // Only load seed data if using mock data (development mode)
+  // In production or when connecting to real API, skip this
+  const useMockData = import.meta.env.VITE_USE_MOCK_DATA !== "false";
+
+  if (!useMockData) {
+    // Real API mode - data will be fetched via TanStack Query
+    return;
+  }
+
+  // Mock data mode - load seed data into stores
   const data = seedData as unknown as SeedData;
 
   // Load platform settings

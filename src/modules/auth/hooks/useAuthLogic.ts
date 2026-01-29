@@ -1,162 +1,140 @@
 import { useState, useCallback, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useMutation } from "@tanstack/react-query";
+import { authApi, type LoginResponse } from "../api/authApi";
 import { useAuthStore } from "../store/auth.store";
-import { useUsersStore } from "@/modules/tenant";
-import { useTenantsStore } from "@/modules/platform";
+import { tokenStorage } from "@/core/security/storage";
 import type { AsyncStatus } from "@/shared/types/common";
 
 /**
- * useAuthLogic - Authentication logic hook
+ * useAuthLogic - Unified authentication logic hook
  *
- * Follows the screen hook pattern:
- * - Returns { status, vm, actions }
- * - vm is memoized
- * - actions are stable
+ * Handles login for both platform and tenant users.
+ * Auto-detects user type based on backend response (tenantId presence).
+ *
+ * After successful login, navigates via window.location.
+ * The auth store handles localStorage persistence internally.
  */
 export function useAuthLogic() {
-  const navigate = useNavigate();
-  const { setCurrentUser, setUserType, setActiveTenantId } = useAuthStore();
-  const { platformUsers, tenantUsers } = useUsersStore();
-  const { tenants } = useTenantsStore();
-
-  const [status, setStatus] = useState<AsyncStatus>("success");
+  const { currentUser, userType } = useAuthStore();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [selectedUserType, setSelectedUserType] = useState<
-    "platform" | "tenant"
-  >("platform");
+
+  // Login mutation - unified for both platform and tenant
+  const loginMutation = useMutation({
+    mutationFn: ({ email, password }: { email: string; password: string }) =>
+      authApi.login(email, password),
+    onSuccess: (data: LoginResponse) => {
+      console.log("Login API successful", data);
+
+      // Store tokens first
+      tokenStorage.setTokens({
+        accessToken: data.token,
+        refreshToken: data.refreshToken,
+      });
+
+      // Auto-detect user type based on tenantId
+      const isPlatformUser = !data.user.tenantId;
+
+      // Call the store's login action directly on the store instance
+      // The store now handles localStorage persistence internally
+      const storeState = useAuthStore.getState();
+
+      if (isPlatformUser) {
+        // Platform user
+        const platformUser = {
+          id: data.user.id,
+          email: data.user.email,
+          password: "",
+          name: data.user.name,
+          role: "super_admin" as const,
+          status:
+            data.user.status === "suspended"
+              ? ("inactive" as const)
+              : data.user.status,
+          phone: data.user.phone,
+          avatarUrl: data.user.avatarUrl,
+          createdAt: data.user.createdAt,
+          updatedAt: data.user.updatedAt,
+        };
+
+        // Atomic login - sets all state and persists to localStorage
+        storeState.login({
+          user: platformUser,
+          userType: "platform",
+          tenantId: null,
+          tenant: null,
+        });
+
+        console.log("Auth store updated for platform user, navigating...");
+        window.location.href = "/platform";
+      } else {
+        // Tenant user
+        const tenantUser = {
+          id: data.user.id,
+          tenant_id: data.user.tenantId!,
+          email: data.user.email,
+          password: "",
+          name: data.user.name,
+          role: data.user.role as "owner" | "cashier",
+          status:
+            data.user.status === "suspended"
+              ? ("inactive" as const)
+              : data.user.status,
+          phone: data.user.phone,
+          avatarUrl: data.user.avatarUrl,
+          createdBy: data.user.createdBy as "platform" | "tenant",
+          createdAt: data.user.createdAt,
+          updatedAt: data.user.updatedAt,
+        };
+
+        // Atomic login - sets all state and persists to localStorage
+        storeState.login({
+          user: tenantUser,
+          userType: "tenant",
+          tenantId: data.user.tenantId,
+          tenant: data.tenant, // Pass tenant from login response
+        });
+
+        console.log("Auth store updated for tenant user, navigating...");
+        window.location.href = "/tenant";
+      }
+    },
+    onError: (error: Error) => {
+      setErrorMessage(error.message || "Invalid email or password");
+    },
+  });
 
   const loginWithCredentials = useCallback(
     (email: string, password: string) => {
-      // Clear any previous errors
       setErrorMessage(null);
-
-      // Check platform users first
-      const platformUser = platformUsers.find(
-        (u) =>
-          u.email.toLowerCase() === email.toLowerCase() &&
-          u.password === password,
-      );
-
-      if (platformUser) {
-        if (platformUser.status !== "active") {
-          setErrorMessage("Your account is inactive. Please contact support.");
-          setStatus("error");
-          return;
-        }
-        setCurrentUser(platformUser);
-        setUserType("platform");
-        setActiveTenantId(null);
-        navigate("/platform");
-        return;
-      }
-
-      // Check tenant users
-      const tenantUser = tenantUsers.find(
-        (u) =>
-          u.email.toLowerCase() === email.toLowerCase() &&
-          u.password === password,
-      );
-
-      if (tenantUser) {
-        if (tenantUser.status !== "active") {
-          setErrorMessage(
-            "Your account is inactive. Please contact your administrator.",
-          );
-          setStatus("error");
-          return;
-        }
-
-        const tenant = tenants.find((t) => t.id === tenantUser.tenant_id);
-        if (tenant) {
-          if (tenant.status === "suspended") {
-            setErrorMessage(
-              "Your organization's account has been suspended. Please contact support.",
-            );
-            setStatus("error");
-            return;
-          }
-          if (tenant.status === "inactive") {
-            setErrorMessage("Your organization's account is inactive.");
-            setStatus("error");
-            return;
-          }
-        }
-
-        setCurrentUser(tenantUser);
-        setUserType("tenant");
-        setActiveTenantId(tenantUser.tenant_id);
-        navigate("/tenant");
-        return;
-      }
-
-      // No user found
-      setErrorMessage("Invalid email or password. Please try again.");
-      setStatus("error");
+      loginMutation.mutate({ email, password });
     },
-    [
-      platformUsers,
-      tenantUsers,
-      tenants,
-      setCurrentUser,
-      setUserType,
-      setActiveTenantId,
-      navigate,
-    ],
+    [loginMutation],
   );
 
-  const loginAsPlatformUser = useCallback(
-    (userId: string) => {
-      const user = platformUsers.find((u) => u.id === userId);
-      if (!user) {
-        setErrorMessage("User not found");
-        setStatus("error");
-        return;
-      }
+  const logout = useCallback(() => {
+    tokenStorage.clearTokens();
+    useAuthStore.getState().logout();
+    window.location.href = "/login";
+  }, []);
 
-      setCurrentUser(user);
-      setUserType("platform");
-      setActiveTenantId(null);
-      navigate("/platform");
-    },
-    [platformUsers, setCurrentUser, setUserType, setActiveTenantId, navigate],
-  );
-
-  const loginAsTenantUser = useCallback(
-    (userId: string) => {
-      const user = tenantUsers.find((u) => u.id === userId);
-      if (!user) {
-        setErrorMessage("User not found");
-        setStatus("error");
-        return;
-      }
-
-      setCurrentUser(user);
-      setUserType("tenant");
-      setActiveTenantId(user.tenant_id);
-      navigate("/tenant");
-    },
-    [tenantUsers, setCurrentUser, setUserType, setActiveTenantId, navigate],
-  );
+  const status: AsyncStatus = loginMutation.isPending ? "loading" : "success";
 
   const vm = useMemo(
     () => ({
-      platformUsers,
-      tenantUsers,
-      selectedUserType,
       errorMessage,
+      isLoading: loginMutation.isPending,
+      isAuthenticated: !!currentUser && !!userType,
     }),
-    [platformUsers, tenantUsers, selectedUserType, errorMessage],
+    [errorMessage, loginMutation.isPending, currentUser, userType],
   );
 
   const actions = useMemo(
     () => ({
       loginWithCredentials,
-      loginAsPlatformUser,
-      loginAsTenantUser,
-      setSelectedUserType,
+      logout,
       clearError: () => setErrorMessage(null),
     }),
-    [loginWithCredentials, loginAsPlatformUser, loginAsTenantUser],
+    [loginWithCredentials, logout],
   );
 
   return { status, vm, actions };

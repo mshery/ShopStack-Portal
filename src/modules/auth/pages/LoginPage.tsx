@@ -143,9 +143,10 @@ export default function LoginPage() {
                 <div>
                   <button
                     type="submit"
-                    className="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600"
+                    disabled={vm.isLoading}
+                    className="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600 disabled:opacity-50"
                   >
-                    Sign in
+                    {vm.isLoading ? "Signing in..." : "Sign in"}
                   </button>
                 </div>
               </div>
