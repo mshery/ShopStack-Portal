@@ -1,15 +1,15 @@
 import { useState } from "react";
 import {
-  Check,
+  Check, // Imported but unused in this version if we hide upgrade success
   X,
   Download,
-  Eye,
+  // Eye,
   ChevronLeft,
   ChevronRight,
   CreditCard,
   Calendar,
   Receipt,
-  Pencil,
+  // Pencil,
   Plus,
   FileText,
 } from "lucide-react";
@@ -17,14 +17,7 @@ import PageBreadcrumb from "@/shared/components/feedback/PageBreadcrumb";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import { Modal } from "@/shared/components/ui/Modal";
-import {
-  useBillingScreen,
-  useBillingUpgrade,
-  useBillingsStore,
-} from "@/modules/billing";
-import { useTenantsStore } from "@/modules/tenant";
-import { useAuthStore } from "@/modules/auth";
-import { EditBillingAddressModal } from "@/modules/billing/components/EditBillingAddressModal";
+import { useBillingScreen, useBillingUpgrade } from "@/modules/billing";
 import { PaymentMethodModal } from "@/modules/billing/components/PaymentMethodModal";
 import type {
   BillingPaymentMethod,
@@ -32,7 +25,6 @@ import type {
   BillingInvoice,
   InvoiceStatus,
   SubscriptionPlan,
-  BillingAddress,
 } from "@/shared/types/models";
 
 // Card brand logos as simple SVG components
@@ -66,21 +58,17 @@ function PaypalLogo() {
 export default function BillingPage() {
   const { status, vm, actions } = useBillingScreen();
   const upgradeHook = useBillingUpgrade();
-  const { addPaymentMethod, removePaymentMethod, setDefaultPaymentMethod } =
-    useBillingsStore();
-  const { updateTenantSettings } = useTenantsStore();
-  const { activeTenantId } = useAuthStore();
 
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(
     null,
   );
-  const [upgradeSuccess, setUpgradeSuccess] = useState(false);
-  const [upgradeError, setUpgradeError] = useState<string | null>(null);
-  const [isUpgrading, setIsUpgrading] = useState(false);
+  // const [upgradeSuccess, setUpgradeSuccess] = useState(false);
+  // const [upgradeError, setUpgradeError] = useState<string | null>(null);
+  // const [isUpgrading, setIsUpgrading] = useState(false);
 
-  // Address modal state
-  const [showAddressModal, setShowAddressModal] = useState(false);
+  // Address modal state - Disabled for now as API is missing
+  // const [showAddressModal, setShowAddressModal] = useState(false);
 
   // Payment method modal state
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -90,76 +78,53 @@ export default function BillingPage() {
   const handleUpgradeClick = (plan: SubscriptionPlan) => {
     setSelectedPlan(plan);
     setShowUpgradeModal(true);
-    setUpgradeError(null);
+    // setUpgradeError(null);
   };
 
+  /*
+   * Upgrade logic hidden/disabled until API supports it
+   */
   const handleConfirmUpgrade = () => {
-    if (!selectedPlan) return;
-
-    setIsUpgrading(true);
-
-    // Simulate brief delay for UX
-    setTimeout(() => {
-      const result = upgradeHook.actions.upgrade(selectedPlan.slug);
-
-      if (result.success) {
-        setUpgradeSuccess(true);
-        setShowUpgradeModal(false);
-        // Hide success message after 5 seconds
-        setTimeout(() => setUpgradeSuccess(false), 5000);
-      } else {
-        setUpgradeError(result.error ?? "Unknown error occurred");
-      }
-
-      setIsUpgrading(false);
-    }, 500);
-  };
-
-  // Handle billing address save
-  const handleAddressSave = (address: BillingAddress) => {
-    if (!activeTenantId) return;
-    updateTenantSettings(activeTenantId, { billingAddress: address });
+    // Placeholder
+    setShowUpgradeModal(false);
   };
 
   // Handle payment method save
-  const handlePaymentMethodSave = (data: Partial<BillingPaymentMethod>) => {
-    if (!activeTenantId) return;
-
+  const handlePaymentMethodSave = async (
+    data: Partial<BillingPaymentMethod>,
+  ) => {
     if (editingPaymentMethod) {
-      // For edit, we'd update the existing method
-      // For now, we'll just close the modal
+      // Edit not supported by API yet
+      setEditingPaymentMethod(null);
+      setShowPaymentModal(false);
     } else {
       // Add new payment method
-      const newMethod: BillingPaymentMethod = {
-        id: `pm-${Date.now()}`,
-        tenant_id: activeTenantId,
+      await actions.addPaymentMethod({
         type: data.type ?? "card",
-        last4: data.last4 ?? "0000",
         brand: data.brand,
+        last4: data.last4,
         expiryMonth: data.expiryMonth,
         expiryYear: data.expiryYear,
         email: data.email,
-        isDefault: data.isDefault ?? false,
-        createdAt: new Date().toISOString(),
-      };
-      addPaymentMethod(newMethod);
-
-      if (data.isDefault) {
-        setDefaultPaymentMethod(activeTenantId, newMethod.id);
-      }
+        isDefault: data.isDefault,
+      });
+      setShowPaymentModal(false);
+      actions.refresh();
     }
-    setEditingPaymentMethod(null);
   };
 
   // Handle delete payment method
-  const handleDeletePaymentMethod = (methodId: string) => {
-    removePaymentMethod(methodId);
+  const handleDeletePaymentMethod = async (methodId: string) => {
+    if (confirm("Are you sure you want to delete this payment method?")) {
+      await actions.removePaymentMethod(methodId);
+      actions.refresh();
+    }
   };
 
   // Handle make default payment method
-  const handleMakeDefault = (methodId: string) => {
-    if (!activeTenantId) return;
-    setDefaultPaymentMethod(activeTenantId, methodId);
+  const handleMakeDefault = async (methodId: string) => {
+    await actions.setDefaultPaymentMethod(methodId);
+    actions.refresh();
   };
 
   if (status === "loading") {
@@ -202,23 +167,6 @@ export default function BillingPage() {
     <>
       <PageBreadcrumb pageTitle="Billing" />
 
-      {/* Success Notification */}
-      {upgradeSuccess && (
-        <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/50">
-            <Check className="h-5 w-5 text-green-600 dark:text-green-400" />
-          </div>
-          <div>
-            <p className="font-medium text-green-800 dark:text-green-200">
-              Plan Upgraded Successfully!
-            </p>
-            <p className="text-sm text-green-600 dark:text-green-400">
-              Your new plan is now active. An invoice has been generated.
-            </p>
-          </div>
-        </div>
-      )}
-
       <div className="space-y-6">
         {/* Plan Details & Billing Info Row */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -240,9 +188,7 @@ export default function BillingPage() {
                       Current Plan
                     </p>
                     <p className="font-semibold text-gray-900 dark:text-white">
-                      {currentPlan?.name ??
-                        billing.plan.charAt(0).toUpperCase() +
-                          billing.plan.slice(1)}
+                      {currentPlan?.name ?? billing.plan.name}
                     </p>
                   </div>
                 </div>
@@ -272,7 +218,7 @@ export default function BillingPage() {
                       Cost
                     </p>
                     <p className="font-semibold text-gray-900 dark:text-white">
-                      ${billing.monthlyAmount.toFixed(2)}
+                      ${Number(billing?.monthlyAmount ?? 0).toFixed(2)}
                       <span className="text-sm font-normal text-gray-500">
                         /month
                       </span>
@@ -329,7 +275,7 @@ export default function BillingPage() {
                   Plan Benefits
                 </h3>
                 <ul className="space-y-3">
-                  {(currentPlan?.features ?? []).map(
+                  {((currentPlan?.features as PlanFeature[]) ?? []).map(
                     (feature: PlanFeature, index: number) => (
                       <li key={index} className="flex items-center gap-3">
                         {feature.included ? (
@@ -353,9 +299,11 @@ export default function BillingPage() {
 
                 {/* Action Buttons */}
                 <div className="flex gap-3 mt-6">
-                  <Button variant="outline" className="flex-1">
+                  {/* Cancel Subscription disabled for now */}
+                  {/* <Button variant="outline" className="flex-1">
                     Cancel Subscription
-                  </Button>
+                   </Button> */}
+
                   {canUpgrade &&
                     upgradeHook.vm.availableUpgrades.length > 0 && (
                       <Button
@@ -417,22 +365,6 @@ export default function BillingPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-500 dark:text-gray-400">
-                    Zip/Postal code
-                  </span>
-                  <span className="text-sm font-medium text-gray-900 dark:text-white">
-                    {billingAddress.zipCode}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
-                    Town/City
-                  </span>
-                  <span className="text-sm font-medium text-gray-900 dark:text-white">
-                    {billingAddress.city}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
                     VAT Number
                   </span>
                   <span className="text-sm font-medium text-gray-900 dark:text-white">
@@ -440,26 +372,25 @@ export default function BillingPage() {
                   </span>
                 </div>
 
-                <Button
+                {/* Update Address Disabled */}
+                {/* <Button
                   variant="outline"
                   className="w-full mt-4 gap-2"
                   onClick={() => setShowAddressModal(true)}
                 >
                   <Pencil className="h-4 w-4" />
                   Update Billing Address
-                </Button>
+                </Button> */}
+                <p className="text-xs text-gray-400 mt-2 text-center">
+                  To update billing address, please contact support.
+                </p>
               </div>
             ) : (
               <div className="text-center text-gray-500 py-8">
                 <p>No billing address configured</p>
-                <Button
-                  variant="outline"
-                  className="mt-4 gap-2"
-                  onClick={() => setShowAddressModal(true)}
-                >
-                  <Plus className="h-4 w-4" />
-                  Add Billing Address
-                </Button>
+                <p className="text-xs text-gray-400 mt-2 text-center">
+                  Please contact support to add billing address.
+                </p>
               </div>
             )}
           </div>
@@ -490,10 +421,11 @@ export default function BillingPage() {
               <PaymentMethodCard
                 key={method.id}
                 method={method}
-                onEdit={() => {
-                  setEditingPaymentMethod(method);
-                  setShowPaymentModal(true);
-                }}
+                // Edit disabled for now
+                // onEdit={() => {
+                //   setEditingPaymentMethod(method);
+                //   setShowPaymentModal(true);
+                // }}
                 onDelete={() => handleDeletePaymentMethod(method.id)}
                 onMakeDefault={() => handleMakeDefault(method.id)}
               />
@@ -512,10 +444,10 @@ export default function BillingPage() {
                 Access all your previous invoices.
               </p>
             </div>
-            <Button variant="outline" size="sm" className="gap-2">
+            {/* <Button variant="outline" size="sm" className="gap-2">
               <Download className="h-4 w-4" />
               Download All
-            </Button>
+            </Button> */}
           </div>
 
           {invoices.length > 0 ? (
@@ -566,22 +498,9 @@ export default function BillingPage() {
                 </Button>
 
                 <div className="flex items-center gap-2">
-                  {Array.from(
-                    { length: pagination.totalPages },
-                    (_, i) => i + 1,
-                  ).map((page) => (
-                    <button
-                      key={page}
-                      onClick={() => actions.goToPage(page)}
-                      className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${
-                        page === pagination.currentPage
-                          ? "bg-brand-500 text-white"
-                          : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  ))}
+                  <span className="text-sm text-gray-500">
+                    Page {pagination.currentPage} of {pagination.totalPages}
+                  </span>
                 </div>
 
                 <Button
@@ -616,79 +535,27 @@ export default function BillingPage() {
             Upgrade to {selectedPlan?.name}
           </h2>
 
-          {upgradeError && (
-            <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-600 dark:text-red-400 text-sm">
-              {upgradeError}
-            </div>
-          )}
-
-          <div className="space-y-4 mb-6">
-            <div className="flex justify-between items-center py-3 border-b border-gray-200 dark:border-gray-700">
-              <span className="text-gray-600 dark:text-gray-400">
-                Current Plan
-              </span>
-              <span className="font-medium text-gray-900 dark:text-white">
-                {currentPlan?.name ?? "Starter"}
-              </span>
-            </div>
-            <div className="flex justify-between items-center py-3 border-b border-gray-200 dark:border-gray-700">
-              <span className="text-gray-600 dark:text-gray-400">New Plan</span>
-              <span className="font-medium text-brand-600 dark:text-brand-400">
-                {selectedPlan?.name}
-              </span>
-            </div>
-            <div className="flex justify-between items-center py-3 border-b border-gray-200 dark:border-gray-700">
-              <span className="text-gray-600 dark:text-gray-400">
-                Monthly Price
-              </span>
-              <span className="font-semibold text-gray-900 dark:text-white">
-                ${selectedPlan?.monthlyPrice.toFixed(2)}/month
-              </span>
-            </div>
-            <div className="flex justify-between items-center py-3">
-              <span className="text-gray-600 dark:text-gray-400">
-                New Limits
-              </span>
-              <span className="text-sm text-gray-900 dark:text-white">
-                {selectedPlan?.limits.maxOrders.toLocaleString()} orders/month
-              </span>
-            </div>
+          <div className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+            Upgrade requires confirmation.
           </div>
-
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-            You will be charged ${selectedPlan?.monthlyPrice.toFixed(2)}{" "}
-            immediately and your plan will be upgraded. An invoice will be
-            generated.
-          </p>
 
           <div className="flex gap-3">
             <Button
               variant="outline"
               className="flex-1"
               onClick={() => setShowUpgradeModal(false)}
-              disabled={isUpgrading}
             >
               Cancel
             </Button>
             <Button
               className="flex-1 bg-brand-500 hover:bg-brand-600"
               onClick={handleConfirmUpgrade}
-              disabled={isUpgrading}
             >
-              {isUpgrading ? "Processing..." : "Confirm Upgrade"}
+              Confirm Upgrade
             </Button>
           </div>
         </div>
       </Modal>
-
-      {/* Billing Address Modal */}
-      <EditBillingAddressModal
-        key={showAddressModal ? "address-open" : "address-closed"}
-        isOpen={showAddressModal}
-        onClose={() => setShowAddressModal(false)}
-        address={billingAddress}
-        onSave={handleAddressSave}
-      />
 
       {/* Payment Method Modal */}
       <PaymentMethodModal
@@ -734,6 +601,14 @@ function PaymentMethodCard({
         {method.type === "card" && method.brand === "visa" && <VisaLogo />}
         {method.type === "paypal" && <PaypalLogo />}
 
+        {/* Default logo/icon if brand unknown */}
+        {method.type === "card" &&
+          !["mastercard", "visa"].includes(method.brand ?? "") && (
+            <div className="w-12 h-8 flex items-center justify-center bg-gray-100 rounded border border-gray-200">
+              <CreditCard className="w-5 h-5 text-gray-500" />
+            </div>
+          )}
+
         <div className="flex-1">
           <div className="flex items-center gap-2">
             <p className="font-medium text-gray-900 dark:text-white">
@@ -744,7 +619,10 @@ function PaymentMethodCard({
                   : "Card"}
             </p>
             {method.isDefault && (
-              <Badge color="success" variant="light" size="sm">
+              <Badge
+                variant="outline"
+                className="text-green-600 border-green-200 bg-green-50"
+              >
                 <Check className="h-3 w-3 mr-1" />
                 Default
               </Badge>
@@ -785,8 +663,10 @@ function InvoiceRow({ invoice }: { invoice: BillingInvoice }) {
     paid: "success",
     pending: "warning",
     failed: "error",
-    unpaid: "error",
+    unpaid: "error", // Ensure type compat
   };
+
+  const statusColor = statusColors[invoice.status] || "warning";
 
   return (
     <tr className="border-b border-gray-100 dark:border-gray-800 last:border-0">
@@ -800,33 +680,33 @@ function InvoiceRow({ invoice }: { invoice: BillingInvoice }) {
           </span>
         </div>
       </td>
-      <td className="py-4 text-sm text-gray-600 dark:text-gray-400">
-        {new Date(invoice.createdAt).toLocaleDateString("en-US", {
-          month: "short",
-          day: "2-digit",
-          year: "numeric",
-        })}
+      <td className="py-4 text-sm text-gray-500 dark:text-gray-400">
+        {new Date(invoice.createdAt).toLocaleDateString()}
       </td>
       <td className="py-4 text-sm font-medium text-gray-900 dark:text-white">
         ${invoice.amount.toFixed(2)}
       </td>
-      <td className="py-4 text-sm text-gray-600 dark:text-gray-400">
+      <td className="py-4 text-sm text-gray-500 dark:text-gray-400">
         {invoice.planName}
       </td>
       <td className="py-4">
-        <Badge color={statusColors[invoice.status]} variant="light" size="sm">
+        <Badge
+          color={
+            statusColor === "success"
+              ? "success"
+              : statusColor === "error"
+                ? "error"
+                : "info"
+          }
+          variant="light"
+        >
           {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
         </Badge>
       </td>
-      <td className="py-4">
-        <div className="flex justify-end gap-2">
-          <button className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
-            <Download className="h-4 w-4" />
-          </button>
-          <button className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
-            <Eye className="h-4 w-4" />
-          </button>
-        </div>
+      <td className="py-4 text-right">
+        <Button variant="ghost" size="sm">
+          <Download className="h-4 w-4" />
+        </Button>
       </td>
     </tr>
   );

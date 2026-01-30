@@ -12,11 +12,8 @@ export interface ApiResponse<T> {
 }
 
 export interface PaginatedResponse<T> {
-  success: boolean;
-  message: string;
-  data: T[];
+  items: T[];
   pagination: Pagination;
-  timestamp: string;
 }
 
 export interface Pagination {
@@ -43,3 +40,8 @@ export interface ListParams {
   sortOrder?: "asc" | "desc";
   search?: string;
 }
+
+/**
+ * Standard async status for screen hooks
+ */
+export type AsyncStatus = "loading" | "error" | "empty" | "success";

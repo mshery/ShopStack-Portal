@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Modal } from "@/shared/components/ui/Modal";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -10,13 +10,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select";
-import { useUsersStore } from "@/modules/tenant";
-import type { TenantUser, UserRole } from "@/shared/types/models";
+import type { TenantUser, UserRole, UserStatus } from "@/shared/types/models";
+import toast from "react-hot-toast";
 
 interface EditUserModalProps {
   user: TenantUser;
   isOpen: boolean;
   onClose: () => void;
+  onSave: (
+    id: string,
+    data: Partial<TenantUser>,
+  ) => Promise<{ success: boolean; error?: string }>;
 }
 
 const USER_ROLES: { value: UserRole; label: string }[] = [
@@ -24,49 +28,86 @@ const USER_ROLES: { value: UserRole; label: string }[] = [
   { value: "cashier", label: "Cashier" },
 ];
 
+const USER_STATUSES: { value: UserStatus; label: string }[] = [
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
+  { value: "suspended", label: "Suspended" },
+];
+
 export default function EditUserModal({
   user,
   isOpen,
   onClose,
+  onSave,
 }: EditUserModalProps) {
-  const { updateTenantUser } = useUsersStore();
+  // Split name for initial state
+  const nameParts = user.name ? user.name.split(" ") : ["", ""];
+  const initialFirstName = nameParts[0] || "";
+  const initialLastName = nameParts.slice(1).join(" ") || "";
+
   const [formData, setFormData] = useState({
-    name: user.name,
-    email: user.email,
+    firstName: initialFirstName,
+    lastName: initialLastName,
     role: user.role,
-    status: user.status,
+    status: user.status as UserStatus,
   });
 
-  const handleChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSave = () => {
-    updateTenantUser(user.id, formData);
-    onClose();
-  };
+  // Update state when user prop changes (e.g. re-opening modal)
+  useEffect(() => {
+    if (isOpen) {
+      const parts = user.name ? user.name.split(" ") : ["", ""];
+      setFormData({
+        firstName: parts[0] || "",
+        lastName: parts.slice(1).join(" ") || "",
+        role: user.role,
+        status: user.status as UserStatus,
+      });
+    }
+  }, [user, isOpen]);
 
-  // Split name into first and last
-  const nameParts = formData.name.split(" ");
-  const firstName = nameParts[0] || "";
-  const lastName = nameParts.slice(1).join(" ") || "";
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    try {
+      const fullName =
+        `${formData.firstName.trim()} ${formData.lastName.trim()}`.trim();
+      const result = await onSave(user.id, {
+        name: fullName,
+        role: formData.role,
+        status: formData.status,
+      });
+
+      if (result.success) {
+        toast.success("User updated successfully");
+        onClose();
+      } else {
+        toast.error(result.error || "Failed to update user");
+      }
+    } catch (error) {
+      console.error("Failed to update user", error);
+      toast.error("Failed to update user");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} className="max-w-[700px] m-4">
       <div className="relative w-full max-w-[700px] overflow-y-auto rounded-3xl bg-white p-4 dark:bg-gray-900 lg:p-11">
         <div className="px-2 pr-14">
           <h4 className="mb-2 text-2xl font-semibold text-gray-800 dark:text-white/90">
-            Edit Personal Information
+            Edit User
           </h4>
           <p className="mb-6 text-sm text-gray-500 dark:text-gray-400 lg:mb-7">
-            Update user details to keep the profile up-to-date.
+            Update user details and status.
           </p>
         </div>
         <form
           className="flex flex-col"
           onSubmit={(e) => {
             e.preventDefault();
-            handleSave();
+            handleSubmit();
           }}
         >
           <div className="px-2 pb-3">
@@ -79,9 +120,12 @@ export default function EditUserModal({
                 <Label>First Name</Label>
                 <Input
                   type="text"
-                  value={firstName}
+                  value={formData.firstName}
                   onChange={(e) =>
-                    handleChange("name", `${e.target.value} ${lastName}`.trim())
+                    setFormData((prev) => ({
+                      ...prev,
+                      firstName: e.target.value,
+                    }))
                   }
                 />
               </div>
@@ -90,12 +134,12 @@ export default function EditUserModal({
                 <Label>Last Name</Label>
                 <Input
                   type="text"
-                  value={lastName}
+                  value={formData.lastName}
                   onChange={(e) =>
-                    handleChange(
-                      "name",
-                      `${firstName} ${e.target.value}`.trim(),
-                    )
+                    setFormData((prev) => ({
+                      ...prev,
+                      lastName: e.target.value,
+                    }))
                   }
                 />
               </div>
@@ -104,21 +148,19 @@ export default function EditUserModal({
                 <Label>Email Address</Label>
                 <Input
                   type="email"
-                  value={formData.email}
-                  onChange={(e) => handleChange("email", e.target.value)}
+                  value={user.email} // Email often shouldn't be edited or needs special validation, sticking to view-only or update if backend allows. Backend does allow.
+                  disabled // Let's keep email disabled for now as it's the identity, unless requested. User said "edit user things", didn't specify email. Usually changing email requires re-verification.
+                  className="bg-gray-100 dark:bg-gray-800 cursor-not-allowed"
                 />
               </div>
 
               <div className="col-span-2 lg:col-span-1">
-                <Label>Phone</Label>
-                <Input type="text" placeholder="No phone number" disabled />
-              </div>
-
-              <div className="col-span-2">
                 <Label>Role</Label>
                 <Select
                   value={formData.role}
-                  onValueChange={(value) => handleChange("role", value)}
+                  onValueChange={(value: UserRole) =>
+                    setFormData((prev) => ({ ...prev, role: value }))
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a role" />
@@ -132,13 +174,41 @@ export default function EditUserModal({
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="col-span-2 lg:col-span-1">
+                <Label>Status</Label>
+                <Select
+                  value={formData.status}
+                  onValueChange={(value: UserStatus) =>
+                    setFormData((prev) => ({ ...prev, status: value }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {USER_STATUSES.map((status) => (
+                      <SelectItem key={status.value} value={status.value}>
+                        {status.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Close
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={isSubmitting}
+            >
+              Cancel
             </Button>
-            <Button type="submit">Save Changes</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Saving..." : "Save Changes"}
+            </Button>
           </div>
         </form>
       </div>

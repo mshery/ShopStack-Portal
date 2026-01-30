@@ -34,6 +34,10 @@ export interface AuthTenant {
   status: string;
   features: Record<string, boolean>;
   settings: Record<string, unknown>;
+  // Tenant limits (from plan)
+  maxUsers?: number;
+  maxProducts?: number;
+  maxOrders?: number;
 }
 
 export interface LoginResponse {

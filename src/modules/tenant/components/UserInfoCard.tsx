@@ -1,18 +1,46 @@
+import { useState } from "react";
 import { useModal } from "@/shared/hooks/useModal";
 import { Modal } from "@/shared/components/ui/Modal";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
-import { useAuthStore } from "@/modules/auth";
+import { useProfileScreen } from "../hooks/useProfileScreen";
 
 export default function UserInfoCard() {
   const { isOpen, openModal, closeModal } = useModal();
-  const { currentUser } = useAuthStore();
+  const { vm, actions } = useProfileScreen();
 
-  const handleSave = () => {
-    console.log("Saving changes...");
-    closeModal();
+  const [formData, setFormData] = useState(() => ({
+    name: vm.user?.name || "",
+    email: vm.user?.email || "",
+    phone: vm.user?.phone || "",
+  }));
+
+  // Reset form when modal opens by using key prop approach in JSX
+  const handleOpenModal = () => {
+    if (vm.user) {
+      setFormData({
+        name: vm.user.name,
+        email: vm.user.email,
+        phone: vm.user.phone || "",
+      });
+    }
+    openModal();
   };
+
+  const handleSave = async () => {
+    const result = await actions.updateProfile({
+      name: formData.name,
+      email: formData.email,
+      phone: formData.phone || undefined, // Send undefined if empty to avoid clearing if not intended, or empty string? API expects string | null/undefined usually.
+    });
+
+    if (result.success) {
+      closeModal();
+    }
+  };
+
+  if (!vm.user) return null;
 
   return (
     <div className="p-5 border border-gray-200 rounded-2xl dark:border-gray-800 lg:p-6 bg-white dark:bg-white/[0.03]">
@@ -25,19 +53,10 @@ export default function UserInfoCard() {
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-7 2xl:gap-x-32">
             <div>
               <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
-                First Name
+                Full Name
               </p>
               <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                {currentUser?.name?.split(" ")[0] || "N/A"}
-              </p>
-            </div>
-
-            <div>
-              <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
-                Last Name
-              </p>
-              <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                {currentUser?.name?.split(" ").slice(1).join(" ") || "N/A"}
+                {vm.user.name}
               </p>
             </div>
 
@@ -46,7 +65,7 @@ export default function UserInfoCard() {
                 Email address
               </p>
               <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                {currentUser?.email || "N/A"}
+                {vm.user.email}
               </p>
             </div>
 
@@ -55,23 +74,23 @@ export default function UserInfoCard() {
                 Phone
               </p>
               <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                {currentUser?.phone || "N/A"}
+                {vm.user.phone || "N/A"}
               </p>
             </div>
 
-            <div className="col-span-1 lg:col-span-2">
+            <div>
               <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
-                Bio
+                Role
               </p>
               <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                {currentUser?.role || "Team Member"}
+                {vm.user.role}
               </p>
             </div>
           </div>
         </div>
 
         <button
-          onClick={openModal}
+          onClick={handleOpenModal}
           className="flex w-full items-center justify-center gap-2 rounded-full border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200 lg:inline-flex lg:w-auto mt-6 lg:mt-0"
         >
           <svg
@@ -109,31 +128,39 @@ export default function UserInfoCard() {
               handleSave();
             }}
           >
-            <div className="custom-scrollbar h-[450px] overflow-y-auto px-2 pb-3">
+            <div className="custom-scrollbar overflow-y-auto px-2 pb-3">
               <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
-                <div className="col-span-2 lg:col-span-1">
-                  <Label>First Name</Label>
-                  <Input type="text" defaultValue={currentUser?.name?.split(" ")[0]} />
-                </div>
-
-                <div className="col-span-2 lg:col-span-1">
-                  <Label>Last Name</Label>
-                  <Input type="text" defaultValue={currentUser?.name?.split(" ").slice(1).join(" ")} />
+                <div className="col-span-2">
+                  <Label>Full Name</Label>
+                  <Input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
+                  />
                 </div>
 
                 <div className="col-span-2 lg:col-span-1">
                   <Label>Email Address</Label>
-                  <Input type="text" defaultValue={currentUser?.email} />
+                  <Input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) =>
+                      setFormData({ ...formData, email: e.target.value })
+                    }
+                  />
                 </div>
 
                 <div className="col-span-2 lg:col-span-1">
                   <Label>Phone</Label>
-                  <Input type="text" defaultValue={currentUser?.phone || ""} />
-                </div>
-
-                <div className="col-span-2">
-                  <Label>Bio</Label>
-                  <Input type="text" defaultValue={currentUser?.role || ""} />
+                  <Input
+                    type="text"
+                    value={formData.phone}
+                    onChange={(e) =>
+                      setFormData({ ...formData, phone: e.target.value })
+                    }
+                  />
                 </div>
               </div>
             </div>
@@ -141,7 +168,9 @@ export default function UserInfoCard() {
               <Button type="button" variant="outline" onClick={closeModal}>
                 Close
               </Button>
-              <Button type="submit">Save Changes</Button>
+              <Button type="submit" disabled={vm.isUpdating}>
+                {vm.isUpdating ? "Saving..." : "Save Changes"}
+              </Button>
             </div>
           </form>
         </div>

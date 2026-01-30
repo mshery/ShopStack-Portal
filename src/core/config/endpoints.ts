@@ -51,6 +51,7 @@ export const endpoints = {
     products: {
       list: "/tenant/products",
       byId: (id: string) => `/tenant/products/${id}`,
+      generateSku: "/tenant/products/generate-sku",
     },
     categories: {
       list: "/tenant/categories",

@@ -163,9 +163,9 @@ export function useTenantDashboardScreen(): {
       )
       .slice(0, 5);
 
-    // Map actor IDs to names and format details
     return sortedLogs.map((log) => {
-      const actorUser = allUsers.find((u: TenantUser) => u.id === log.actorId);
+      // safe cast/check since TeamMember is subset of user info needed here
+      const actorUser = tenantUsers.find((u: any) => u.id === log.actorId);
       return {
         id: log.id,
         action: log.action,
@@ -174,7 +174,7 @@ export function useTenantDashboardScreen(): {
         createdAt: log.createdAt,
       };
     });
-  }, [specificTenantLogs, allUsers]);
+  }, [specificTenantLogs, tenantUsers]);
 
   const metrics = useMemo(
     () => [
