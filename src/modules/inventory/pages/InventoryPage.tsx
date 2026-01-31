@@ -1,52 +1,16 @@
-import { useMemo, useState } from "react";
+import { useInventoryScreen } from "../hooks/useInventoryScreen";
 import Pagination from "@/shared/components/feedback/Pagination";
-import { useInventoryStore } from "@/modules/inventory";
-import { useAuthStore } from "@/modules/auth";
-import { useUsersStore } from "@/modules/tenant";
-import { useTenantCurrency } from "@/modules/tenant";
 import {
   ArrowDownRight,
-  ArrowUpRight,
   Package,
-  TrendingDown,
-  TrendingUp,
   AlertTriangle,
   RotateCcw,
   Link2,
 } from "lucide-react";
-
-const ITEMS_PER_PAGE = 10;
+import { Skeleton } from "@/shared/components/ui/skeleton";
 
 export default function InventoryPage() {
-  const { inventoryAdjustments } = useInventoryStore();
-  const { activeTenantId } = useAuthStore();
-  const { tenantUsers } = useUsersStore();
-  const { formatPrice } = useTenantCurrency();
-
-  const [currentPage, setCurrentPage] = useState(1);
-
-  // Filter adjustments for current tenant
-  const tenantAdjustments = useMemo(() => {
-    return inventoryAdjustments
-      .filter((adj) => adj.tenant_id === activeTenantId)
-      .sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-      );
-  }, [inventoryAdjustments, activeTenantId]);
-
-  // Pagination
-  const totalPages = Math.ceil(tenantAdjustments.length / ITEMS_PER_PAGE);
-  const paginatedAdjustments = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return tenantAdjustments.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [tenantAdjustments, currentPage]);
-
-  // Helper to get user name
-  const getUserName = (userId: string) => {
-    return tenantUsers.find((u) => u.id === userId)?.name || "Unknown";
-  };
-
+  const { status, vm, actions } = useInventoryScreen();
   // Format date
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -104,23 +68,26 @@ export default function InventoryPage() {
     );
   };
 
-  // Calculate stats
-  const stats = useMemo(() => {
-    const totalCostImpact = tenantAdjustments.reduce(
-      (sum, adj) => sum + adj.costImpact,
-      0,
+  if (status === "loading") {
+    return (
+      <div className="p-4 md:p-6 max-w-[1600px] mx-auto space-y-6">
+        <div className="mb-6">
+          <Skeleton className="h-8 w-48 mb-2" />
+          <Skeleton className="h-4 w-96" />
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <Skeleton className="h-32 rounded-2xl" />
+          <Skeleton className="h-32 rounded-2xl" />
+          <Skeleton className="h-32 rounded-2xl" />
+          <Skeleton className="h-32 rounded-2xl" />
+        </div>
+        <Skeleton className="h-[400px] rounded-2xl" />
+      </div>
     );
-    const totalLosses = tenantAdjustments
-      .filter((adj) => adj.costImpact > 0)
-      .reduce((sum, adj) => sum + adj.costImpact, 0);
-    const totalGains = Math.abs(
-      tenantAdjustments
-        .filter((adj) => adj.costImpact < 0)
-        .reduce((sum, adj) => sum + adj.costImpact, 0),
-    );
+  }
 
-    return { totalCostImpact, totalLosses, totalGains };
-  }, [tenantAdjustments]);
+  // Use only available total from meta for stats, omitting complex aggregations
+  const totalAdjustments = vm.pagination.total;
 
   return (
     <div className="p-4 md:p-6 max-w-[1600px] mx-auto">
@@ -134,8 +101,8 @@ export default function InventoryPage() {
         </p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      {/* Stats Cards - Simply showing count and placeholders for now as complex stats require full dataset aggregation */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {/* Total Adjustments */}
         <div className="bg-white dark:bg-gray-800/50 rounded-2xl p-5 border border-gray-200 dark:border-gray-700/50">
           <div className="flex items-center gap-3 mb-3">
@@ -147,67 +114,7 @@ export default function InventoryPage() {
             Total Adjustments
           </p>
           <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-            {tenantAdjustments.length}
-          </p>
-        </div>
-
-        {/* Net Cost Impact */}
-        <div className="bg-white dark:bg-gray-800/50 rounded-2xl p-5 border border-gray-200 dark:border-gray-700/50">
-          <div className="flex items-center gap-3 mb-3">
-            <div
-              className={`w-10 h-10 rounded-xl flex items-center justify-center ${stats.totalCostImpact >= 0
-                  ? "bg-red-50 dark:bg-red-500/10"
-                  : "bg-emerald-50 dark:bg-emerald-500/10"
-                }`}
-            >
-              {stats.totalCostImpact >= 0 ? (
-                <TrendingDown className="w-5 h-5 text-red-600 dark:text-red-400" />
-              ) : (
-                <TrendingUp className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-              )}
-            </div>
-          </div>
-          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-            Net Cost Impact
-          </p>
-          <p
-            className={`text-2xl font-bold mt-1 ${stats.totalCostImpact >= 0
-                ? "text-red-600 dark:text-red-400"
-                : "text-emerald-600 dark:text-emerald-400"
-              }`}
-          >
-            {stats.totalCostImpact >= 0 ? "-" : "+"}
-            {formatPrice(Math.abs(stats.totalCostImpact))}
-          </p>
-        </div>
-
-        {/* Total Losses */}
-        <div className="bg-white dark:bg-gray-800/50 rounded-2xl p-5 border border-gray-200 dark:border-gray-700/50">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-500/10 flex items-center justify-center">
-              <ArrowDownRight className="w-5 h-5 text-red-600 dark:text-red-400" />
-            </div>
-          </div>
-          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-            Total Losses
-          </p>
-          <p className="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">
-            {formatPrice(stats.totalLosses)}
-          </p>
-        </div>
-
-        {/* Total Gains */}
-        <div className="bg-white dark:bg-gray-800/50 rounded-2xl p-5 border border-gray-200 dark:border-gray-700/50">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center">
-              <ArrowUpRight className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-            </div>
-          </div>
-          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-            Total Gains
-          </p>
-          <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
-            {formatPrice(stats.totalGains)}
+            {totalAdjustments}
           </p>
         </div>
       </div>
@@ -233,30 +140,32 @@ export default function InventoryPage() {
                 <th className="px-6 py-4 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Stock
                 </th>
-                <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                {/* <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Impact
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   By
-                </th>
+                </th> */}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
-              {paginatedAdjustments.length === 0 ? (
+              {vm.adjustments.length === 0 ? (
                 <tr>
                   <td
                     colSpan={7}
                     className="px-6 py-16 text-center text-gray-500 dark:text-gray-400"
                   >
                     <Package className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
-                    <p className="font-medium">No inventory adjustments yet</p>
+                    <p className="font-medium">
+                      No inventory adjustments found
+                    </p>
                     <p className="text-sm mt-1">
                       Adjustments will appear here when stock is modified
                     </p>
                   </td>
                 </tr>
               ) : (
-                paginatedAdjustments.map((adjustment) => {
+                vm.adjustments.map((adjustment) => {
                   const reasonStyle = getReasonBadge(adjustment.reason);
                   return (
                     <tr
@@ -292,10 +201,11 @@ export default function InventoryPage() {
                       </td>
                       <td className="px-6 py-4 text-center whitespace-nowrap">
                         <span
-                          className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 text-sm font-bold rounded-lg ${adjustment.quantityChange > 0
+                          className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 text-sm font-bold rounded-lg ${
+                            adjustment.quantityChange > 0
                               ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"
                               : "bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400"
-                            }`}
+                          }`}
                         >
                           {adjustment.quantityChange > 0 ? "+" : ""}
                           {adjustment.quantityChange}
@@ -312,14 +222,15 @@ export default function InventoryPage() {
                           {adjustment.newStock}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-right whitespace-nowrap">
+                      {/* <td className="px-6 py-4 text-sm text-right whitespace-nowrap">
                         <span
-                          className={`font-semibold ${adjustment.costImpact > 0
+                          className={`font-semibold ${
+                            adjustment.costImpact > 0
                               ? "text-red-600 dark:text-red-400"
                               : adjustment.costImpact < 0
                                 ? "text-emerald-600 dark:text-emerald-400"
                                 : "text-gray-500"
-                            }`}
+                          }`}
                         >
                           {adjustment.costImpact > 0
                             ? "-"
@@ -328,10 +239,7 @@ export default function InventoryPage() {
                               : ""}
                           {formatPrice(Math.abs(adjustment.costImpact))}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                        {getUserName(adjustment.createdBy)}
-                      </td>
+                      </td> */}
                     </tr>
                   );
                 })
@@ -341,14 +249,14 @@ export default function InventoryPage() {
         </div>
 
         {/* Pagination */}
-        {totalPages > 1 && (
+        {vm.pagination.totalPages > 1 && (
           <div className="border-t border-gray-100 dark:border-gray-700/50">
             <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              totalItems={tenantAdjustments.length}
-              itemsPerPage={ITEMS_PER_PAGE}
-              onPageChange={setCurrentPage}
+              currentPage={vm.pagination.page}
+              totalPages={vm.pagination.totalPages}
+              totalItems={vm.pagination.total}
+              itemsPerPage={10}
+              onPageChange={actions.setPage}
             />
           </div>
         )}

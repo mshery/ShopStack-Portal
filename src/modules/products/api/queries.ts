@@ -9,6 +9,7 @@ import {
   type ProductFilters,
   type UpdateProductInput,
 } from "./productsApi";
+import { inventoryKeys } from "../../inventory/api/queries";
 
 export type { ProductFilters };
 
@@ -67,6 +68,8 @@ export function useUpdateProduct() {
       await queryClient.invalidateQueries({ queryKey: productKeys.detail(id) });
       // Invalidate list to reflect changes (e.g. stock, price)
       await queryClient.invalidateQueries({ queryKey: productKeys.all });
+      // Invalidate inventory adjustments to reflect stock changes
+      await queryClient.refetchQueries({ queryKey: inventoryKeys.all });
     },
   });
 }

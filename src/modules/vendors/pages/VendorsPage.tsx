@@ -1,5 +1,4 @@
-import { useVendorsStore } from "@/modules/vendors";
-import { useAuthStore } from "@/modules/auth";
+import { useVendorsScreen } from "@/modules/vendors/hooks/useVendorsScreen";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -21,30 +20,38 @@ import {
 } from "lucide-react";
 import { EmptyState } from "@/shared/components/feedback/EmptyState";
 import { Input } from "@/shared/components/ui/input";
-import { useMemo, useState } from "react";
 import { formatDateTime } from "@/shared/utils/format";
 import AddVendorModal from "../components/AddVendorModal";
 import EditVendorModal from "../components/EditVendorModal";
 import DeleteConfirmationModal from "@/shared/components/feedback/DeleteConfirmationModal";
-import type { Vendor } from "@/shared/types/models";
+import { Skeleton } from "@/shared/components/ui/skeleton";
 
 export default function VendorsPage() {
-  const { vendors, removeVendor } = useVendorsStore();
-  const { activeTenantId } = useAuthStore();
-  const [search, setSearch] = useState("");
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
-  const [vendorToDelete, setVendorToDelete] = useState<Vendor | null>(null);
+  const { status, vm, actions } = useVendorsScreen();
 
-  const tenantVendors = useMemo(() => {
-    const list = vendors.filter((v) => v.tenant_id === activeTenantId);
-    if (!search) return list;
-    return list.filter(
-      (v) =>
-        v.name.toLowerCase().includes(search.toLowerCase()) ||
-        v.contactPerson.toLowerCase().includes(search.toLowerCase()),
+  if (status === "loading") {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <Skeleton className="h-10 w-full max-w-sm" />
+        <Skeleton className="h-[400px] w-full rounded-2xl" />
+      </div>
     );
-  }, [vendors, activeTenantId, search]);
+  }
+
+  if (status === "error") {
+    return (
+      <div className="p-8">
+        <EmptyState
+          title="Something went wrong"
+          description="Failed to load vendors. Please try again."
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -59,7 +66,7 @@ export default function VendorsPage() {
         </div>
         <Button
           className="gap-2 rounded-xl bg-brand-600 hover:bg-brand-700"
-          onClick={() => setIsAddModalOpen(true)}
+          onClick={() => actions.setIsAddModalOpen(true)}
         >
           <Plus className="h-4 w-4" />
           Add Vendor
@@ -71,14 +78,14 @@ export default function VendorsPage() {
         <Input
           placeholder="Search vendors..."
           className="h-10 pl-9 rounded-xl border-gray-200 dark:border-gray-800"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          value={vm.search}
+          onChange={(e) => actions.setSearch(e.target.value)}
         />
       </div>
 
       <Card className="rounded-2xl border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
         <CardContent className="p-0">
-          {tenantVendors.length === 0 ? (
+          {vm.isEmpty && !vm.search ? (
             <div className="p-8">
               <EmptyState
                 title="No vendors found"
@@ -128,7 +135,7 @@ export default function VendorsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {tenantVendors.map((vendor) => (
+                {vm.vendors.map((vendor) => (
                   <TableRow
                     key={vendor.id}
                     className="hover:bg-gray-50/50 dark:hover:bg-white/[0.01]"
@@ -177,14 +184,14 @@ export default function VendorsPage() {
                     <TableCell className="px-6 py-4 text-end">
                       <div className="flex items-center justify-end gap-2">
                         <button
-                          onClick={() => setSelectedVendor(vendor)}
+                          onClick={() => actions.setSelectedVendor(vendor)}
                           className="p-2 rounded-lg text-gray-500 hover:text-brand-500 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-colors"
                           title="Edit vendor"
                         >
                           <Pencil className="h-4 w-4" />
                         </button>
                         <button
-                          onClick={() => setVendorToDelete(vendor)}
+                          onClick={() => actions.setVendorToDelete(vendor)}
                           className="p-2 rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                           title="Delete vendor"
                         >
@@ -202,31 +209,29 @@ export default function VendorsPage() {
 
       {/* Add Vendor Modal */}
       <AddVendorModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
+        isOpen={vm.isAddModalOpen}
+        onClose={() => actions.setIsAddModalOpen(false)}
+        onCreate={actions.createVendor}
       />
 
       {/* Edit Vendor Modal */}
-      {selectedVendor && (
+      {vm.selectedVendor && (
         <EditVendorModal
-          vendor={selectedVendor}
-          isOpen={!!selectedVendor}
-          onClose={() => setSelectedVendor(null)}
+          vendor={vm.selectedVendor}
+          isOpen={!!vm.selectedVendor}
+          onClose={() => actions.setSelectedVendor(null)}
+          onUpdate={actions.updateVendor}
         />
       )}
 
       {/* Delete Confirmation Modal */}
       <DeleteConfirmationModal
-        isOpen={!!vendorToDelete}
-        onClose={() => setVendorToDelete(null)}
-        onConfirm={() => {
-          if (vendorToDelete) {
-            removeVendor(vendorToDelete.id);
-          }
-        }}
+        isOpen={!!vm.vendorToDelete}
+        onClose={() => actions.setVendorToDelete(null)}
+        onConfirm={actions.deleteVendor}
         title="Delete Vendor"
         message="Are you sure you want to delete this vendor? This action cannot be undone."
-        itemName={vendorToDelete?.name}
+        itemName={vm.vendorToDelete?.name}
       />
     </div>
   );

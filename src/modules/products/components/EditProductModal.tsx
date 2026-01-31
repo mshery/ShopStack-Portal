@@ -3,14 +3,12 @@ import { Modal } from "@/shared/components/ui/Modal";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
-import { useInventoryStore } from "@/modules/inventory";
-import { useExpensesStore } from "@/modules/expenses";
-import { useActivityLogsStore } from "@/modules/platform";
 import { useAuthStore } from "@/modules/auth";
 import {
   useCategoriesFetch,
   useBrandsFetch,
 } from "@/modules/catalog/api/queries";
+import { useCreateAdjustment } from "@/modules/inventory/api/queries";
 import type {
   Product,
   TenantUser,
@@ -47,9 +45,10 @@ export default function EditProductModal({
   onUpdate,
 }: EditProductModalProps) {
   // const { updateProduct } = useProductsStore(); // Removed legacy store usage
-  const { addAdjustment } = useInventoryStore();
-  const { addExpense } = useExpensesStore();
-  const { addTenantLog } = useActivityLogsStore();
+  const { mutateAsync: createAdjustment } = useCreateAdjustment();
+  // const { addAdjustment } = useInventoryStore(); // Removed legacy
+  // const { addExpense } = useExpensesStore();
+  // const { addTenantLog } = useActivityLogsStore();
   const { currentUser, activeTenantId } = useAuthStore();
 
   // Fetch categories and brands via TanStack Query (not Zustand stores)
@@ -114,18 +113,11 @@ export default function EditProductModal({
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const generateId = useCallback((prefix: string) => {
-    return `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  }, []);
+  const handleSave = useCallback(async () => {
+    // Prepare unified update data
+    const updateData: UpdateProductInput = { ...formData };
 
-  const handleSave = useCallback(() => {
-    const now = new Date().toISOString();
-    const userId = currentUser?.id || "system";
-
-    // Update basic product info
-    onUpdate(product.id, formData);
-
-    // Handle stock adjustment if action selected (owner only)
+    // Handle stock adjustment logic if needed
     if (isOwner && stockAction) {
       const previousStock = product.currentStock;
       let quantityChange = 0;
@@ -151,7 +143,7 @@ export default function EditProductModal({
           break;
       }
 
-      // Only proceed if there's an actual change
+      // Only proceed with stock logic if there's an actual change or forcing correction
       if (quantityChange !== 0 || stockAction === "count_correction") {
         // Calculate cost impact
         let costImpact = 0;
@@ -159,99 +151,35 @@ export default function EditProductModal({
           costImpact = product.costPrice * Math.abs(quantityChange);
         }
 
-        // Update product stock
-        const statusUpdate =
+        // Update product stock in the SAME update object
+        updateData.currentStock = newStock;
+        updateData.status =
           newStock <= 0
             ? "out_of_stock"
             : newStock <= product.minimumStock
               ? "low_stock"
               : "in_stock";
 
-        onUpdate(product.id, {
-          currentStock: newStock,
-          status: statusUpdate,
-        });
-
-        // Create expense for inventory loss (damaged/theft)
-        let relatedExpenseId: string | null = null;
-        if (
-          (stockAction === "damaged" || stockAction === "theft") &&
-          costImpact > 0
-        ) {
-          const expenseId = generateId("exp");
-          relatedExpenseId = expenseId;
-
-          addExpense({
-            tenant_id: product.tenant_id,
-            category: "inventory",
-            expenseType: "inventory_loss",
-            amount: costImpact,
-            description: `Inventory loss - ${product.name} (${stockAction})`,
-            vendor: null,
-            relatedVendorId: null,
-            relatedProductId: product.id,
-            relatedPurchaseId: null,
-            receiptUrl: null,
-            date: now,
-            createdBy: userId,
-          });
-
-          // Log expense creation
-          addTenantLog({
-            id: generateId("tlog"),
-            tenant_id: product.tenant_id,
-            action: "expense_created",
-            actorId: userId,
-            targetType: "expense",
-            targetId: expenseId,
-            details: {
-              category: "inventory",
-              expenseType: "inventory_loss",
-              amount: costImpact,
-              productName: product.name,
-            },
-          });
-        }
-
-        // Create inventory adjustment record
-        const adjustmentId = generateId("inv-adj");
-        addAdjustment({
-          id: adjustmentId,
-          tenant_id: product.tenant_id,
-          productId: product.id,
-          productName: product.name,
-          reason: stockAction as InventoryAdjustmentReason,
-          quantityChange,
-          previousStock,
-          newStock,
-          costImpact,
-          relatedExpenseId,
-          notes: adjustmentNotes,
-          createdBy: userId,
-        });
-
-        // Log inventory adjustment
-        addTenantLog({
-          id: generateId("tlog"),
-          tenant_id: product.tenant_id,
-          action: "inventory_adjusted",
-          actorId: userId,
-          targetType: "product",
-          targetId: product.id,
-          details: {
-            productName: product.name,
+        // Create inventory adjustment record via API
+        try {
+          await createAdjustment({
+            productId: product.id,
             reason: stockAction,
             quantityChange,
-            previousStock,
-            newStock,
-          },
-        });
+            costImpact,
+            notes: adjustmentNotes,
+          });
+        } catch (error) {
+          console.error("Failed to create inventory adjustment:", error);
+        }
       }
     }
 
+    // Execute SINGLE update call for Product Details (Name, Price, Current Stock)
+    await onUpdate(product.id, updateData);
+
     onClose();
   }, [
-    currentUser,
     product,
     formData,
     isOwner,
@@ -260,10 +188,7 @@ export default function EditProductModal({
     setStockTo,
     adjustmentNotes,
     onUpdate,
-    addAdjustment,
-    addExpense,
-    addTenantLog,
-    generateId,
+    createAdjustment,
     onClose,
   ]);
 

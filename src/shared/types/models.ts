@@ -389,7 +389,7 @@ export interface Vendor {
 // Purchase Types
 // ============================================
 
-export type PurchaseStatus = "pending" | "received" | "cancelled";
+export type PurchaseStatus = "pending" | "ordered" | "received" | "cancelled";
 
 export interface PurchaseLineItem {
   productId: string;

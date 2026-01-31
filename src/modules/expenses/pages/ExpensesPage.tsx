@@ -1,14 +1,9 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import Pagination from "@/shared/components/feedback/Pagination";
 import { Button } from "@/shared/components/ui/button";
 import AddExpenseModal from "../components/AddExpenseModal";
-import { useExpensesStore } from "@/modules/expenses";
-import { useAuthStore } from "@/modules/auth";
-import { useVendorsStore } from "@/modules/vendors";
-import { useProductsStore } from "@/modules/products";
-import { usePurchasesStore } from "@/modules/purchases";
+import { useExpensesScreen } from "../hooks/useExpensesScreen";
 import { useTenantCurrency } from "@/modules/tenant";
-import type { TenantUser } from "@/shared/types/models";
 import {
   Receipt,
   DollarSign,
@@ -20,63 +15,12 @@ import {
   FileText,
 } from "lucide-react";
 
-const ITEMS_PER_PAGE = 10;
-
 export default function ExpensesPage() {
-  const { expenses } = useExpensesStore();
-  const { activeTenantId, currentUser } = useAuthStore();
-  const { vendors } = useVendorsStore();
-  const { products } = useProductsStore();
-  const { purchases } = usePurchasesStore();
-
-  const [currentPage, setCurrentPage] = useState(1);
+  const { status, vm, actions } = useExpensesScreen();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-
-  const isOwner = (currentUser as TenantUser)?.role === "owner";
   const { formatPrice } = useTenantCurrency();
 
-  // Filter expenses for current tenant
-  const tenantExpenses = useMemo(() => {
-    return expenses
-      .filter((e) => e.tenant_id === activeTenantId)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [expenses, activeTenantId]);
-
-  // Pagination
-  const totalPages = Math.ceil(tenantExpenses.length / ITEMS_PER_PAGE);
-  const paginatedExpenses = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return tenantExpenses.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [tenantExpenses, currentPage]);
-
-  // Helper to get vendor name
-  const getVendorName = (vendorId: string | null) => {
-    if (!vendorId) return null;
-    return vendors.find((v) => v.id === vendorId)?.name || null;
-  };
-
-  // Helper to get product name
-  const getProductName = (productId: string | null) => {
-    if (!productId) return null;
-    return products.find((p) => p.id === productId)?.name || null;
-  };
-
-  // Helper to get purchase number
-  const getPurchaseNumber = (purchaseId: string | null) => {
-    if (!purchaseId) return null;
-    return purchases.find((p) => p.id === purchaseId)?.purchaseNumber || null;
-  };
-
-  // Format date
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  };
-
-  // Get badge styles for expense type
+  // Helper to get expense type badge styles
   const getExpenseTypeBadge = (expenseType: string) => {
     const styles: Record<string, { bg: string; text: string }> = {
       operational: {
@@ -104,18 +48,17 @@ export default function ExpensesPage() {
     );
   };
 
-  // Calculate stats
-  const stats = useMemo(() => {
-    const totalAmount = tenantExpenses.reduce((sum, e) => sum + e.amount, 0);
-    const inventoryLosses = tenantExpenses
-      .filter((e) => e.expenseType === "inventory_loss")
-      .reduce((sum, e) => sum + e.amount, 0);
-    const vendorPayments = tenantExpenses
-      .filter((e) => e.expenseType === "vendor_payment")
-      .reduce((sum, e) => sum + e.amount, 0);
+  if (status === "error" && !vm.expenses.length)
+    return (
+      <div className="p-6 text-center text-red-500">
+        Error loading expenses. Please try refreshing.
+      </div>
+    );
 
-    return { totalAmount, inventoryLosses, vendorPayments };
-  }, [tenantExpenses]);
+  const getSummaryValue = (type: string) => {
+    const stat = vm.summary.byType.find((s) => s.expenseType === type);
+    return stat?._sum.amount || 0;
+  };
 
   return (
     <>
@@ -130,15 +73,13 @@ export default function ExpensesPage() {
               Operational costs, vendor payments, and inventory losses
             </p>
           </div>
-          {isOwner && (
-            <Button
-              onClick={() => setIsAddModalOpen(true)}
-              className="gap-2 bg-brand-500 hover:bg-brand-600"
-            >
-              <Plus className="w-4 h-4" />
-              Add Expense
-            </Button>
-          )}
+          <Button
+            onClick={() => setIsAddModalOpen(true)}
+            className="gap-2 bg-brand-500 hover:bg-brand-600"
+          >
+            <Plus className="w-4 h-4" />
+            Add Expense
+          </Button>
         </div>
 
         {/* Stats Cards */}
@@ -153,9 +94,13 @@ export default function ExpensesPage() {
             <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
               Total Expenses
             </p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-              {tenantExpenses.length}
-            </p>
+            {status === "loading" ? (
+              <div className="h-8 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mt-1" />
+            ) : (
+              <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+                {vm.summary.totalCount}
+              </p>
+            )}
           </div>
 
           {/* Total Amount */}
@@ -168,9 +113,13 @@ export default function ExpensesPage() {
             <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
               Total Amount
             </p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-              {formatPrice(stats.totalAmount)}
-            </p>
+            {status === "loading" ? (
+              <div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mt-1" />
+            ) : (
+              <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+                {formatPrice(vm.summary.totalAmount)}
+              </p>
+            )}
           </div>
 
           {/* Inventory Losses */}
@@ -183,9 +132,13 @@ export default function ExpensesPage() {
             <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
               Inventory Losses
             </p>
-            <p className="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">
-              {formatPrice(stats.inventoryLosses)}
-            </p>
+            {status === "loading" ? (
+              <div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mt-1" />
+            ) : (
+              <p className="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">
+                {formatPrice(getSummaryValue("inventory_loss"))}
+              </p>
+            )}
           </div>
 
           {/* Vendor Payments */}
@@ -198,9 +151,13 @@ export default function ExpensesPage() {
             <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
               Vendor Payments
             </p>
-            <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
-              {formatPrice(stats.vendorPayments)}
-            </p>
+            {status === "loading" ? (
+              <div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mt-1" />
+            ) : (
+              <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
+                {formatPrice(getSummaryValue("vendor_payment"))}
+              </p>
+            )}
           </div>
         </div>
 
@@ -231,7 +188,23 @@ export default function ExpensesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
-                {paginatedExpenses.length === 0 ? (
+                {status === "loading" ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <tr key={i}>
+                      <td className="px-6 py-4">
+                        <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="space-y-2 animate-pulse">
+                          <div className="h-4 w-40 bg-gray-200 dark:bg-gray-700 rounded" />
+                        </div>
+                      </td>
+                      <td colSpan={4} className="px-6 py-4">
+                        <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                      </td>
+                    </tr>
+                  ))
+                ) : vm.isEmpty ? (
                   <tr>
                     <td
                       colSpan={6}
@@ -245,7 +218,7 @@ export default function ExpensesPage() {
                     </td>
                   </tr>
                 ) : (
-                  paginatedExpenses.map((expense) => {
+                  vm.expenses.map((expense) => {
                     const typeBadge = getExpenseTypeBadge(expense.expenseType);
                     const hasRelations =
                       expense.relatedProductId ||
@@ -258,7 +231,7 @@ export default function ExpensesPage() {
                         className="hover:bg-gray-50 dark:hover:bg-gray-700/20 transition-colors"
                       >
                         <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">
-                          {formatDate(expense.date)}
+                          {new Date(expense.date).toLocaleDateString()}
                         </td>
                         <td className="px-6 py-4">
                           <div className="font-medium text-gray-900 dark:text-white text-sm">
@@ -289,19 +262,19 @@ export default function ExpensesPage() {
                               {expense.relatedProductId && (
                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700 text-xs text-gray-600 dark:text-gray-300">
                                   <Package className="w-3 h-3" />
-                                  {getProductName(expense.relatedProductId)}
+                                  Product
                                 </span>
                               )}
                               {expense.relatedVendorId && (
                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700 text-xs text-gray-600 dark:text-gray-300">
                                   <Truck className="w-3 h-3" />
-                                  {getVendorName(expense.relatedVendorId)}
+                                  Vendor
                                 </span>
                               )}
                               {expense.relatedPurchaseId && (
                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700 text-xs text-gray-600 dark:text-gray-300">
                                   <FileText className="w-3 h-3" />
-                                  {getPurchaseNumber(expense.relatedPurchaseId)}
+                                  PO
                                 </span>
                               )}
                             </div>
@@ -325,14 +298,14 @@ export default function ExpensesPage() {
           </div>
 
           {/* Pagination */}
-          {totalPages > 1 && (
+          {vm.totalPages > 1 && (
             <div className="border-t border-gray-100 dark:border-gray-700/50">
               <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                totalItems={tenantExpenses.length}
-                itemsPerPage={ITEMS_PER_PAGE}
-                onPageChange={setCurrentPage}
+                currentPage={vm.currentPage}
+                totalPages={vm.totalPages}
+                totalItems={vm.totalItems}
+                itemsPerPage={vm.itemsPerPage}
+                onPageChange={actions.setPage}
               />
             </div>
           )}

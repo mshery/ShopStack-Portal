@@ -1,7 +1,6 @@
-import { usePurchasesStore } from "@/modules/purchases";
-import { useVendorsStore } from "@/modules/vendors";
-import { useAuthStore } from "@/modules/auth";
+import { usePurchasesScreen } from "@/modules/purchases/hooks/usePurchasesScreen";
 import { useTenantCurrency } from "@/modules/tenant";
+import type { Purchase } from "@/shared/types/models";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
@@ -12,36 +11,23 @@ import {
   TableRow,
   TableCell,
 } from "@/shared/components/ui/table";
-import { Plus, FileText, CheckCircle2, Pencil, Trash2 } from "lucide-react";
+import { Plus, FileText, CheckCircle2 } from "lucide-react";
 import { EmptyState } from "@/shared/components/feedback/EmptyState";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { formatDateTime } from "@/shared/utils/format";
 import AddPurchaseModal from "../components/AddPurchaseModal";
-import EditPurchaseModal from "../components/EditPurchaseModal";
-import DeleteConfirmationModal from "@/shared/components/feedback/DeleteConfirmationModal";
-import type { Purchase } from "@/shared/types/models";
 import { Link } from "react-router-dom";
+import { Skeleton } from "@/shared/components/ui/skeleton";
+import Pagination from "@/shared/components/feedback/Pagination";
 
 export default function PurchasesPage() {
-  const { purchases, removePurchase } = usePurchasesStore();
-  const { vendors } = useVendorsStore();
-  const { activeTenantId } = useAuthStore();
+  const { status, vm, actions } = usePurchasesScreen();
   const { formatPrice } = useTenantCurrency();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [selectedPurchase, setSelectedPurchase] = useState<Purchase | null>(
-    null,
-  );
-  const [purchaseToDelete, setPurchaseToDelete] = useState<Purchase | null>(
-    null,
-  );
 
-  const tenantPurchases = useMemo(() => {
-    return purchases.filter((p) => p.tenant_id === activeTenantId).reverse();
-  }, [purchases, activeTenantId]);
-
-  const getVendorName = (vendorId: string) => {
-    return vendors.find((v) => v.id === vendorId)?.name || "Unknown Vendor";
-  };
+  // Helper to get vendor name (using store for now as it's likely cached/available,
+  // or we could fetch efficiently. For list view, ideally the API returns vendor name)
+  // The API DOES return vendor object in the list items!
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -52,6 +38,15 @@ export default function PurchasesPage() {
             className="bg-green-50 text-green-700 border-green-200"
           >
             Received
+          </Badge>
+        );
+      case "ordered":
+        return (
+          <Badge
+            variant="outline"
+            className="bg-orange-50 text-orange-700 border-orange-200"
+          >
+            Ordered
           </Badge>
         );
       case "pending":
@@ -77,6 +72,29 @@ export default function PurchasesPage() {
     }
   };
 
+  if (status === "loading") {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <Skeleton className="h-[400px] w-full rounded-2xl" />
+      </div>
+    );
+  }
+
+  if (status === "error") {
+    return (
+      <div className="p-8">
+        <EmptyState
+          title="Something went wrong"
+          description="Failed to load purchases. Please try again."
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -99,7 +117,7 @@ export default function PurchasesPage() {
 
       <Card className="rounded-2xl border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
         <CardContent className="p-0">
-          {tenantPurchases.length === 0 ? (
+          {vm.isEmpty ? (
             <div className="p-8">
               <EmptyState
                 title="No purchases recorded"
@@ -107,165 +125,132 @@ export default function PurchasesPage() {
               />
             </div>
           ) : (
-            <Table>
-              <TableHeader className="border-y border-gray-100 dark:border-gray-800">
-                <TableRow>
-                  <TableCell
-                    isHeader
-                    className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-start text-xs uppercase tracking-wider"
-                  >
-                    PO Number
-                  </TableCell>
-                  <TableCell
-                    isHeader
-                    className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-start text-xs uppercase tracking-wider"
-                  >
-                    Vendor
-                  </TableCell>
-                  <TableCell
-                    isHeader
-                    className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-start text-xs uppercase tracking-wider"
-                  >
-                    Total Cost
-                  </TableCell>
-                  <TableCell
-                    isHeader
-                    className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-start text-xs uppercase tracking-wider"
-                  >
-                    Status
-                  </TableCell>
-                  <TableCell
-                    isHeader
-                    className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-start text-xs uppercase tracking-wider"
-                  >
-                    Date
-                  </TableCell>
-                  <TableCell
-                    isHeader
-                    className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-end text-xs uppercase tracking-wider"
-                  >
-                    Actions
-                  </TableCell>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {tenantPurchases.map((purchase) => (
-                  <TableRow
-                    key={purchase.id}
-                    className="hover:bg-gray-50/50 dark:hover:bg-white/[0.01] cursor-pointer"
-                  >
-                    <TableCell className="px-6 py-4">
-                      <Link
-                        to={`/tenant/purchases/${purchase.id}`}
-                        className="flex items-center gap-2"
-                      >
-                        <FileText className="h-4 w-4 text-gray-400" />
-                        <span className="font-bold text-brand-600 dark:text-brand-400">
-                          {purchase.purchaseNumber}
-                        </span>
-                      </Link>
+            <>
+              <Table>
+                <TableHeader className="border-y border-gray-100 dark:border-gray-800">
+                  <TableRow>
+                    <TableCell
+                      isHeader
+                      className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-start text-xs uppercase tracking-wider"
+                    >
+                      PO Number
                     </TableCell>
-                    <TableCell className="px-6 py-4">
-                      <Link to={`/tenant/purchases/${purchase.id}`}>
-                        <span className="font-medium text-gray-900 dark:text-white">
-                          {getVendorName(purchase.vendorId)}
-                        </span>
-                      </Link>
+                    <TableCell
+                      isHeader
+                      className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-start text-xs uppercase tracking-wider"
+                    >
+                      Vendor
                     </TableCell>
-                    <TableCell className="px-6 py-4">
-                      <Link
-                        to={`/tenant/purchases/${purchase.id}`}
-                        className="font-bold text-gray-900 dark:text-white"
-                      >
-                        {formatPrice(purchase.totalCost)}
-                      </Link>
+                    <TableCell
+                      isHeader
+                      className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-start text-xs uppercase tracking-wider"
+                    >
+                      Total Cost
                     </TableCell>
-                    <TableCell className="px-6 py-4">
-                      <Link
-                        to={`/tenant/purchases/${purchase.id}`}
-                        className="inline-block"
-                      >
-                        {getStatusBadge(purchase.status)}
-                      </Link>
+                    <TableCell
+                      isHeader
+                      className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-start text-xs uppercase tracking-wider"
+                    >
+                      Status
                     </TableCell>
-                    <TableCell className="px-6 py-4">
-                      <Link
-                        to={`/tenant/purchases/${purchase.id}`}
-                        className="text-xs text-gray-500"
-                      >
-                        <div className="flex flex-col">
-                          <span>{formatDateTime(purchase.purchaseDate)}</span>
-                          {purchase.receivedDate && (
-                            <span className="text-[10px] text-green-600 dark:text-green-500 flex items-center gap-0.5">
-                              <CheckCircle2 className="h-2 w-2" /> Received:{" "}
-                              {formatDateTime(purchase.receivedDate)}
-                            </span>
-                          )}
-                        </div>
-                      </Link>
-                    </TableCell>
-                    <TableCell className="px-6 py-4 text-end">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setSelectedPurchase(purchase);
-                          }}
-                          className="p-2 rounded-lg text-gray-500 hover:text-brand-500 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-colors"
-                          title="Edit purchase"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setPurchaseToDelete(purchase);
-                          }}
-                          className="p-2 rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                          title="Delete purchase"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
+                    <TableCell
+                      isHeader
+                      className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-start text-xs uppercase tracking-wider"
+                    >
+                      Date
                     </TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {vm.purchases.map((purchase) => (
+                    <TableRow
+                      key={purchase.id}
+                      className="hover:bg-gray-50/50 dark:hover:bg-white/[0.01] cursor-pointer"
+                    >
+                      <TableCell className="px-6 py-4">
+                        <Link
+                          to={`/tenant/purchases/${purchase.id}`}
+                          className="flex items-center gap-2"
+                        >
+                          <FileText className="h-4 w-4 text-gray-400" />
+                          <span className="font-bold text-brand-600 dark:text-brand-400">
+                            {purchase.purchaseNumber}
+                          </span>
+                        </Link>
+                      </TableCell>
+                      <TableCell className="px-6 py-4">
+                        <Link to={`/tenant/purchases/${purchase.id}`}>
+                          <span className="font-medium text-gray-900 dark:text-white">
+                            {(
+                              purchase as Purchase & {
+                                vendor?: { name: string };
+                              }
+                            ).vendor?.name || "Unknown Vendor"}
+                          </span>
+                        </Link>
+                      </TableCell>
+                      <TableCell className="px-6 py-4">
+                        <Link
+                          to={`/tenant/purchases/${purchase.id}`}
+                          className="font-bold text-gray-900 dark:text-white"
+                        >
+                          {formatPrice(purchase.totalCost)}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="px-6 py-4">
+                        <Link
+                          to={`/tenant/purchases/${purchase.id}`}
+                          className="inline-block"
+                        >
+                          {getStatusBadge(purchase.status)}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="px-6 py-4">
+                        <Link
+                          to={`/tenant/purchases/${purchase.id}`}
+                          className="text-xs text-gray-500"
+                        >
+                          <div className="flex flex-col">
+                            <span>{formatDateTime(purchase.purchaseDate)}</span>
+                            {purchase.receivedDate && (
+                              <span className="text-[10px] text-green-600 dark:text-green-500 flex items-center gap-0.5">
+                                <CheckCircle2 className="h-2 w-2" /> Received:{" "}
+                                {formatDateTime(purchase.receivedDate)}
+                              </span>
+                            )}
+                          </div>
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              {vm.pagination.totalPages > 1 && (
+                <div className="p-4 border-t border-gray-100 dark:border-gray-800">
+                  <Pagination
+                    currentPage={vm.pagination.page}
+                    totalPages={vm.pagination.totalPages}
+                    totalItems={vm.pagination.total}
+                    itemsPerPage={10}
+                    onPageChange={actions.setPage}
+                  />
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
 
       {/* Add Purchase Modal */}
-      <AddPurchaseModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-      />
-
-      {/* Edit Purchase Modal */}
-      {selectedPurchase && (
-        <EditPurchaseModal
-          purchase={selectedPurchase}
-          isOpen={!!selectedPurchase}
-          onClose={() => setSelectedPurchase(null)}
+      {isAddModalOpen && (
+        <AddPurchaseModal
+          isOpen={isAddModalOpen}
+          onClose={() => setIsAddModalOpen(false)}
+          onSuccess={() => {
+            /* invalidate query handled in modal if refactored, or here */
+          }}
         />
       )}
-
-      {/* Delete Confirmation Modal */}
-      <DeleteConfirmationModal
-        isOpen={!!purchaseToDelete}
-        onClose={() => setPurchaseToDelete(null)}
-        onConfirm={() => {
-          if (purchaseToDelete) {
-            removePurchase(purchaseToDelete.id);
-          }
-        }}
-        title="Delete Purchase Order"
-        message="Are you sure you want to delete this purchase order? This action cannot be undone."
-        itemName={purchaseToDelete?.purchaseNumber}
-      />
     </div>
   );
 }

@@ -3,21 +3,23 @@ import { Modal } from "@/shared/components/ui/Modal";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
-import { useVendorsStore } from "@/modules/vendors";
 import type { Vendor } from "@/shared/types/models";
 
+import type { UpdateVendorInput } from "@/modules/vendors/api/vendorsApi";
+
 interface EditVendorModalProps {
-  vendor: Vendor;
   isOpen: boolean;
   onClose: () => void;
+  vendor: Vendor;
+  onUpdate: (id: string, data: UpdateVendorInput) => Promise<void>;
 }
 
 export default function EditVendorModal({
   vendor,
   isOpen,
   onClose,
+  onUpdate,
 }: EditVendorModalProps) {
-  const { updateVendor } = useVendorsStore();
   const [formData, setFormData] = useState({
     name: vendor.name,
     contactPerson: vendor.contactPerson,
@@ -26,12 +28,13 @@ export default function EditVendorModal({
     address: vendor.address,
     paymentTerms: vendor.paymentTerms,
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (
       !formData.name ||
       !formData.contactPerson ||
@@ -42,17 +45,22 @@ export default function EditVendorModal({
       return;
     }
 
-    updateVendor(vendor.id, {
-      name: formData.name,
-      contactPerson: formData.contactPerson,
-      email: formData.email || null,
-      phone: formData.phone || null,
-      address: formData.address,
-      paymentTerms: formData.paymentTerms,
-      updatedAt: new Date().toISOString(),
-    });
-
-    onClose();
+    setIsSubmitting(true);
+    try {
+      await onUpdate(vendor.id, {
+        name: formData.name,
+        contactPerson: formData.contactPerson,
+        email: formData.email || undefined,
+        phone: formData.phone || undefined,
+        address: formData.address,
+        paymentTerms: formData.paymentTerms,
+      });
+      // Modal closed by parent/success callback
+    } catch (error) {
+      console.error("Failed to update vendor", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -142,10 +150,17 @@ export default function EditVendorModal({
             </div>
           </div>
           <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={isSubmitting}
+            >
               Cancel
             </Button>
-            <Button type="submit">Save Changes</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Saving..." : "Save Changes"}
+            </Button>
           </div>
         </form>
       </div>

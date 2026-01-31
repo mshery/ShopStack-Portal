@@ -69,20 +69,27 @@ export const endpoints = {
     purchases: {
       list: "/tenant/purchases",
       byId: (id: string) => `/tenant/purchases/${id}`,
+      // Workflow actions
+      markAsOrdered: (id: string) => `/tenant/purchases/${id}/order`,
+      receive: (id: string) => `/tenant/purchases/${id}/receive`,
+      cancel: (id: string) => `/tenant/purchases/${id}/cancel`,
     },
     inventory: {
-      list: "/tenant/inventory",
-      byId: (id: string) => `/tenant/inventory/${id}`,
+      summary: "/tenant/inventory/summary",
+      lowStock: "/tenant/inventory/low-stock",
+      adjustments: "/tenant/inventory/adjustments",
     },
     // Customers
     customers: {
       list: "/tenant/customers",
       byId: (id: string) => `/tenant/customers/${id}`,
+      purchases: (id: string) => `/tenant/customers/${id}/purchases`,
     },
     // Finance
     expenses: {
       list: "/tenant/expenses",
       byId: (id: string) => `/tenant/expenses/${id}`,
+      summary: "/tenant/expenses/summary",
     },
     // POS & Sales
     sales: {

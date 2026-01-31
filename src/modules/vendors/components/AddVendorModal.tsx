@@ -3,20 +3,20 @@ import { Modal } from "@/shared/components/ui/Modal";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
-import { useVendorsStore } from "@/modules/vendors";
-import { useAuthStore } from "@/modules/auth";
+
+import type { CreateVendorInput } from "@/modules/vendors/api/vendorsApi";
 
 interface AddVendorModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onCreate: (data: CreateVendorInput) => Promise<void>;
 }
 
 export default function AddVendorModal({
   isOpen,
   onClose,
+  onCreate,
 }: AddVendorModalProps) {
-  const { addVendor } = useVendorsStore();
-  const { activeTenantId } = useAuthStore();
   const [formData, setFormData] = useState({
     name: "",
     contactPerson: "",
@@ -25,15 +25,15 @@ export default function AddVendorModal({
     address: "",
     paymentTerms: "Net 30",
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!activeTenantId) return;
     if (
       !formData.name ||
       !formData.contactPerson ||
@@ -44,27 +44,31 @@ export default function AddVendorModal({
       return;
     }
 
-    addVendor({
-      tenant_id: activeTenantId,
-      name: formData.name,
-      contactPerson: formData.contactPerson,
-      email: formData.email || null,
-      phone: formData.phone || null,
-      address: formData.address,
-      paymentTerms: formData.paymentTerms,
-    });
+    setIsSubmitting(true);
+    try {
+      await onCreate({
+        name: formData.name,
+        contactPerson: formData.contactPerson,
+        email: formData.email || undefined,
+        phone: formData.phone || undefined,
+        address: formData.address,
+        paymentTerms: formData.paymentTerms,
+      });
 
-    // Reset form
-    setFormData({
-      name: "",
-      contactPerson: "",
-      email: "",
-      phone: "",
-      address: "",
-      paymentTerms: "Net 30",
-    });
-
-    onClose();
+      // Reset form
+      setFormData({
+        name: "",
+        contactPerson: "",
+        email: "",
+        phone: "",
+        address: "",
+        paymentTerms: "Net 30",
+      });
+    } catch (error) {
+      console.error("Failed to create vendor", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -148,10 +152,17 @@ export default function AddVendorModal({
             </div>
           </div>
           <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={isSubmitting}
+            >
               Cancel
             </Button>
-            <Button type="submit">Add Vendor</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Adding..." : "Add Vendor"}
+            </Button>
           </div>
         </form>
       </div>

@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState } from "react";
 import { Modal } from "@/shared/components/ui/Modal";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -10,18 +10,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select";
-import { usePurchasesStore } from "@/modules/purchases";
-import { useVendorsStore } from "@/modules/vendors";
-import { useProductsStore } from "@/modules/products";
-import { useExpensesStore } from "@/modules/expenses";
-import { useActivityLogsStore } from "@/modules/platform";
-import { useAuthStore } from "@/modules/auth";
-import type { PurchaseStatus } from "@/shared/types/models";
+import { useVendorsFetch } from "@/modules/vendors/api/queries";
+import { useCreatePurchase } from "@/modules/purchases/api/queries";
 import { Plus, X } from "lucide-react";
+import { toast } from "react-hot-toast";
+import { AsyncProductSelect } from "@/modules/products/components/AsyncProductSelect";
+import type { Product } from "@/modules/products/api/productsApi";
 
 interface AddPurchaseModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
 interface LineItem {
@@ -34,51 +33,43 @@ interface LineItem {
 export default function AddPurchaseModal({
   isOpen,
   onClose,
+  onSuccess,
 }: AddPurchaseModalProps) {
-  const { addPurchase } = usePurchasesStore();
-  const { vendors } = useVendorsStore();
-  const { products } = useProductsStore();
-  const { addExpense } = useExpensesStore();
-  const { addTenantLog } = useActivityLogsStore();
-  const { activeTenantId, currentUser } = useAuthStore();
+  // Data Fetching
+  const { data: vendors = [] } = useVendorsFetch();
+
+  const createPurchaseMutation = useCreatePurchase();
 
   const [vendorId, setVendorId] = useState<string | undefined>(undefined);
-  const [status, setStatus] = useState<PurchaseStatus>("pending");
   const [notes, setNotes] = useState("");
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
-
-  const tenantVendors = useMemo(
-    () => vendors.filter((v) => v.tenant_id === activeTenantId),
-    [vendors, activeTenantId],
-  );
-  const tenantProducts = useMemo(
-    () => products.filter((p) => p.tenant_id === activeTenantId),
-    [products, activeTenantId],
-  );
-
-  const generateId = useCallback((prefix: string) => {
-    return `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  }, []);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const addLineItem = () => {
-    if (tenantProducts.length > 0) {
-      const firstProduct = tenantProducts[0];
-      setLineItems([
-        ...lineItems,
-        {
-          productId: firstProduct.id,
-          productName: firstProduct.name,
-          quantity: 1,
-          costPrice: firstProduct.costPrice,
-        },
-      ]);
-    } else {
-      alert("No products found for this tenant. Please add products first.");
-    }
+    setLineItems([
+      ...lineItems,
+      {
+        productId: "",
+        productName: "",
+        quantity: 1,
+        costPrice: 0,
+      },
+    ]);
   };
 
   const removeLineItem = (index: number) => {
     setLineItems(lineItems.filter((_, i) => i !== index));
+  };
+
+  const handleProductSelect = (index: number, product: Product) => {
+    const updated = [...lineItems];
+    updated[index] = {
+      ...updated[index],
+      productId: product.id,
+      productName: product.name,
+      costPrice: Number(product.costPrice),
+    };
+    setLineItems(updated);
   };
 
   const updateLineItem = (
@@ -87,25 +78,15 @@ export default function AddPurchaseModal({
     value: string | number,
   ) => {
     const updated = [...lineItems];
-    if (field === "productId") {
-      const product = tenantProducts.find((p) => p.id === value);
-      if (product) {
-        updated[index] = {
-          ...updated[index],
-          productId: value as string,
-          productName: product.name,
-          costPrice: product.costPrice,
-        };
-      }
-    } else if (field === "quantity") {
+    if (field === "quantity") {
       updated[index] = {
         ...updated[index],
-        quantity: Math.max(1, value as number),
+        quantity: Math.max(1, Number(value)),
       };
     } else if (field === "costPrice") {
       updated[index] = {
         ...updated[index],
-        costPrice: Math.max(0, value as number),
+        costPrice: Math.max(0, Number(value)),
       };
     }
     setLineItems(updated);
@@ -116,149 +97,47 @@ export default function AddPurchaseModal({
     0,
   );
 
-  const handleSubmit = useCallback(
-    (e: React.FormEvent) => {
-      e.preventDefault();
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-      if (!activeTenantId || !vendorId || lineItems.length === 0) {
-        alert("Please fill in all required fields and add at least one item");
-        return;
-      }
+    if (!vendorId || lineItems.length === 0) {
+      toast.error("Please select a vendor and add at least one item");
+      return;
+    }
 
-      const now = new Date().toISOString();
-      const userId = currentUser?.id || "system";
-      const vendor = vendors.find((v) => v.id === vendorId);
-      const vendorName = vendor?.name || "Unknown Vendor";
+    if (lineItems.some((item) => !item.productId)) {
+      toast.error("Please select a product for all items");
+      return;
+    }
 
-      // Add the purchase - store generates id, purchaseNumber, createdAt
-      const purchaseId = addPurchase({
-        tenant_id: activeTenantId,
+    setIsSubmitting(true);
+    try {
+      await createPurchaseMutation.mutateAsync({
         vendorId,
         items: lineItems.map((item) => ({
           productId: item.productId,
-          productName: item.productName,
           quantity: item.quantity,
           costPrice: item.costPrice,
-          subtotal: item.quantity * item.costPrice,
         })),
-        totalCost,
-        status,
-        purchaseDate: now,
-        receivedDate: status === "received" ? now : null,
         notes,
       });
 
-      // Generate purchase number for logging (store creates one similarly)
-      const purchaseNumber = `PO-${Date.now().toString().slice(-6)}`;
-
-      // Create purchase_order expense
-      const expenseId = generateId("exp");
-      addExpense({
-        tenant_id: activeTenantId,
-        category: "inventory",
-        expenseType: "purchase_order",
-        amount: totalCost,
-        description: `Purchase Order ${purchaseNumber} - ${vendorName}`,
-        vendor: vendorName,
-        relatedVendorId: vendorId,
-        relatedProductId:
-          lineItems.length === 1 ? lineItems[0].productId : null,
-        relatedPurchaseId: purchaseId,
-        receiptUrl: null,
-        date: now,
-        createdBy: userId,
-      });
-
-      // Log expense creation
-      addTenantLog({
-        id: generateId("tlog"),
-        tenant_id: activeTenantId,
-        action: "expense_created",
-        actorId: userId,
-        targetType: "expense",
-        targetId: expenseId,
-        details: {
-          category: "inventory",
-          expenseType: "purchase_order",
-          amount: totalCost,
-          vendorName,
-          purchaseNumber,
-        },
-      });
-
-      // Log purchase creation
-      addTenantLog({
-        id: generateId("tlog"),
-        tenant_id: activeTenantId,
-        action: "purchase_created",
-        actorId: userId,
-        targetType: "purchase",
-        targetId: purchaseId,
-        details: {
-          purchaseNumber,
-          totalCost,
-          vendorName,
-          itemCount: lineItems.length,
-        },
-      });
-
-      // If status is "received", also log vendor_payment
-      if (status === "received") {
-        const vendorPaymentId = generateId("exp");
-        addExpense({
-          tenant_id: activeTenantId,
-          category: "vendor_payment",
-          expenseType: "vendor_payment",
-          amount: totalCost,
-          description: `Vendor payment - ${vendorName} for ${purchaseNumber}`,
-          vendor: vendorName,
-          relatedVendorId: vendorId,
-          relatedProductId: null,
-          relatedPurchaseId: purchaseId,
-          receiptUrl: null,
-          date: now,
-          createdBy: userId,
-        });
-
-        addTenantLog({
-          id: generateId("tlog"),
-          tenant_id: activeTenantId,
-          action: "expense_created",
-          actorId: userId,
-          targetType: "expense",
-          targetId: vendorPaymentId,
-          details: {
-            category: "vendor_payment",
-            expenseType: "vendor_payment",
-            amount: totalCost,
-            vendorName,
-          },
-        });
-      }
+      toast.success("Purchase order created successfully");
 
       // Reset form
-      setVendorId("");
-      setStatus("pending");
+      setVendorId(undefined);
       setNotes("");
       setLineItems([]);
+
+      onSuccess?.();
       onClose();
-    },
-    [
-      activeTenantId,
-      vendorId,
-      lineItems,
-      status,
-      notes,
-      totalCost,
-      currentUser,
-      vendors,
-      addPurchase,
-      addExpense,
-      addTenantLog,
-      generateId,
-      onClose,
-    ],
-  );
+    } catch (error) {
+      toast.error("Failed to create purchase order");
+      console.error(error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} className="max-w-[800px] m-4">
@@ -281,7 +160,7 @@ export default function AddPurchaseModal({
                     <SelectValue placeholder="Select vendor" />
                   </SelectTrigger>
                   <SelectContent>
-                    {tenantVendors.map((vendor) => (
+                    {vendors.map((vendor) => (
                       <SelectItem key={vendor.id} value={vendor.id}>
                         {vendor.name}
                       </SelectItem>
@@ -291,19 +170,13 @@ export default function AddPurchaseModal({
               </div>
 
               <div className="col-span-2 lg:col-span-1">
-                <Label>Status *</Label>
-                <Select
-                  value={status}
-                  onValueChange={(v) => setStatus(v as PurchaseStatus)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="received">Received</SelectItem>
-                  </SelectContent>
-                </Select>
+                {/* Status is always pending on create via API typically, or we let backend handle default */}
+                <div className="flex flex-col gap-2">
+                  <Label>Status</Label>
+                  <div className="h-10 flex items-center px-3 rounded-md border border-gray-200 bg-gray-50 text-gray-500 text-sm">
+                    Pending (Draft)
+                  </div>
+                </div>
               </div>
 
               <div className="col-span-2">
@@ -339,23 +212,12 @@ export default function AddPurchaseModal({
                   >
                     <div className="flex-1">
                       <Label className="text-xs">Product</Label>
-                      <Select
+                      <AsyncProductSelect
                         value={item.productId}
-                        onValueChange={(v) =>
-                          updateLineItem(index, "productId", v)
+                        onSelect={(product) =>
+                          handleProductSelect(index, product)
                         }
-                      >
-                        <SelectTrigger className="h-9">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {tenantProducts.map((product) => (
-                            <SelectItem key={product.id} value={product.id}>
-                              {product.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      />
                     </div>
                     <div className="w-24">
                       <Label className="text-xs">Quantity</Label>
@@ -425,28 +287,22 @@ export default function AddPurchaseModal({
                 </div>
               )}
             </div>
-
-            {/* Info about expenses that will be created */}
-            {lineItems.length > 0 && (
-              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                <p className="text-sm text-blue-700 dark:text-blue-400">
-                  <strong>Note:</strong> A purchase order expense of{" "}
-                  <span className="font-semibold">${totalCost.toFixed(2)}</span>{" "}
-                  will be recorded.
-                  {status === "received" && (
-                    <> Additionally, a vendor payment will be logged.</>
-                  )}
-                </p>
-              </div>
-            )}
           </div>
 
           <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={isSubmitting}
+            >
               Cancel
             </Button>
-            <Button type="submit" disabled={lineItems.length === 0}>
-              Create Purchase Order
+            <Button
+              type="submit"
+              disabled={lineItems.length === 0 || isSubmitting}
+            >
+              {isSubmitting ? "Creating..." : "Create Purchase Order"}
             </Button>
           </div>
         </form>
