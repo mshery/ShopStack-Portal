@@ -35,7 +35,7 @@ export default function BrandsPage() {
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [newBrandName, setNewBrandName] = useState("");
   const [brandToDelete, setBrandToDelete] = useState<Brand | null>(null);
-  const [viewMode, setViewMode] = useState<"table" | "grid">("table");
+  const [viewMode, setViewMode] = useState<"table" | "grid">("grid");
 
   const handleAddBrand = () => {
     if (!newBrandName.trim()) return;

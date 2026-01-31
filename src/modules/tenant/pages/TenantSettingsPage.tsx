@@ -14,11 +14,13 @@ import { Switch } from "@/shared/components/ui/switch";
 import { Separator } from "@/shared/components/ui/separator";
 import { useAuthStore } from "@/modules/auth";
 import { useTenantsStore } from "@/modules/platform";
-import { useCategoriesStore } from "@/modules/catalog";
-import { useBrandsStore } from "@/modules/catalog";
 import PageBreadcrumb from "@/shared/components/feedback/PageBreadcrumb";
 import { Check, ChevronRight, Package, Tag, ShieldAlert } from "lucide-react";
 import { usePermissions } from "@/shared/hooks/usePermissions";
+import {
+  useBrandsFetch,
+  useCategoriesFetch,
+} from "@/modules/catalog/api/queries";
 
 export default function TenantSettingsPage() {
   const { isSuperAdmin } = usePermissions();
@@ -26,17 +28,12 @@ export default function TenantSettingsPage() {
   const { tenants, updateTenantSettings } = useTenantsStore();
   const tenant = tenants.find((t) => t.id === activeTenantId);
 
-  const { categories } = useCategoriesStore();
-  const { brands } = useBrandsStore();
-
-  // Filter by tenant
-  const tenantCategories = categories.filter(
-    (c) => c.tenant_id === activeTenantId
-  );
-  const tenantBrands = brands.filter((b) => b.tenant_id === activeTenantId);
+  // Fetch categories and brands via TanStack Query (not Zustand stores)
+  const { data: tenantCategories = [] } = useCategoriesFetch();
+  const { data: tenantBrands = [] } = useBrandsFetch();
 
   const [currencySymbol, setCurrencySymbol] = useState(
-    tenant?.settings?.currencySymbol || "$"
+    tenant?.settings?.currencySymbol || "$",
   );
   const [showSuccess, setShowSuccess] = useState(false);
 
