@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 
 interface CategoryFilterProps {
-  categories: string[];
+  categories: { id: string; name: string }[];
   selectedCategory: string | null;
   onCategoryChange: (category: string | null) => void;
 }
@@ -41,8 +41,8 @@ const categoryIcons: Record<string, LucideIcon> = {
   food: UtensilsCrossed,
 };
 
-const getCategoryIcon = (category: string): LucideIcon => {
-  const key = category.toLowerCase();
+const getCategoryIcon = (categoryName: string): LucideIcon => {
+  const key = categoryName.toLowerCase();
   return categoryIcons[key] || Package;
 };
 
@@ -64,7 +64,8 @@ export function CategoryFilter({
     if (container) {
       setShowLeftArrow(container.scrollLeft > 0);
       setShowRightArrow(
-        container.scrollLeft < container.scrollWidth - container.clientWidth - 10
+        container.scrollLeft <
+          container.scrollWidth - container.clientWidth - 10,
       );
     }
   }, []);
@@ -113,19 +114,30 @@ export function CategoryFilter({
         </button>
       )}
 
-      {/* Scrollable container */}
+      {/* Scrollable container with hidden scrollbar */}
       <div
         ref={scrollContainerRef}
-        className="flex items-center gap-2 overflow-x-auto no-scrollbar"
-        style={{ WebkitOverflowScrolling: "touch" }}
+        className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1"
+        style={{
+          scrollbarWidth: "none" /* Firefox */,
+          msOverflowStyle: "none" /* IE and Edge */,
+          WebkitOverflowScrolling: "touch",
+        }}
       >
+        <style>{`
+          .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+          }
+        `}</style>
+
         {/* All Products Button */}
         <button
           onClick={() => onCategoryChange(null)}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all flex-shrink-0 ${selectedCategory === null
-            ? "bg-brand-500 text-white"
-            : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700"
-            }`}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all flex-shrink-0 ${
+            selectedCategory === null
+              ? "bg-brand-500 text-white shadow-md shadow-brand-500/20"
+              : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700"
+          }`}
         >
           <LayoutGrid className="w-4 h-4" />
           <span>All Products</span>
@@ -136,20 +148,21 @@ export function CategoryFilter({
 
         {/* Category Buttons */}
         {categories.map((category) => {
-          const Icon = getCategoryIcon(category);
-          const isSelected = selectedCategory === category;
+          const Icon = getCategoryIcon(category.name);
+          const isSelected = selectedCategory === category.name;
 
           return (
             <button
-              key={category}
-              onClick={() => onCategoryChange(category)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all flex-shrink-0 ${isSelected
-                ? "bg-brand-500 text-white"
-                : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700"
-                }`}
+              key={category.id}
+              onClick={() => onCategoryChange(category.name)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all flex-shrink-0 ${
+                isSelected
+                  ? "bg-brand-500 text-white shadow-md shadow-brand-500/20"
+                  : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700"
+              }`}
             >
               <Icon className="w-4 h-4" />
-              <span>{category}</span>
+              <span>{category.name}</span>
             </button>
           );
         })}
@@ -159,7 +172,7 @@ export function CategoryFilter({
       {showRightArrow && (
         <button
           onClick={() => scroll("right")}
-          className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
+          className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center shadow-lg shadow-gray-200/50 dark:shadow-none hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
         >
           <ChevronRight className="w-4 h-4 text-gray-600 dark:text-gray-300" />
         </button>

@@ -20,6 +20,9 @@ export interface ProductFilters {
   brandId?: string;
   status?: "in_stock" | "low_stock" | "out_of_stock";
   vendorId?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  sortBy?: "name" | "price_asc" | "price_desc" | "stock" | "newest";
 }
 
 export interface Product {

@@ -85,7 +85,12 @@ export function useExpensesScreen() {
   });
 
   const expenses = useMemo(
-    () => expensesData?.items || [],
+    () =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (expensesData?.items || []).map((expense: any) => ({
+        ...expense,
+        amount: Number(expense.amount || 0),
+      })),
     [expensesData?.items],
   );
   const totalItems = expensesData?.total || 0;
@@ -110,15 +115,42 @@ export function useExpensesScreen() {
     [searchParams, setSearchParams],
   );
 
-  const vm = useMemo(
-    () => ({
-      expenses,
-      summary: summaryData || {
+  const normalizedSummary = useMemo(() => {
+    if (!summaryData) {
+      return {
         totalAmount: 0,
         totalCount: 0,
         byType: [],
         byCategory: [],
-      },
+      };
+    }
+
+    return {
+      ...summaryData,
+      totalAmount: Number(summaryData.totalAmount || 0),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      byType: (summaryData.byType || []).map((item: any) => ({
+        ...item,
+        _sum: {
+          ...item._sum,
+          amount: Number(item._sum?.amount || 0),
+        },
+      })),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      byCategory: (summaryData.byCategory || []).map((item: any) => ({
+        ...item,
+        _sum: {
+          ...item._sum,
+          amount: Number(item._sum?.amount || 0),
+        },
+      })),
+    };
+  }, [summaryData]);
+
+  const vm = useMemo(
+    () => ({
+      expenses,
+      summary: normalizedSummary,
       totalItems,
       totalPages,
       currentPage: page,
@@ -134,7 +166,7 @@ export function useExpensesScreen() {
     }),
     [
       expenses,
-      summaryData,
+      normalizedSummary,
       totalItems,
       totalPages,
       page,

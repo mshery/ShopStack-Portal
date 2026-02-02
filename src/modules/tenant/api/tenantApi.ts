@@ -131,7 +131,64 @@ export const ITEMS_PER_PAGE = 10;
 // TEAM MANAGEMENT API
 // ============================================
 
+export interface DashboardStats {
+  today: {
+    salesCount: number;
+    revenue: number;
+  };
+  month: {
+    salesCount: number;
+    revenue: number;
+    expenses: number;
+    profit: number;
+  };
+  inventory: {
+    totalProducts: number;
+    lowStockCount: number;
+    outOfStockCount: number;
+    totalValue: number;
+  };
+  customers: {
+    total: number;
+  };
+  recentSales: {
+    id: string;
+    number: string;
+    customer: string;
+    grandTotal: number;
+    itemCount: number;
+    createdAt: string;
+  }[];
+  topProducts: {
+    productId: string;
+    name: string;
+    quantitySold: number;
+  }[];
+  salesBreakdown: {
+    label: string;
+    value: number;
+    color: string;
+  }[];
+  monthlySales: {
+    month: string;
+    revenue: number;
+    orders: number;
+  }[];
+}
+
 export const tenantApi = {
+  // ========== Dashboard ==========
+
+  /**
+   * Get dashboard statistics
+   */
+  getDashboardStats: async (): Promise<DashboardStats> => {
+    const res = await httpClient.get<ApiResponse<DashboardStats>>(
+      endpoints.tenant.dashboard,
+    );
+    return res.data.data;
+  },
+
   // ========== Team Members ==========
 
   /**

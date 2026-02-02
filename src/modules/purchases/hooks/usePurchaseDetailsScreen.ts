@@ -80,8 +80,12 @@ export function usePurchaseDetailsScreen() {
     cancelPurchaseMutation.isPending;
 
   const vm = useMemo(() => {
+    const normalizedPurchase = purchase
+      ? { ...purchase, totalCost: Number(purchase.totalCost || 0) }
+      : null;
+
     return {
-      purchase,
+      purchase: normalizedPurchase,
       vendor,
       items: items || [],
       isLoading,

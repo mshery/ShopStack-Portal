@@ -3,7 +3,11 @@ import MetricCard from "@/shared/components/dashboard/MetricCard";
 import RecentOrders from "@/shared/components/dashboard/RecentOrders";
 import MonthlySalesChart from "@/shared/components/dashboard/MonthlySalesChart";
 import SalesDonutChart from "@/shared/components/dashboard/SalesDonutChart";
-import { BoxCubeIcon, GroupIcon, PlugInIcon } from "@/shared/components/ui/Icons";
+import {
+  BoxCubeIcon,
+  GroupIcon,
+  PlugInIcon,
+} from "@/shared/components/ui/Icons";
 import { useTenantDashboardScreen } from "../hooks/useTenantDashboardScreen";
 import { useTenantCurrency } from "@/modules/tenant";
 
@@ -80,7 +84,11 @@ export default function TenantDashboardPage() {
             <MetricCard
               key={metric.title}
               title={metric.title}
-              value={metric.isRawCurrency ? formatPrice(metric.value as number) : metric.value}
+              value={
+                metric.isRawCurrency
+                  ? formatPrice(metric.value as number)
+                  : metric.value
+              }
               change={metric.change}
               icon={metricIcons[index]}
               iconColor={metric.iconColor}
@@ -93,7 +101,7 @@ export default function TenantDashboardPage() {
       <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-12">
         {/* Monthly Sales Bar Chart - Takes more space */}
         <div className="xl:col-span-7">
-          <MonthlySalesChart sales={vm.tenantSales} />
+          <MonthlySalesChart data={vm.tenantSales} />
         </div>
 
         {/* Sales Breakdown Donut Chart */}

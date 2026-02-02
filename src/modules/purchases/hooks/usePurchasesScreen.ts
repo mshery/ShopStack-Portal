@@ -15,7 +15,11 @@ export function usePurchasesScreen() {
 
   const vm = useMemo(() => {
     return {
-      purchases: data?.items ?? [],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      purchases: (data?.items ?? []).map((p: any) => ({
+        ...p,
+        totalCost: Number(p.totalCost || 0),
+      })),
       pagination: {
         page,
         total: data?.total ?? 0,

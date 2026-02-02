@@ -55,9 +55,21 @@ export default function ExpensesPage() {
       </div>
     );
 
-  const getSummaryValue = (type: string) => {
-    const stat = vm.summary.byType.find((s) => s.expenseType === type);
-    return stat?._sum.amount || 0;
+  const getSummaryValue = (type: string, categoryFallback?: string) => {
+    const typeStat = vm.summary.byType.find((s) => s.expenseType === type);
+    const typeAmount = typeStat?._sum.amount || 0;
+
+    // If we have a type match, use it.
+    // If not (0), and we have a category fallback, check that.
+    // This helps catch misclassified expenses (e.g. Category "Vendor Payment" but Type "Operational")
+    if (typeAmount === 0 && categoryFallback) {
+      const catStat = vm.summary.byCategory.find(
+        (s) => s.category === categoryFallback,
+      );
+      return catStat?._sum.amount || 0;
+    }
+
+    return typeAmount;
   };
 
   return (
@@ -136,7 +148,9 @@ export default function ExpensesPage() {
               <div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mt-1" />
             ) : (
               <p className="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">
-                {formatPrice(getSummaryValue("inventory_loss"))}
+                {formatPrice(
+                  getSummaryValue("inventory_loss", "Inventory Loss"),
+                )}
               </p>
             )}
           </div>
@@ -155,7 +169,9 @@ export default function ExpensesPage() {
               <div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mt-1" />
             ) : (
               <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
-                {formatPrice(getSummaryValue("vendor_payment"))}
+                {formatPrice(
+                  getSummaryValue("vendor_payment", "vendor_payment"),
+                )}
               </p>
             )}
           </div>

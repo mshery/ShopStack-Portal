@@ -34,7 +34,24 @@ export const tenantKeys = {
 
   // Payment methods
   paymentMethods: () => [...tenantKeys.all, "paymentMethods"] as const,
+
+  // Dashboard
+  dashboard: () => [...tenantKeys.all, "dashboard"] as const,
 };
+
+// ============ DASHBOARD ============
+
+/**
+ * Fetch dashboard stats
+ */
+export function useDashboardStatsFetch(enabled = true) {
+  return useQuery({
+    queryKey: tenantKeys.dashboard(),
+    queryFn: tenantApi.getDashboardStats,
+    enabled,
+    staleTime: 60 * 1000, // 1 minute
+  });
+}
 
 // ============ TEAM MEMBERS ============
 

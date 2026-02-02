@@ -91,10 +91,12 @@ export const endpoints = {
       byId: (id: string) => `/tenant/expenses/${id}`,
       summary: "/tenant/expenses/summary",
     },
+    REPORTS: "/tenant/reports/analytics",
     // POS & Sales
     sales: {
       list: "/tenant/sales",
       byId: (id: string) => `/tenant/sales/${id}`,
+      today: "/tenant/sales/today",
     },
     refunds: {
       list: "/tenant/refunds",
@@ -103,10 +105,13 @@ export const endpoints = {
     receipts: {
       list: "/tenant/receipts",
       byId: (id: string) => `/tenant/receipts/${id}`,
+      bySale: (saleId: string) => `/tenant/receipts/sale/${saleId}`,
+      byNumber: (number: string) => `/tenant/receipts/number/${number}`,
     },
     heldOrders: {
       list: "/tenant/held-orders",
       byId: (id: string) => `/tenant/held-orders/${id}`,
+      resume: (id: string) => `/tenant/held-orders/${id}/resume`,
     },
   },
 } as const;

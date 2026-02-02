@@ -1,47 +1,37 @@
 import React, { useMemo } from "react";
 
-interface Sale {
-  id: string;
-  grandTotal: number;
-  createdAt: string;
+interface MonthlySalesData {
+  month: string;
+  revenue: number;
 }
 
 interface MonthlySalesChartProps {
-  sales: Sale[];
+  data: MonthlySalesData[];
 }
 
-const MonthlySalesChart: React.FC<MonthlySalesChartProps> = ({ sales }) => {
+const MonthlySalesChart: React.FC<MonthlySalesChartProps> = ({ data }) => {
   const monthlyData = useMemo(() => {
-    const monthMap: Record<string, number> = {};
+    // If no data, return empty default
+    if (!data || data.length === 0) {
+      return { months: [], maxTotal: 1 };
+    }
 
-    sales.forEach((sale) => {
-      const date = new Date(sale.createdAt);
-      const monthKey = `${date.getFullYear()}-${String(
-        date.getMonth() + 1,
-      ).padStart(2, "0")}`;
+    // Sort is not needed if backend returns in order, but verify.
+    // Backend returns last 6 months in reverse order (loop 5 to 0), so it pushes Jan, then Feb...
+    // Actually loop was: for (let i = 5; i >= 0; i--). i=5 is 5 months ago. i=0 is current month.
+    // So it pushes oldest first. Order is correct.
 
-      if (!monthMap[monthKey]) {
-        monthMap[monthKey] = 0;
-      }
-      monthMap[monthKey] += sale.grandTotal;
-    });
-
-    // Get last 6 months of data for better visual balance
-    const sortedMonths = Object.keys(monthMap).sort().slice(-6);
-    const maxTotal = Math.max(...sortedMonths.map((key) => monthMap[key]), 1);
+    const maxTotal = Math.max(...data.map((d) => d.revenue), 1);
 
     return {
-      months: sortedMonths.map((key) => {
-        const date = new Date(key + "-01");
-        return {
-          month: date.toLocaleString("default", { month: "short" }),
-          total: monthMap[key],
-          heightPercent: (monthMap[key] / maxTotal) * 100,
-        };
-      }),
+      months: data.map((d) => ({
+        month: d.month,
+        total: d.revenue,
+        heightPercent: (d.revenue / maxTotal) * 100,
+      })),
       maxTotal,
     };
-  }, [sales]);
+  }, [data]);
 
   // Calculate nice round numbers for Y-axis
   const yAxisLabels = useMemo(() => {

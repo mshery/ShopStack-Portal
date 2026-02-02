@@ -54,7 +54,23 @@ export default function AddExpenseModal({
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((prev) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const updates: any = { [field]: value };
+
+      // Auto-select corresponding expense type
+      if (field === "category") {
+        if (value === "vendor_payment") {
+          updates.expenseType = "vendor_payment";
+        } else if (value === "inventory") {
+          // Default to operational for inventory (purchases),
+          // user can manually select "inventory_loss" if needed
+          updates.expenseType = "operational";
+        }
+      }
+      return { ...prev, ...updates };
+    });
+
     // Clear error when field is modified
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: "" }));

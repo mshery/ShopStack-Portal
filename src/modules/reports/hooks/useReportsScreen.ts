@@ -1,155 +1,44 @@
 import { useMemo } from "react";
-import { usePOSStore } from "@/modules/pos";
-import { useProductsStore } from "@/modules/products";
-import { useAuthStore } from "@/modules/auth";
+import { useReportsFetch } from "../api/queries";
 import type { AsyncStatus } from "@/shared/types/models";
 
 /**
  * Reports Screen Hook
- * Provides analytics and reporting data
+ * Provides analytics and reporting data from server
  */
 export function useReportsScreen() {
-  const { sales: allSales, refunds: allRefunds } = usePOSStore();
-  const { products: allProducts } = useProductsStore();
-  const { activeTenantId } = useAuthStore();
+  const { data, isLoading, isError } = useReportsFetch();
 
-  const sales = useMemo(
-    () => allSales.filter((s) => s.tenant_id === activeTenantId),
-    [allSales, activeTenantId],
-  );
+  const status: AsyncStatus = isLoading
+    ? "loading"
+    : isError
+      ? "error"
+      : "success";
 
-  const refunds = useMemo(
-    () => allRefunds.filter((r) => r.tenant_id === activeTenantId),
-    [allRefunds, activeTenantId],
-  );
-
-  const products = useMemo(
-    () => allProducts.filter((p) => p.tenant_id === activeTenantId),
-    [allProducts, activeTenantId],
-  );
-
-  const status: AsyncStatus = "success";
-
-  // Calculate analytics
   const vm = useMemo(() => {
-    // Sales metrics
-    const totalRevenue = sales.reduce((sum, sale) => sum + sale.grandTotal, 0);
-    const totalRefunds = refunds.reduce(
-      (sum, refund) => sum + refund.refundTotal,
-      0,
-    );
-    const netRevenue = totalRevenue - totalRefunds;
-
-    // Profit calculation
-    const totalProfit = sales.reduce((sum, sale) => {
-      const saleProfit = sale.lineItems.reduce((itemSum, item) => {
-        const profit = item.subtotal - item.costPriceSnapshot * item.quantity;
-        return itemSum + profit;
-      }, 0);
-      return sum + saleProfit;
-    }, 0);
-
-    const profitMargin =
-      totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
-
-    // Inventory metrics
-    const totalProducts = products.length;
-    const inStockProducts = products.filter(
-      (p) => p.status === "in_stock",
-    ).length;
-    const lowStockProducts = products.filter(
-      (p) => p.status === "low_stock",
-    ).length;
-    const outOfStockProducts = products.filter(
-      (p) => p.status === "out_of_stock",
-    ).length;
-
-    const totalInventoryValue = products.reduce(
-      (sum, p) => sum + p.currentStock * p.costPrice,
-      0,
-    );
-    const totalRetailValue = products.reduce(
-      (sum, p) => sum + p.currentStock * p.unitPrice,
-      0,
-    );
-
-    // Best sellers by quantity
-    const productSales = new Map<
-      string,
-      { name: string; quantity: number; revenue: number }
-    >();
-    sales.forEach((sale) => {
-      sale.lineItems.forEach((item) => {
-        const existing = productSales.get(item.productId) || {
-          name: item.nameSnapshot,
-          quantity: 0,
-          revenue: 0,
-        };
-        productSales.set(item.productId, {
-          name: item.nameSnapshot,
-          quantity: existing.quantity + item.quantity,
-          revenue: existing.revenue + item.subtotal,
-        });
-      });
-    });
-
-    const bestSellers = Array.from(productSales.values())
-      .sort((a, b) => b.quantity - a.quantity)
-      .slice(0, 10);
-
-    // Payment method breakdown - Cash only
-    const cashSales = sales.length; // All sales are cash
-    const cashRevenue = sales.reduce((sum, s) => sum + s.grandTotal, 0);
-
-    // Monthly sales (last 12 months)
-    const monthlySales = new Map<string, number>();
-    const monthlyProfit = new Map<string, number>();
-
-    sales.forEach((sale) => {
-      const month = new Date(sale.createdAt).toISOString().slice(0, 7); // YYYY-MM
-      monthlySales.set(month, (monthlySales.get(month) || 0) + sale.grandTotal);
-
-      const saleProfit = sale.lineItems.reduce((sum, item) => {
-        return sum + (item.subtotal - item.costPriceSnapshot * item.quantity);
-      }, 0);
-      monthlyProfit.set(month, (monthlyProfit.get(month) || 0) + saleProfit);
-    });
-
-    return {
-      // Sales metrics
-      totalSales: sales.length,
-      totalRevenue,
-      totalRefunds,
-      netRevenue,
-      totalProfit,
-      profitMargin,
-
-      // Inventory metrics
-      totalProducts,
-      inStockProducts,
-      lowStockProducts,
-      outOfStockProducts,
-      totalInventoryValue,
-      totalRetailValue,
-      potentialProfit: totalRetailValue - totalInventoryValue,
-
-      // Best sellers
-      bestSellers,
-
-      // Payment methods - Cash only
-      cashSales,
-      cashRevenue,
-
-      // Monthly data
-      monthlySales: Array.from(monthlySales.entries())
-        .map(([month, revenue]) => ({
-          month,
-          revenue,
-          profit: monthlyProfit.get(month) || 0,
-        }))
-        .sort((a, b) => a.month.localeCompare(b.month)),
-    };
-  }, [sales, refunds, products]);
+    if (!data) {
+      return {
+        totalSales: 0,
+        totalRevenue: 0,
+        totalRefunds: 0,
+        netRevenue: 0,
+        totalProfit: 0,
+        profitMargin: 0,
+        totalProducts: 0,
+        inStockProducts: 0,
+        lowStockProducts: 0,
+        outOfStockProducts: 0,
+        totalInventoryValue: 0,
+        totalRetailValue: 0,
+        potentialProfit: 0,
+        bestSellers: [],
+        cashSales: 0,
+        cashRevenue: 0,
+        monthlySales: [],
+      };
+    }
+    return data;
+  }, [data]);
 
   return { status, vm };
 }

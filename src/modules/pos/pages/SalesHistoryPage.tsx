@@ -20,8 +20,13 @@ import { Banknote, Undo2 } from "lucide-react";
 import { formatDateTime } from "@/shared/utils/format";
 import { useTenantCurrency } from "@/modules/tenant";
 import { Button } from "@/shared/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
-import { useState, useMemo } from "react";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/shared/components/ui/tabs";
+import { useState } from "react";
 import type { Sale } from "@/shared/types/models";
 
 const ITEMS_PER_PAGE = 10;
@@ -30,8 +35,6 @@ export default function SalesHistoryPage() {
   const { vm, actions } = useSalesHistoryLogic();
   const { formatPrice } = useTenantCurrency();
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [refundsPage, setRefundsPage] = useState(1);
 
   const handleRefundSale = async (sale: Sale) => {
     if (
@@ -51,22 +54,6 @@ export default function SalesHistoryPage() {
       setIsProcessing(null);
     }
   };
-
-  // Pagination for orders
-  const paginatedSales = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return vm.sales.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [vm.sales, currentPage]);
-
-  const totalOrderPages = Math.ceil(vm.sales.length / ITEMS_PER_PAGE);
-
-  // Pagination for refunds
-  const paginatedRefunds = useMemo(() => {
-    const startIndex = (refundsPage - 1) * ITEMS_PER_PAGE;
-    return vm.refunds.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [vm.refunds, refundsPage]);
-
-  const totalRefundPages = Math.ceil(vm.refunds.length / ITEMS_PER_PAGE);
 
   return (
     <div className="space-y-6">
@@ -88,10 +75,11 @@ export default function SalesHistoryPage() {
               Order Usage
             </p>
             <p
-              className={`text-sm font-bold ${!vm.orderStats.canAddMore
+              className={`text-sm font-bold ${
+                !vm.orderStats.canAddMore
                   ? "text-rose-600 dark:text-rose-400"
                   : "text-gray-900 dark:text-white"
-                }`}
+              }`}
             >
               {vm.orderStats.currentCount} /{" "}
               {vm.orderStats.maxOrders === Infinity
@@ -108,10 +96,10 @@ export default function SalesHistoryPage() {
       <Tabs defaultValue="orders" className="w-full">
         <TabsList className="grid w-full grid-cols-2 max-w-[400px] mb-4">
           <TabsTrigger value="orders" className="dark:text-white/90">
-            All Orders ({vm.sales.length})
+            All Orders ({vm.totalSales})
           </TabsTrigger>
           <TabsTrigger value="refunds" className="dark:text-white/90">
-            Refunds & Returns ({vm.refunds.length})
+            Refunds & Returns ({vm.totalRefunds})
           </TabsTrigger>
         </TabsList>
 
@@ -178,7 +166,7 @@ export default function SalesHistoryPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
-                        {paginatedSales.map((sale) => {
+                        {vm.sales.map((sale) => {
                           const isRefunded = vm.refunds.some(
                             (r) => r.originalSaleId === sale.id,
                           );
@@ -250,14 +238,14 @@ export default function SalesHistoryPage() {
                     </Table>
                   </div>
                   {/* Pagination */}
-                  {totalOrderPages > 1 && (
+                  {vm.ordersPagination.totalPages > 1 && (
                     <div className="p-4 border-t border-gray-100 dark:border-gray-800">
                       <Pagination
-                        currentPage={currentPage}
-                        totalPages={totalOrderPages}
-                        totalItems={vm.sales.length}
+                        currentPage={vm.ordersPagination.page}
+                        totalPages={vm.ordersPagination.totalPages}
+                        totalItems={vm.ordersPagination.totalItems}
                         itemsPerPage={ITEMS_PER_PAGE}
-                        onPageChange={setCurrentPage}
+                        onPageChange={actions.setOrdersPage}
                       />
                     </div>
                   )}
@@ -318,7 +306,7 @@ export default function SalesHistoryPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
-                        {paginatedRefunds.map((refund) => (
+                        {vm.refunds.map((refund) => (
                           <TableRow
                             key={refund.id}
                             className="hover:bg-gray-50/50 dark:hover:bg-white/[0.01] transition-colors"
@@ -345,14 +333,14 @@ export default function SalesHistoryPage() {
                     </Table>
                   </div>
                   {/* Pagination */}
-                  {totalRefundPages > 1 && (
+                  {vm.refundsPagination.totalPages > 1 && (
                     <div className="p-4 border-t border-gray-100 dark:border-gray-800">
                       <Pagination
-                        currentPage={refundsPage}
-                        totalPages={totalRefundPages}
-                        totalItems={vm.refunds.length}
+                        currentPage={vm.refundsPagination.page}
+                        totalPages={vm.refundsPagination.totalPages}
+                        totalItems={vm.refundsPagination.totalItems}
                         itemsPerPage={ITEMS_PER_PAGE}
-                        onPageChange={setRefundsPage}
+                        onPageChange={actions.setRefundsPage}
                       />
                     </div>
                   )}
