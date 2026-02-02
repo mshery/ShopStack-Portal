@@ -1,3 +1,4 @@
+import { Skeleton as UiSkeleton } from "@/shared/components/ui/skeleton";
 import { cn } from "@/shared/utils/cn";
 
 interface SkeletonProps {
@@ -5,5 +6,5 @@ interface SkeletonProps {
 }
 
 export function Skeleton({ className }: SkeletonProps) {
-  return <div className={cn("skeleton h-4 w-full", className)} />;
+  return <UiSkeleton className={cn("h-4 w-full", className)} />;
 }

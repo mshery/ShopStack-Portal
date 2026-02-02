@@ -28,6 +28,8 @@ interface ProductGridProps {
   getCategoryName?: (categoryId: string) => string;
 }
 
+import { Skeleton } from "@/shared/components/ui/skeleton";
+
 /**
  * ProductGrid - Professional POS product display with grid and list views
  *
@@ -59,7 +61,7 @@ export const ProductGrid = memo(function ProductGrid({
   // Create a Set for O(1) cart lookups
   const cartProductIds = useMemo(
     () => new Set(cart.map((item) => item.productId)),
-    [cart]
+    [cart],
   );
 
   const getCartQuantity = (productId: string): number => {
@@ -93,21 +95,24 @@ export const ProductGrid = memo(function ProductGrid({
       <div className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 no-scrollbar">
         <div className="p-4 md:p-6">
           <div
-            className={`grid gap-3 sm:gap-4 ${viewMode === "grid"
-              ? "grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5"
-              : "grid-cols-1"
-              }`}
+            className={`grid gap-3 sm:gap-4 ${
+              viewMode === "grid"
+                ? "grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5"
+                : "grid-cols-1"
+            }`}
           >
             {Array.from({ length: 12 }).map((_, i) => (
               <div
                 key={i}
-                className="rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 overflow-hidden animate-pulse"
+                className="rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 overflow-hidden"
               >
-                <div className="aspect-square bg-gray-200 dark:bg-gray-700" />
+                <Skeleton className="aspect-square w-full rounded-none" />
                 <div className="p-3 md:p-4 space-y-3">
-                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
-                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
-                  <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded" />
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                  <div className="pt-2">
+                    <Skeleton className="h-10 w-full" />
+                  </div>
                 </div>
               </div>
             ))}
@@ -169,7 +174,7 @@ export const ProductGrid = memo(function ProductGrid({
           <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5">
             <AnimatePresence mode="wait">
               <motion.div
-                key={selectedCategory || 'all'}
+                key={selectedCategory || "all"}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -185,8 +190,9 @@ export const ProductGrid = memo(function ProductGrid({
                   return (
                     <div
                       key={product.id}
-                      className={`group relative flex flex-col rounded-xl bg-white dark:bg-gray-800 overflow-hidden border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-all ${isOutOfStock ? "opacity-75" : ""
-                        }`}
+                      className={`group relative flex flex-col rounded-xl bg-white dark:bg-gray-800 overflow-hidden border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-all ${
+                        isOutOfStock ? "opacity-75" : ""
+                      }`}
                     >
                       {/* Stock Badge */}
                       <div className="absolute top-2 left-2 z-10">
@@ -252,12 +258,13 @@ export const ProductGrid = memo(function ProductGrid({
                         <button
                           onClick={() => onAddToCart(product)}
                           disabled={isOutOfStock}
-                          className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all ${inCart
-                            ? "bg-brand-500 text-white hover:bg-brand-600 active:scale-[0.98]"
-                            : isOutOfStock
-                              ? "bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
-                              : "bg-gray-900 dark:bg-gray-700 text-white hover:bg-gray-800 dark:hover:bg-gray-600 active:scale-[0.98]"
-                            }`}
+                          className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                            inCart
+                              ? "bg-brand-500 text-white hover:bg-brand-600 active:scale-[0.98]"
+                              : isOutOfStock
+                                ? "bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
+                                : "bg-gray-900 dark:bg-gray-700 text-white hover:bg-gray-800 dark:hover:bg-gray-600 active:scale-[0.98]"
+                          }`}
                         >
                           {inCart ? (
                             <>
@@ -287,7 +294,7 @@ export const ProductGrid = memo(function ProductGrid({
           <div className="space-y-2">
             <AnimatePresence mode="wait">
               <motion.div
-                key={selectedCategory || 'all'}
+                key={selectedCategory || "all"}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -303,8 +310,9 @@ export const ProductGrid = memo(function ProductGrid({
                   return (
                     <div
                       key={product.id}
-                      className={`group flex items-center gap-3 md:gap-4 p-3 md:p-4 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-all ${isOutOfStock ? "opacity-75" : ""
-                        }`}
+                      className={`group flex items-center gap-3 md:gap-4 p-3 md:p-4 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-all ${
+                        isOutOfStock ? "opacity-75" : ""
+                      }`}
                     >
                       {/* Product Image */}
                       <div className="relative w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700 flex-shrink-0">
@@ -370,12 +378,13 @@ export const ProductGrid = memo(function ProductGrid({
                       <button
                         onClick={() => onAddToCart(product)}
                         disabled={isOutOfStock}
-                        className={`flex-shrink-0 flex items-center justify-center gap-1.5 px-3 md:px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${inCart
-                          ? "bg-brand-500 text-white hover:bg-brand-600 active:scale-[0.98]"
-                          : isOutOfStock
-                            ? "bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
-                            : "bg-gray-900 dark:bg-gray-700 text-white hover:bg-gray-800 dark:hover:bg-gray-600 active:scale-[0.98]"
-                          }`}
+                        className={`flex-shrink-0 flex items-center justify-center gap-1.5 px-3 md:px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                          inCart
+                            ? "bg-brand-500 text-white hover:bg-brand-600 active:scale-[0.98]"
+                            : isOutOfStock
+                              ? "bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
+                              : "bg-gray-900 dark:bg-gray-700 text-white hover:bg-gray-800 dark:hover:bg-gray-600 active:scale-[0.98]"
+                        }`}
                       >
                         <Plus className="w-4 h-4" />
                         <span className="hidden sm:inline">

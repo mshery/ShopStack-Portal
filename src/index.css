@@ -202,3 +202,11 @@ layer(base);
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+@layer utilities {
+  @keyframes shimmer {
+    100% {
+      transform: translateX(100%);
+    }
+  }
+}
