@@ -7,12 +7,16 @@
  */
 export function formatCurrency(
   value: number,
-  currency = "USD",
-  locale = "en-US",
+  currency = "PKR",
+  locale = "en-PK",
 ): string {
+  // Manual override for PKR to display as "Rs " if Intl defaults to "PKR"
+  // But let's check standard first. En-PK usually formats as "Rs." or "PKR".
+  // Let's stick to standard Intl for now, but ensure en-PK locale.
   return new Intl.NumberFormat(locale, {
     style: "currency",
     currency,
+    currencyDisplay: "symbol", // "narrowSymbol" might be better if available
   }).format(value);
 }
 

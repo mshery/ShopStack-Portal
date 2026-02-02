@@ -210,7 +210,7 @@ export default function BillingPage() {
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-50 dark:bg-green-900/20">
                     <span className="text-green-600 dark:text-green-400 font-semibold">
-                      $
+                      Rs
                     </span>
                   </div>
                   <div>
@@ -218,7 +218,7 @@ export default function BillingPage() {
                       Cost
                     </p>
                     <p className="font-semibold text-gray-900 dark:text-white">
-                      ${Number(billing?.monthlyAmount ?? 0).toFixed(2)}
+                      Rs {Number(billing?.monthlyAmount ?? 0).toFixed(2)}
                       <span className="text-sm font-normal text-gray-500">
                         /month
                       </span>
@@ -684,7 +684,7 @@ function InvoiceRow({ invoice }: { invoice: BillingInvoice }) {
         {new Date(invoice.createdAt).toLocaleDateString()}
       </td>
       <td className="py-4 text-sm font-medium text-gray-900 dark:text-white">
-        ${invoice.amount.toFixed(2)}
+        Rs {invoice.amount.toFixed(2)}
       </td>
       <td className="py-4 text-sm text-gray-500 dark:text-gray-400">
         {invoice.planName}

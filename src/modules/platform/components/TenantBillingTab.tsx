@@ -36,7 +36,7 @@ export function TenantBillingTab({ billing, invoices }: TenantBillingTabProps) {
           icon={<CreditCard className="h-5 w-5 text-brand-600" />}
           title="Current Plan"
           value={billing.plan.charAt(0).toUpperCase() + billing.plan.slice(1)}
-          subtitle={`$${billing.monthlyAmount}/month`}
+          subtitle={`Rs ${billing.monthlyAmount}/month`}
           status={billing.status}
         />
         <BillingCard
@@ -54,7 +54,7 @@ export function TenantBillingTab({ billing, invoices }: TenantBillingTabProps) {
           title="Last Payment"
           value={
             billing.lastPaymentAmount
-              ? `$${billing.lastPaymentAmount.toFixed(2)}`
+              ? `Rs ${billing.lastPaymentAmount.toFixed(2)}`
               : "No payments yet"
           }
           subtitle={
@@ -181,7 +181,7 @@ function InvoiceRow({ invoice }: { invoice: BillingInvoice }) {
         {invoice.invoiceNumber}
       </TableCell>
       <TableCell className="px-4 py-3 font-medium text-gray-900">
-        ${invoice.amount.toFixed(2)}
+        Rs {invoice.amount.toFixed(2)}
       </TableCell>
       <TableCell className="px-4 py-3">
         <Badge color={statusColors[invoice.status]} variant="light" size="sm">

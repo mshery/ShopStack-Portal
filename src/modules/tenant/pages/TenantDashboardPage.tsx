@@ -36,7 +36,7 @@ export default function TenantDashboardPage() {
   const { status, vm } = useTenantDashboardScreen();
   const { formatPrice } = useTenantCurrency();
 
-  if (status === "loading" || true) {
+  if (status === "loading") {
     return (
       <div className="space-y-6">
         <div className="h-8 w-64">

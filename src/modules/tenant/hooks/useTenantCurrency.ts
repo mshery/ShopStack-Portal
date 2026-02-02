@@ -17,12 +17,12 @@ export function useTenantCurrency() {
     [tenants, activeTenantId],
   );
 
-  const currencySymbol = tenant?.settings?.currencySymbol || "$";
+  const currencySymbol = tenant?.settings?.currencySymbol || "Rs";
 
   const formatPrice = useMemo(
     () => (amount: number | undefined | null) => {
       const value = typeof amount === "number" ? amount : 0;
-      return `${currencySymbol}${value.toLocaleString("en-US", {
+      return `${currencySymbol} ${value.toLocaleString("en-US", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       })}`;

@@ -16,6 +16,7 @@ import { Plus, X } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { AsyncProductSelect } from "@/modules/products/components/AsyncProductSelect";
 import type { Product } from "@/modules/products/api/productsApi";
+import { useTenantCurrency } from "@/modules/tenant";
 
 interface AddPurchaseModalProps {
   isOpen: boolean;
@@ -37,6 +38,7 @@ export default function AddPurchaseModal({
 }: AddPurchaseModalProps) {
   // Data Fetching
   const { data: vendors = [] } = useVendorsFetch();
+  const { formatPrice } = useTenantCurrency();
 
   const createPurchaseMutation = useCreatePurchase();
 
@@ -255,7 +257,7 @@ export default function AddPurchaseModal({
                     <div className="w-28">
                       <Label className="text-xs">Subtotal</Label>
                       <div className="h-9 flex items-center text-sm font-semibold">
-                        ${(item.quantity * item.costPrice).toFixed(2)}
+                        {formatPrice(item.quantity * item.costPrice)}
                       </div>
                     </div>
                     <Button
@@ -281,7 +283,7 @@ export default function AddPurchaseModal({
                   <div className="text-right">
                     <div className="text-sm text-gray-500">Total Cost</div>
                     <div className="text-2xl font-bold text-brand-600 dark:text-brand-400">
-                      ${totalCost.toFixed(2)}
+                      {formatPrice(totalCost)}
                     </div>
                   </div>
                 </div>

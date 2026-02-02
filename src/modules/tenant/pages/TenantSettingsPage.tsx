@@ -33,7 +33,7 @@ export default function TenantSettingsPage() {
   const { data: tenantBrands = [] } = useBrandsFetch();
 
   const [currencySymbol, setCurrencySymbol] = useState(
-    tenant?.settings?.currencySymbol || "$",
+    tenant?.settings?.currencySymbol || "Rs",
   );
   const [showSuccess, setShowSuccess] = useState(false);
 

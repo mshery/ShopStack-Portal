@@ -153,7 +153,7 @@ export default function CartPage() {
   );
 
   const tenant = tenants.find((t: { id: string }) => t.id === activeTenantId);
-  const currencySymbol = vm.tenantSettings?.currencySymbol || "$";
+  const currencySymbol = vm.tenantSettings?.currencySymbol || "Rs";
   const taxRate = vm.tenantSettings?.taxRate || 0.1;
 
   // Keyboard shortcut for search focus

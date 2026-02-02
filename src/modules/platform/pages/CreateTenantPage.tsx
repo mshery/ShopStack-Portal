@@ -334,7 +334,7 @@ function StepPlanLimits({
                   Up to {plan.limits.maxUsers} users
                 </p>
                 <p className="mt-1 text-xs text-brand-600 font-semibold">
-                  ${plan.monthlyPrice}/mo
+                  Rs {plan.monthlyPrice}/mo
                 </p>
                 {formData.planId === plan.id && (
                   <motion.div

@@ -201,7 +201,7 @@ export function ProductFiltersModal({
               <div className="grid grid-cols-2 gap-4">
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-                    $
+                    Rs
                   </span>
                   <Input
                     type="number"
@@ -218,7 +218,7 @@ export function ProductFiltersModal({
                 </div>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-                    $
+                    Rs
                   </span>
                   <Input
                     type="number"
