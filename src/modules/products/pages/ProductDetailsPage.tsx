@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useProductDetailsScreen } from "../hooks/useProductDetailsScreen";
 import PageBreadcrumb from "@/shared/components/feedback/PageBreadcrumb";
+import { DetailPageSkeleton } from "@/shared/components/feedback/DetailPageSkeleton";
 import { DetailPageHeader } from "@/shared/components/feedback/DetailPageHeader";
 import {
   InfoSection,
@@ -30,27 +31,7 @@ export default function ProductDetailsPage() {
 
   // Loading state - show skeleton
   if (status === "loading") {
-    return (
-      <>
-        <PageBreadcrumb pageTitle="Product Details" />
-        <div className="animate-pulse space-y-6">
-          <div className="flex items-center gap-4">
-            <div className="w-24 h-24 bg-gray-200 dark:bg-gray-700 rounded-xl" />
-            <div className="space-y-2">
-              <div className="h-6 w-48 bg-gray-200 dark:bg-gray-700 rounded" />
-              <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 h-64 bg-gray-200 dark:bg-gray-700 rounded-2xl" />
-            <div className="space-y-6">
-              <div className="h-48 bg-gray-200 dark:bg-gray-700 rounded-2xl" />
-              <div className="h-48 bg-gray-200 dark:bg-gray-700 rounded-2xl" />
-            </div>
-          </div>
-        </div>
-      </>
-    );
+    return <DetailPageSkeleton />;
   }
 
   // Error/Not found state

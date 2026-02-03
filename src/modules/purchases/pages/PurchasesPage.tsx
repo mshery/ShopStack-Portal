@@ -17,7 +17,8 @@ import { useState } from "react";
 import { formatDateTime } from "@/shared/utils/format";
 import AddPurchaseModal from "../components/AddPurchaseModal";
 import { Link } from "react-router-dom";
-import { Skeleton } from "@/shared/components/ui/skeleton";
+import { TableSkeleton } from "@/shared/components/skeletons/TableSkeleton";
+import PageBreadcrumb from "@/shared/components/feedback/PageBreadcrumb";
 import Pagination from "@/shared/components/feedback/Pagination";
 
 export default function PurchasesPage() {
@@ -75,11 +76,8 @@ export default function PurchasesPage() {
   if (status === "loading") {
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-10 w-32" />
-        </div>
-        <Skeleton className="h-[400px] w-full rounded-2xl" />
+        <PageBreadcrumb pageTitle="Purchase Orders" />
+        <TableSkeleton rows={10} columns={5} />
       </div>
     );
   }

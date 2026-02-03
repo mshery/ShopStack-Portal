@@ -14,11 +14,16 @@ import {
   Truck,
   FileText,
 } from "lucide-react";
+import { PageSkeleton } from "@/shared/components/skeletons/PageSkeleton";
 
 export default function ExpensesPage() {
   const { status, vm, actions } = useExpensesScreen();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const { formatPrice } = useTenantCurrency();
+
+  if (status === "loading") {
+    return <PageSkeleton />;
+  }
 
   // Helper to get expense type badge styles
   const getExpenseTypeBadge = (expenseType: string) => {
@@ -106,13 +111,9 @@ export default function ExpensesPage() {
             <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
               Total Expenses
             </p>
-            {status === "loading" ? (
-              <div className="h-8 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mt-1" />
-            ) : (
-              <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                {vm.summary.totalCount}
-              </p>
-            )}
+            <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+              {vm.summary.totalCount}
+            </p>
           </div>
 
           {/* Total Amount */}
@@ -125,13 +126,9 @@ export default function ExpensesPage() {
             <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
               Total Amount
             </p>
-            {status === "loading" ? (
-              <div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mt-1" />
-            ) : (
-              <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                {formatPrice(vm.summary.totalAmount)}
-              </p>
-            )}
+            <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+              {formatPrice(vm.summary.totalAmount)}
+            </p>
           </div>
 
           {/* Inventory Losses */}
@@ -144,15 +141,9 @@ export default function ExpensesPage() {
             <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
               Inventory Losses
             </p>
-            {status === "loading" ? (
-              <div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mt-1" />
-            ) : (
-              <p className="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">
-                {formatPrice(
-                  getSummaryValue("inventory_loss", "Inventory Loss"),
-                )}
-              </p>
-            )}
+            <p className="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">
+              {formatPrice(getSummaryValue("inventory_loss", "Inventory Loss"))}
+            </p>
           </div>
 
           {/* Vendor Payments */}
@@ -165,15 +156,9 @@ export default function ExpensesPage() {
             <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
               Vendor Payments
             </p>
-            {status === "loading" ? (
-              <div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mt-1" />
-            ) : (
-              <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
-                {formatPrice(
-                  getSummaryValue("vendor_payment", "vendor_payment"),
-                )}
-              </p>
-            )}
+            <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
+              {formatPrice(getSummaryValue("vendor_payment", "vendor_payment"))}
+            </p>
           </div>
         </div>
 
@@ -204,23 +189,7 @@ export default function ExpensesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
-                {status === "loading" ? (
-                  Array.from({ length: 5 }).map((_, i) => (
-                    <tr key={i}>
-                      <td className="px-6 py-4">
-                        <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="space-y-2 animate-pulse">
-                          <div className="h-4 w-40 bg-gray-200 dark:bg-gray-700 rounded" />
-                        </div>
-                      </td>
-                      <td colSpan={4} className="px-6 py-4">
-                        <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                      </td>
-                    </tr>
-                  ))
-                ) : vm.isEmpty ? (
+                {vm.isEmpty ? (
                   <tr>
                     <td
                       colSpan={6}

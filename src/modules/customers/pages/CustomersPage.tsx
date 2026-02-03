@@ -8,6 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/shared/components/ui/table";
+import { TableSkeleton } from "@/shared/components/skeletons/TableSkeleton";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { useCustomersScreen } from "../hooks/useCustomersScreen";
@@ -34,6 +35,15 @@ export default function CustomersPage() {
         Error loading customers. Please try refreshing.
       </div>
     );
+
+  if (status === "loading") {
+    return (
+      <div className="space-y-6">
+        <PageBreadcrumb pageTitle="Customers" />
+        <TableSkeleton rows={10} columns={5} />
+      </div>
+    );
+  }
 
   return (
     <>
@@ -102,28 +112,7 @@ export default function CustomersPage() {
               </TableRow>
             </TableHeader>
             <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
-              {status === "loading" ? (
-                // Loading Skeleton
-                Array.from({ length: 5 }).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell className="px-6 py-4">
-                      <div className="flex items-center gap-3 animate-pulse">
-                        <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700" />
-                        <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
-                      </div>
-                    </TableCell>
-                    <TableCell className="px-6 py-4">
-                      <div className="space-y-2 animate-pulse">
-                        <div className="h-3 w-40 bg-gray-200 dark:bg-gray-700 rounded" />
-                        <div className="h-3 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
-                      </div>
-                    </TableCell>
-                    <TableCell colSpan={3} className="px-6 py-4">
-                      <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : vm.isEmpty ? (
+              {vm.isEmpty ? (
                 // Empty State
                 <TableRow>
                   <TableCell

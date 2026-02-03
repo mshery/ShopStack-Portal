@@ -8,6 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/shared/components/ui/table";
+import { TableSkeleton } from "@/shared/components/skeletons/TableSkeleton";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { useProductsScreen } from "../hooks/useProductsScreen";
@@ -36,6 +37,17 @@ export default function ProductsPage() {
     const map = new Map(vm.brands.map((b) => [b.id, b.name]));
     return (id: string) => map.get(id) || "Unknown";
   }, [vm.brands]);
+
+  if (status === "loading") {
+    return (
+      <div className="p-6">
+        <PageBreadcrumb pageTitle="Products" />
+        <div className="mt-6">
+          <TableSkeleton rows={10} columns={7} />
+        </div>
+      </div>
+    );
+  }
 
   if (status === "error") return <div>Error: Tenant context not found.</div>;
 

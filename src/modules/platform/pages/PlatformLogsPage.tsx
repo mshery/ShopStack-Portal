@@ -17,8 +17,8 @@ import {
   FilterX,
   RefreshCw,
   AlertCircle,
-  Loader2,
 } from "lucide-react";
+import { TableSkeleton } from "@/shared/components/skeletons/TableSkeleton";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -87,10 +87,7 @@ export default function PlatformLogsPage() {
     return (
       <div className="space-y-6">
         <PageBreadcrumb pageTitle="Platform Logs" />
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
-          <span className="ml-2 text-gray-600">Loading activity logs...</span>
-        </div>
+        <TableSkeleton rows={10} columns={4} />
       </div>
     );
   }

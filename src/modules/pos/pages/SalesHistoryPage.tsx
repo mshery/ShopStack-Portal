@@ -17,6 +17,7 @@ import {
 } from "@/shared/components/ui/table";
 import Pagination from "@/shared/components/feedback/Pagination";
 import { Banknote, Undo2 } from "lucide-react";
+import { PageSkeleton } from "@/shared/components/skeletons/PageSkeleton";
 import { formatDateTime } from "@/shared/utils/format";
 import { useTenantCurrency } from "@/modules/tenant";
 import { Button } from "@/shared/components/ui/button";
@@ -32,9 +33,13 @@ import type { Sale } from "@/shared/types/models";
 const ITEMS_PER_PAGE = 10;
 
 export default function SalesHistoryPage() {
-  const { vm, actions } = useSalesHistoryLogic();
+  const { status, vm, actions } = useSalesHistoryLogic();
   const { formatPrice } = useTenantCurrency();
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
+
+  if (status === "loading") {
+    return <PageSkeleton />;
+  }
 
   const handleRefundSale = async (sale: Sale) => {
     if (

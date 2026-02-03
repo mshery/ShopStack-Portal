@@ -24,7 +24,8 @@ import { formatDateTime } from "@/shared/utils/format";
 import AddVendorModal from "../components/AddVendorModal";
 import EditVendorModal from "../components/EditVendorModal";
 import DeleteConfirmationModal from "@/shared/components/feedback/DeleteConfirmationModal";
-import { Skeleton } from "@/shared/components/ui/skeleton";
+import { TableSkeleton } from "@/shared/components/skeletons/TableSkeleton";
+import PageBreadcrumb from "@/shared/components/feedback/PageBreadcrumb";
 
 export default function VendorsPage() {
   const { status, vm, actions } = useVendorsScreen();
@@ -32,12 +33,8 @@ export default function VendorsPage() {
   if (status === "loading") {
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-10 w-32" />
-        </div>
-        <Skeleton className="h-10 w-full max-w-sm" />
-        <Skeleton className="h-[400px] w-full rounded-2xl" />
+        <PageBreadcrumb pageTitle="Vendors" />
+        <TableSkeleton rows={10} columns={6} />
       </div>
     );
   }

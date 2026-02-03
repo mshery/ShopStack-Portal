@@ -18,13 +18,13 @@ import {
   Check,
   LayoutGrid,
   List,
-  RefreshCw,
 } from "lucide-react";
 import { EmptyState } from "@/shared/components/feedback/EmptyState";
 import { Input } from "@/shared/components/ui/input";
 import { formatDateTime } from "@/shared/utils/format";
 import DeleteConfirmationModal from "@/shared/components/feedback/DeleteConfirmationModal";
 import Pagination from "@/shared/components/feedback/Pagination";
+import { PageSkeleton } from "@/shared/components/skeletons/PageSkeleton";
 import { useBrandsScreen } from "../hooks/useBrandsScreen";
 import type { Brand } from "../api/catalogApi";
 
@@ -45,13 +45,7 @@ export default function BrandsPage() {
   };
 
   if (status === "loading") {
-    return (
-      <div className="space-y-6 p-6">
-        <div className="flex items-center justify-center py-12">
-          <RefreshCw className="h-8 w-8 animate-spin text-brand-600" />
-        </div>
-      </div>
-    );
+    return <PageSkeleton />;
   }
 
   if (status === "error") {

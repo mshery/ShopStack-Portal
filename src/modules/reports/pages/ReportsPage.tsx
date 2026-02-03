@@ -15,17 +15,17 @@ import {
   TableRow,
   TableCell,
 } from "@/shared/components/ui/table";
-import {
-  DollarSign,
-  TrendingUp,
-  Package,
-  Banknote,
-} from "lucide-react";
+import { DollarSign, TrendingUp, Package, Banknote } from "lucide-react";
+import { PageSkeleton } from "@/shared/components/skeletons/PageSkeleton";
 import PageBreadcrumb from "@/shared/components/feedback/PageBreadcrumb";
 
 export default function ReportsPage() {
-  const { vm } = useReportsScreen();
+  const { status, vm } = useReportsScreen();
   const { formatPrice } = useTenantCurrency();
+
+  if (status === "loading") {
+    return <PageSkeleton />;
+  }
 
   return (
     <>

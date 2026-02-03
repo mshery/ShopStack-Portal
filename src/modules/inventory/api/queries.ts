@@ -9,6 +9,7 @@ import {
   type InventoryFilters,
   type CreateAdjustmentInput,
 } from "./inventoryApi";
+import { REPORT_KEYS } from "../../reports/api/queries";
 
 export type { InventoryFilters, CreateAdjustmentInput };
 
@@ -44,6 +45,7 @@ export function useCreateAdjustment() {
       queryClient.invalidateQueries({ queryKey: inventoryKeys.all });
       // Also invalidate products since stock changed
       queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: REPORT_KEYS.all });
     },
   });
 }

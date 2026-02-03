@@ -17,6 +17,7 @@ import PageBreadcrumb from "@/shared/components/feedback/PageBreadcrumb";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import { Modal } from "@/shared/components/ui/Modal";
+import { PageSkeleton } from "@/shared/components/skeletons/PageSkeleton";
 import { useBillingScreen, useBillingUpgrade } from "@/modules/billing";
 import { PaymentMethodModal } from "@/modules/billing/components/PaymentMethodModal";
 import type {
@@ -128,14 +129,7 @@ export default function BillingPage() {
   };
 
   if (status === "loading") {
-    return (
-      <>
-        <PageBreadcrumb pageTitle="Billing" />
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-500" />
-        </div>
-      </>
-    );
+    return <PageSkeleton />;
   }
 
   if (status === "empty" || !vm.billing) {

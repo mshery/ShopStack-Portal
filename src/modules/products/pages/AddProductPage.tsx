@@ -20,16 +20,13 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useAddProductScreen } from "../hooks/useAddProductScreen";
+import { PageSkeleton } from "@/shared/components/skeletons/PageSkeleton";
 
 export default function AddProductPage() {
   const { status, vm, actions } = useAddProductScreen();
 
   if (status === "loading") {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <RefreshCw className="h-8 w-8 animate-spin text-brand-600" />
-      </div>
-    );
+    return <PageSkeleton />;
   }
 
   return (

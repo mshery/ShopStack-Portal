@@ -10,6 +10,7 @@ import {
   type UpdateProductInput,
 } from "./productsApi";
 import { inventoryKeys } from "../../inventory/api/queries";
+import { REPORT_KEYS } from "../../reports/api/queries";
 
 export type { ProductFilters };
 
@@ -53,6 +54,7 @@ export function useCreateProduct() {
     onSuccess: () => {
       // Invalidate list queries
       queryClient.invalidateQueries({ queryKey: productKeys.all });
+      queryClient.invalidateQueries({ queryKey: REPORT_KEYS.all });
     },
   });
 }
@@ -70,6 +72,7 @@ export function useUpdateProduct() {
       await queryClient.invalidateQueries({ queryKey: productKeys.all });
       // Invalidate inventory adjustments to reflect stock changes
       await queryClient.refetchQueries({ queryKey: inventoryKeys.all });
+      queryClient.invalidateQueries({ queryKey: REPORT_KEYS.all });
     },
   });
 }
@@ -81,6 +84,7 @@ export function useDeleteProduct() {
     mutationFn: productsApi.deleteProduct,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: productKeys.all });
+      queryClient.invalidateQueries({ queryKey: REPORT_KEYS.all });
     },
   });
 }

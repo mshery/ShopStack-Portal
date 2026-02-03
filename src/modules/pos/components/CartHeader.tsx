@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { Input } from "@/shared/components/ui/input";
-import { Search, ScanBarcode, LayoutGrid, List } from "lucide-react";
+import { Search, LayoutGrid, List, Store } from "lucide-react";
 
 interface CartHeaderProps {
   search: string;
@@ -10,7 +10,7 @@ interface CartHeaderProps {
 }
 
 /**
- * CartHeader - Clean search bar with action buttons
+ * CartHeader - Premium POS header with floating card design
  */
 export function CartHeader({
   search,
@@ -20,79 +20,70 @@ export function CartHeader({
 }: CartHeaderProps) {
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const handleBarcodeClick = () => {
-    searchInputRef.current?.focus();
-    searchInputRef.current?.select();
-  };
-
   return (
-    <div className="px-4 md:px-6 pt-4 md:pt-6 bg-gray-50 dark:bg-gray-900">
-      <div className="flex items-center gap-3">
-        {/* Search Bar */}
-        <div className="relative flex-1">
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center justify-center h-8 w-8 rounded-lg bg-brand-500">
-            <Search className="h-4 w-4 text-white" />
+    <div className="px-4 md:px-6 pt-4">
+      <div className="flex items-center gap-4 p-4 bg-white dark:bg-gray-800 rounded-2xl shadow-sm">
+        {/* Left: Branding */}
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 shadow-lg shadow-brand-500/25">
+            <Store className="h-5 w-5 text-white" />
           </div>
+          <div className="hidden sm:block">
+            <h1 className="text-base font-bold text-gray-900 dark:text-white leading-tight">
+              QuickSale
+            </h1>
+            <p className="text-[11px] text-gray-400 dark:text-gray-500">
+              Point of Sale
+            </p>
+          </div>
+        </div>
+
+        {/* Center: Search Bar */}
+        <div className="relative flex-1 max-w-xl">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
             ref={searchInputRef}
-            placeholder="Search products or scan barcode..."
-            className="h-12 md:h-14 pl-14 pr-4 text-base border border-gray-200 dark:border-gray-700 focus:border-brand-500 focus:ring-1 focus:ring-brand-500/20 rounded-xl bg-white dark:bg-gray-800 dark:text-white transition-all placeholder:text-gray-400 dark:placeholder:text-gray-500"
+            placeholder="Search products..."
+            className="h-11 pl-11 pr-10 text-sm bg-gray-50 dark:bg-gray-800 border-0 focus:ring-2 focus:ring-brand-500/20 focus:bg-white dark:focus:bg-gray-700 rounded-xl transition-all placeholder:text-gray-400"
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             autoFocus
           />
 
-          {/* Search hint */}
-          {!search && (
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 hidden md:flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
-              <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-[10px] font-mono">
-                /
-              </kbd>
-              <span>to focus</span>
-            </div>
-          )}
-
           {/* Clear button */}
           {search && (
             <button
               onClick={() => onSearchChange("")}
-              className="absolute right-4 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500 flex items-center justify-center transition-colors"
             >
-              <span className="text-gray-500 dark:text-gray-400 text-sm leading-none">×</span>
+              <span className="text-white text-xs leading-none">×</span>
             </button>
           )}
         </div>
 
-        {/* Scan Barcode Button */}
-        <button
-          onClick={handleBarcodeClick}
-          className="flex h-12 md:h-14 w-12 md:w-14 items-center justify-center rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-95 transition-all"
-          title="Scan barcode"
-        >
-          <ScanBarcode className="h-5 w-5 text-gray-600 dark:text-gray-300" />
-        </button>
-
-        {/* View Mode Toggle */}
-        <div className="flex h-12 md:h-14 items-center rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-1">
+        {/* Right: View Toggle */}
+        <div className="flex items-center gap-1 p-1.5 rounded-xl bg-gray-100 dark:bg-gray-800 flex-shrink-0">
           <button
             onClick={() => onViewModeChange?.("grid")}
-            className={`flex h-full items-center justify-center px-3 md:px-4 rounded-lg transition-all ${viewMode === "grid"
-              ? "bg-brand-500 text-white"
-              : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
-              }`}
+            className={`flex items-center justify-center w-9 h-9 rounded-lg transition-all ${
+              viewMode === "grid"
+                ? "bg-white dark:bg-gray-700 text-brand-600 dark:text-brand-400 shadow-sm"
+                : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            }`}
             title="Grid view"
           >
-            <LayoutGrid className="h-5 w-5" />
+            <LayoutGrid className="h-4.5 w-4.5" />
           </button>
           <button
             onClick={() => onViewModeChange?.("list")}
-            className={`flex h-full items-center justify-center px-3 md:px-4 rounded-lg transition-all ${viewMode === "list"
-              ? "bg-brand-500 text-white"
-              : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
-              }`}
+            className={`flex items-center justify-center w-9 h-9 rounded-lg transition-all ${
+              viewMode === "list"
+                ? "bg-white dark:bg-gray-700 text-brand-600 dark:text-brand-400 shadow-sm"
+                : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            }`}
             title="List view"
           >
-            <List className="h-5 w-5" />
+            <List className="h-4.5 w-4.5" />
           </button>
         </div>
       </div>
