@@ -3,9 +3,14 @@ import MetricCard from "@/shared/components/dashboard/MetricCard";
 import RecentOrders from "@/shared/components/dashboard/RecentOrders";
 import MonthlySalesChart from "@/shared/components/dashboard/MonthlySalesChart";
 import SalesDonutChart from "@/shared/components/dashboard/SalesDonutChart";
-import { BoxCubeIcon, GroupIcon, PlugInIcon } from "@/shared/components/ui/Icons";
+import {
+  BoxCubeIcon,
+  GroupIcon,
+  PlugInIcon,
+} from "@/shared/components/ui/Icons";
 import { useTenantDashboardScreen } from "../hooks/useTenantDashboardScreen";
 import { useTenantCurrency } from "@/modules/tenant";
+import { Skeleton } from "@/shared/components/ui/skeleton";
 
 // Custom icon for low stock / inventory alerts
 const AlertBoxIcon = ({ className }: { className?: string }) => (
@@ -33,8 +38,39 @@ export default function TenantDashboardPage() {
 
   if (status === "loading") {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-500"></div>
+      <div className="space-y-6">
+        <div className="h-8 w-64">
+          <Skeleton className="h-8 w-full rounded-lg" />
+        </div>
+
+        {/* Metrics Skeleton */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-5 xl:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <div
+              key={i}
+              className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 space-y-3"
+            >
+              <div className="flex justify-between items-start">
+                <Skeleton className="h-4 w-24 rounded" />
+                <Skeleton className="h-8 w-8 rounded-lg" />
+              </div>
+              <div className="space-y-2">
+                <Skeleton className="h-8 w-32 rounded" />
+                <Skeleton className="h-4 w-16 rounded" />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Charts Skeleton */}
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+          <div className="xl:col-span-7 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 h-[400px]">
+            <Skeleton className="h-full w-full rounded-lg" />
+          </div>
+          <div className="xl:col-span-5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 h-[400px]">
+            <Skeleton className="h-full w-full rounded-lg" />
+          </div>
+        </div>
       </div>
     );
   }
@@ -80,7 +116,11 @@ export default function TenantDashboardPage() {
             <MetricCard
               key={metric.title}
               title={metric.title}
-              value={metric.isRawCurrency ? formatPrice(metric.value as number) : metric.value}
+              value={
+                metric.isRawCurrency
+                  ? formatPrice(metric.value as number)
+                  : metric.value
+              }
               change={metric.change}
               icon={metricIcons[index]}
               iconColor={metric.iconColor}
@@ -93,7 +133,7 @@ export default function TenantDashboardPage() {
       <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-12">
         {/* Monthly Sales Bar Chart - Takes more space */}
         <div className="xl:col-span-7">
-          <MonthlySalesChart sales={vm.tenantSales} />
+          <MonthlySalesChart data={vm.tenantSales} />
         </div>
 
         {/* Sales Breakdown Donut Chart */}

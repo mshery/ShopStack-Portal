@@ -27,7 +27,13 @@ type NavItem = {
 };
 
 const AppSidebar: React.FC = () => {
-  const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
+  const {
+    isExpanded,
+    isMobileOpen,
+    isHovered,
+    setIsHovered,
+    toggleMobileSidebar,
+  } = useSidebar();
   const location = useLocation();
 
   const isActive = useCallback(
@@ -35,6 +41,13 @@ const AppSidebar: React.FC = () => {
       location.pathname === path || location.pathname.startsWith(path + "/"),
     [location.pathname],
   );
+
+  // Close mobile sidebar when nav item is clicked
+  const handleNavClick = useCallback(() => {
+    if (isMobileOpen) {
+      toggleMobileSidebar();
+    }
+  }, [isMobileOpen, toggleMobileSidebar]);
 
   const { userType } = useAuthStore();
   const { canAccessRoute } = usePermissions();
@@ -201,11 +214,12 @@ const AppSidebar: React.FC = () => {
   return (
     <aside
       className={`fixed flex flex-col lg:mt-0 top-0 px-5 left-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-50 border-r border-gray-200 
-        ${isExpanded || isMobileOpen
-          ? "w-[290px]"
-          : isHovered
+        ${
+          isExpanded || isMobileOpen
             ? "w-[290px]"
-            : "w-[90px]"
+            : isHovered
+              ? "w-[290px]"
+              : "w-[90px]"
         }
         ${isMobileOpen ? "translate-x-0" : "-translate-x-full"}
         lg:translate-x-0`}
@@ -213,25 +227,22 @@ const AppSidebar: React.FC = () => {
       onMouseLeave={() => setIsHovered(false)}
     >
       <div
-        className={`py-8 flex ${!isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
-          }`}
+        className={`py-8 flex ${
+          !isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
+        }`}
       >
-
         {isExpanded || isHovered || isMobileOpen ? (
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center text-white font-bold">
               S
             </div>
-            <span className="text-xl font-bold dark:text-white">
-              ShopStack
-            </span>
+            <span className="text-xl font-bold dark:text-white">ShopStack</span>
           </div>
         ) : (
           <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center text-white font-bold">
             SS
           </div>
         )}
-
       </div>
       <div className="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar">
         <nav className="mb-6">
@@ -242,40 +253,44 @@ const AppSidebar: React.FC = () => {
 
               return (
                 <div key={category}>
-                  {(isExpanded || isHovered || isMobileOpen) ? (
-                    category && (
-                      <h2 className="mb-4 text-xs uppercase flex leading-[20px] text-gray-400 px-3">
-                        {category}
-                      </h2>
-                    )
-                  ) : (
-                    category && (
-                      <div className="flex justify-center mb-4">
-                        <HorizontaLDots className="size-6 text-gray-400" />
-                      </div>
-                    )
-                  )}
+                  {isExpanded || isHovered || isMobileOpen
+                    ? category && (
+                        <h2 className="mb-4 text-xs uppercase flex leading-[20px] text-gray-400 px-3">
+                          {category}
+                        </h2>
+                      )
+                    : category && (
+                        <div className="flex justify-center mb-4">
+                          <HorizontaLDots className="size-6 text-gray-400" />
+                        </div>
+                      )}
                   <ul className="flex flex-col gap-2">
                     {items.map((item) => (
                       <li key={item.path}>
                         <Link
                           to={item.path}
-                          className={`menu-item group ${isActive(item.path) ? "menu-item-active" : "menu-item-inactive"
-                            } ${!isExpanded && !isHovered && !isMobileOpen
+                          onClick={handleNavClick}
+                          className={`menu-item group ${
+                            isActive(item.path)
+                              ? "menu-item-active"
+                              : "menu-item-inactive"
+                          } ${
+                            !isExpanded && !isHovered && !isMobileOpen
                               ? "lg:justify-center"
                               : ""
-                            }`}
+                          }`}
                         >
-                          <span className={`menu-item-icon-size ${isActive(item.path)
-                            ? "menu-item-icon-active"
-                            : "menu-item-icon-inactive"
-                            }`}>
+                          <span
+                            className={`menu-item-icon-size ${
+                              isActive(item.path)
+                                ? "menu-item-icon-active"
+                                : "menu-item-icon-inactive"
+                            }`}
+                          >
                             {item.icon}
                           </span>
                           {(isExpanded || isHovered || isMobileOpen) && (
-                            <span className="menu-item-text">
-                              {item.name}
-                            </span>
+                            <span className="menu-item-text">{item.name}</span>
                           )}
                         </Link>
                       </li>

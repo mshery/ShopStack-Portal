@@ -1,3 +1,4 @@
+import { formatPKR } from "@/shared/utils/currency";
 import React, { useMemo } from "react";
 
 interface SalesBreakdownItem {
@@ -149,7 +150,7 @@ const SalesDonutChart: React.FC<SalesDonutChartProps> = ({
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                    ${item.value.toLocaleString()}
+                    {formatPKR(item.value)}
                   </span>
                   <span className="text-xs text-gray-500 dark:text-gray-500 w-12 text-right">
                     {percentage}%

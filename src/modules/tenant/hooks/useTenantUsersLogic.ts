@@ -1,109 +1,248 @@
 import { useState, useMemo, useCallback } from "react";
 import { useAuthStore } from "@/modules/auth";
-import { useUsersStore } from "@/modules/tenant";
-import { useTenantsStore } from "@/modules/platform";
-import { generateId } from "@/shared/utils/normalize";
-import type { TenantUser, UserRole, UserStatus } from "@/shared/types/models";
+import {
+  useTeamMembersFetch,
+  useCreateTeamMember,
+  useUpdateTeamMember,
+  useDeleteTeamMember,
+} from "../api/queries";
+import type { AsyncStatus } from "@/shared/types/api";
 
 /**
  * useTenantUsersLogic - Tenant users list logic hook
+ *
+ * Uses real API via TanStack Query. Follows the rules:
+ * - Screen hook owns fetching, actions, side effects
+ * - Returns status, vm, actions
  */
 export function useTenantUsersLogic() {
-  const { activeTenantId } = useAuthStore();
-  const { tenantUsers, addTenantUser, updateTenantUser, removeTenantUser } =
-    useUsersStore();
-  const { tenants } = useTenantsStore();
+  const { currentUser, currentTenant } = useAuthStore();
+  const isOwner = currentUser?.role === "owner";
 
-  const [search, setSearch] = useState("");
+  // Pagination State
+  const [page, setPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
-  const tenant = useMemo(
-    () => tenants.find((t) => t.id === activeTenantId),
-    [tenants, activeTenantId],
+  // TanStack Query hooks
+  const { data, isLoading, isError, refetch, isFetching } = useTeamMembersFetch(
+    { page, limit: ITEMS_PER_PAGE },
   );
 
-  const filteredUsers = useMemo(() => {
-    if (!activeTenantId) return [];
-    return tenantUsers
-      .filter((u) => u.tenant_id === activeTenantId)
-      .filter(
-        (u) =>
-          u.name.toLowerCase().includes(search.toLowerCase()) ||
-          u.email.toLowerCase().includes(search.toLowerCase()),
-      );
-  }, [activeTenantId, tenantUsers, search]);
+  // Extract items and pagination from response
+  const teamMembers = useMemo(() => data?.items ?? [], [data]);
+  const pagination = useMemo(
+    () =>
+      data?.pagination ?? {
+        page: 1,
+        limit: ITEMS_PER_PAGE,
+        total: 0,
+        totalPages: 1,
+      },
+    [data],
+  );
 
+  const createMutation = useCreateTeamMember();
+  const updateMutation = useUpdateTeamMember();
+  const deleteMutation = useDeleteTeamMember();
+
+  // Local state
+  const [search, setSearch] = useState("");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Derive status
+  const status: AsyncStatus = useMemo(() => {
+    if (isLoading) return "loading";
+    if (isError) return "error";
+    if (teamMembers.length === 0 && !search && page === 1) return "empty";
+    return "success";
+  }, [isLoading, isError, teamMembers.length, search, page]);
+
+  // Filter users by search
+  const filteredUsers = useMemo(() => {
+    if (!search.trim()) return teamMembers;
+    const lowerSearch = search.toLowerCase();
+    return teamMembers.filter(
+      (u) =>
+        u.name.toLowerCase().includes(lowerSearch) ||
+        u.email.toLowerCase().includes(lowerSearch),
+    );
+  }, [teamMembers, search]);
+
+  // View model
   const vm = useMemo(
     () => ({
       users: filteredUsers,
       search,
-      canAddMore: tenant ? filteredUsers.length < tenant.maxUsers : false,
-      maxUsers: tenant?.maxUsers ?? 0,
-      currentCount: filteredUsers.length,
+      canAddMore: isOwner && (currentTenant?.maxUsers ?? 10) > pagination.total,
+      maxUsers: currentTenant?.maxUsers ?? 10,
+      currentCount: pagination.total,
+      isOwner,
+      isMutating:
+        createMutation.isPending ||
+        updateMutation.isPending ||
+        deleteMutation.isPending,
+      errorMessage,
+      isFetching,
+      pagination: {
+        currentPage: pagination.page,
+        totalPages: pagination.totalPages,
+        totalItems: pagination.total,
+      },
     }),
-    [filteredUsers, search, tenant],
+    [
+      filteredUsers,
+      search,
+      isOwner,
+      currentTenant,
+      pagination,
+      createMutation.isPending,
+      updateMutation.isPending,
+      deleteMutation.isPending,
+      errorMessage,
+      isFetching,
+    ],
   );
 
+  // Actions
   const createUser = useCallback(
-    (data: { name: string; email: string; role: UserRole }) => {
-      if (!activeTenantId || !vm.canAddMore) return;
+    async (data: {
+      name: string;
+      email: string;
+      password: string;
+      phone?: string;
+    }) => {
+      if (!isOwner || !vm.canAddMore) {
+        setErrorMessage("Cannot add more users or insufficient permissions");
+        return {
+          success: false,
+          error: "Cannot add more users or insufficient permissions",
+        };
+      }
 
-      const newUser: TenantUser = {
-        id: generateId("user"),
-        tenant_id: activeTenantId,
-        email: data.email,
-        password: "", // Password should be set separately in a real app
-        name: data.name,
-        role: data.role,
-        status: "active",
-        phone: null,
-        avatarUrl: null,
-        createdBy: "tenant",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-
-      addTenantUser(newUser);
+      try {
+        setErrorMessage(null);
+        await createMutation.mutateAsync(data);
+        // If successful, reset to page 1 to see new user
+        if (page !== 1) setPage(1);
+        return { success: true };
+      } catch (error: unknown) {
+        const err = error as {
+          response?: { data?: { message?: string; error?: string } };
+          message?: string;
+        };
+        const message =
+          err?.response?.data?.message ||
+          err?.response?.data?.error ||
+          err?.message ||
+          "Failed to create user";
+        setErrorMessage(message);
+        return { success: false, error: message };
+      }
     },
-    [activeTenantId, addTenantUser, vm.canAddMore],
+    [isOwner, vm.canAddMore, createMutation, page],
+  );
+
+  const updateUser = useCallback(
+    async (
+      id: string,
+      data: {
+        name?: string;
+        email?: string;
+        status?: "active" | "inactive" | "suspended";
+        phone?: string;
+        role?: "owner" | "cashier";
+      },
+    ) => {
+      try {
+        setErrorMessage(null);
+        await updateMutation.mutateAsync({ id, data });
+        return { success: true };
+      } catch (error: unknown) {
+        const err = error as {
+          response?: { data?: { message?: string; error?: string } };
+          message?: string;
+        };
+        const message =
+          err?.response?.data?.message ||
+          err?.response?.data?.error ||
+          err?.message ||
+          "Failed to update user";
+        setErrorMessage(message);
+        return { success: false, error: message };
+      }
+    },
+    [updateMutation],
   );
 
   const toggleStatus = useCallback(
-    (userId: string, currentStatus: UserStatus) => {
-      updateTenantUser(userId, {
-        status: currentStatus === "active" ? "inactive" : "active",
-      });
+    async (
+      userId: string,
+      currentStatus: "active" | "inactive" | "suspended",
+    ) => {
+      const newStatus = currentStatus === "active" ? "inactive" : "active";
+      return updateUser(userId, { status: newStatus });
     },
-    [updateTenantUser],
+    [updateUser],
   );
 
-  const { userType, isImpersonating } = useAuthStore();
-  const isSuperAdmin = userType === "platform" || isImpersonating;
-
   const deleteUser = useCallback(
-    (userId: string) => {
-      const userToDelete = tenantUsers.find((u) => u.id === userId);
-      if (!userToDelete) return;
-
-      const canDelete = isSuperAdmin || userToDelete.createdBy === "tenant";
-
-      if (!canDelete) {
-        alert("Only Super Admins can delete platform-created users.");
-        return;
+    async (userId: string) => {
+      const userToDelete = teamMembers.find((u) => u.id === userId);
+      // If user not in current page list (unlikely for click action), proceed if we trust ID.
+      // But we should verify ownership logic. The hook checks 'isOwner'.
+      if (!isOwner) {
+        setErrorMessage("Only owner can delete users");
+        return { success: false, error: "Only owner can delete users" };
       }
-      removeTenantUser(userId);
+
+      // Owner update check relies on filtering which relies on userToDelete being found
+      if (userToDelete && userToDelete.role === "owner") {
+        setErrorMessage("Cannot delete owner user");
+        return { success: false, error: "Cannot delete owner user" };
+      }
+
+      try {
+        setErrorMessage(null);
+        await deleteMutation.mutateAsync(userId);
+        return { success: true };
+      } catch (error: unknown) {
+        const err = error as {
+          response?: { data?: { message?: string; error?: string } };
+          message?: string;
+        };
+        const message =
+          err?.response?.data?.message ||
+          err?.response?.data?.error ||
+          err?.message ||
+          "Failed to delete user";
+        setErrorMessage(message);
+        return { success: false, error: message };
+      }
     },
-    [isSuperAdmin, removeTenantUser, tenantUsers],
+    [isOwner, teamMembers, deleteMutation],
   );
 
   const actions = useMemo(
     () => ({
       setSearch,
       createUser,
+      updateUser,
       toggleStatus,
       deleteUser,
+      refresh: refetch,
+      clearError: () => setErrorMessage(null),
+      nextPage: () => setPage((p) => Math.min(p + 1, pagination.totalPages)),
+      prevPage: () => setPage((p) => Math.max(1, p - 1)),
     }),
-    [createUser, toggleStatus, deleteUser],
+    [
+      createUser,
+      updateUser,
+      toggleStatus,
+      deleteUser,
+      refetch,
+      pagination.totalPages,
+    ],
   );
 
-  return { status: "success", vm, actions };
+  return { status, vm, actions };
 }

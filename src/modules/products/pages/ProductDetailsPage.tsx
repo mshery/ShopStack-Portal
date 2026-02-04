@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
-import { useMemo } from "react";
 import { useProductDetailsScreen } from "../hooks/useProductDetailsScreen";
 import PageBreadcrumb from "@/shared/components/feedback/PageBreadcrumb";
+import { DetailPageSkeleton } from "@/shared/components/feedback/DetailPageSkeleton";
 import { DetailPageHeader } from "@/shared/components/feedback/DetailPageHeader";
 import {
   InfoSection,
@@ -24,25 +24,15 @@ import {
   Info,
 } from "lucide-react";
 import { useTenantCurrency } from "@/modules/tenant";
-import { useCategoriesStore } from "@/modules/catalog";
-import { useBrandsStore } from "@/modules/catalog";
 
 export default function ProductDetailsPage() {
   const { status, vm, actions } = useProductDetailsScreen();
   const { formatPrice } = useTenantCurrency();
-  const { categories } = useCategoriesStore();
-  const { brands } = useBrandsStore();
 
-  // Lookup helpers
-  const getCategoryName = useMemo(() => {
-    const map = new Map(categories.map((c) => [c.id, c.name]));
-    return (id: string) => map.get(id) || "Unknown";
-  }, [categories]);
-
-  const getBrandName = useMemo(() => {
-    const map = new Map(brands.map((b) => [b.id, b.name]));
-    return (id: string) => map.get(id) || "Unknown";
-  }, [brands]);
+  // Loading state - show skeleton
+  if (status === "loading") {
+    return <DetailPageSkeleton />;
+  }
 
   // Error/Not found state
   if (status === "error" || !vm.product) {
@@ -68,7 +58,8 @@ export default function ProductDetailsPage() {
     );
   }
 
-  const { product, vendor, profitInfo, stockWarning } = vm;
+  const { product, vendor, categoryName, brandName, profitInfo, stockWarning } =
+    vm;
 
   const statusBadge = (
     <Badge
@@ -132,8 +123,8 @@ export default function ProductDetailsPage() {
         {/* Left column - Product details */}
         <div className="lg:col-span-2">
           <InfoSection icon={Info} title="Product Information">
-            <InfoRow label="Category" value={getCategoryName(product.categoryId)} />
-            <InfoRow label="Brand" value={getBrandName(product.brandId)} />
+            <InfoRow label="Category" value={categoryName} />
+            <InfoRow label="Brand" value={brandName} />
             <InfoRow
               label="Vendor"
               value={vendor?.name || "No vendor assigned"}
@@ -210,6 +201,7 @@ export default function ProductDetailsPage() {
           product={product}
           isOpen={vm.isEditModalOpen}
           onClose={actions.closeEdit}
+          onUpdate={actions.updateProduct}
         />
       )}
 

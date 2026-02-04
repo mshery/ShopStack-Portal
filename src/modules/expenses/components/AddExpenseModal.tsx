@@ -3,9 +3,8 @@ import { Modal } from "@/shared/components/ui/Modal";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
-import { useExpensesStore } from "@/modules/expenses";
-import { useActivityLogsStore } from "@/modules/platform";
-import { useAuthStore } from "@/modules/auth";
+import { useCreateExpense } from "../api/queries";
+import { useAuthStore } from "@/modules/auth"; // For userType check if needed
 import type { ExpenseCategory, ExpenseType } from "@/shared/types/models";
 
 interface AddExpenseModalProps {
@@ -38,9 +37,8 @@ export default function AddExpenseModal({
   isOpen,
   onClose,
 }: AddExpenseModalProps) {
-  const { addExpense } = useExpensesStore();
-  const { addTenantLog } = useActivityLogsStore();
-  const { currentUser, activeTenantId } = useAuthStore();
+  const createMutation = useCreateExpense();
+  const { activeTenantId } = useAuthStore();
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -56,16 +54,28 @@ export default function AddExpenseModal({
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((prev) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const updates: any = { [field]: value };
+
+      // Auto-select corresponding expense type
+      if (field === "category") {
+        if (value === "vendor_payment") {
+          updates.expenseType = "vendor_payment";
+        } else if (value === "inventory") {
+          // Default to operational for inventory (purchases),
+          // user can manually select "inventory_loss" if needed
+          updates.expenseType = "operational";
+        }
+      }
+      return { ...prev, ...updates };
+    });
+
     // Clear error when field is modified
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: "" }));
     }
   };
-
-  const generateId = useCallback((prefix: string) => {
-    return `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  }, []);
 
   const validate = useCallback((): boolean => {
     const newErrors: Record<string, string> = {};
@@ -86,66 +96,38 @@ export default function AddExpenseModal({
 
   const handleSubmit = useCallback(() => {
     if (!validate()) return;
+    if (!activeTenantId) {
+      setErrors((prev) => ({ ...prev, form: "Session error. Please reload." }));
+      return;
+    }
 
-    const userId = currentUser?.id || "system";
-    const tenantId = activeTenantId || "";
-
-    const expenseId = generateId("exp");
-    const amount = parseFloat(formData.amount);
-
-    // Create expense record
-    addExpense({
-      tenant_id: tenantId,
-      category: formData.category,
-      expenseType: formData.expenseType,
-      amount,
-      description: formData.description.trim(),
-      vendor: formData.vendor.trim() || null,
-      relatedVendorId: null,
-      relatedProductId: null,
-      relatedPurchaseId: null,
-      receiptUrl: null,
-      date: new Date(formData.date).toISOString(),
-      createdBy: userId,
-    });
-
-    // Log expense creation
-    addTenantLog({
-      id: generateId("tlog"),
-      tenant_id: tenantId,
-      action: "expense_created",
-      actorId: userId,
-      targetType: "expense",
-      targetId: expenseId,
-      details: {
+    createMutation.mutate(
+      {
         category: formData.category,
         expenseType: formData.expenseType,
-        amount,
+        amount: parseFloat(formData.amount),
+        description: formData.description.trim(),
+        vendor: formData.vendor.trim() || undefined,
+        // API handles createdBy and tenantId from context/token
+        date: new Date(formData.date).toISOString(),
       },
-    });
-
-    // Reset form and close
-    setFormData({
-      date: today,
-      category: "other",
-      expenseType: "operational",
-      amount: "",
-      description: "",
-      vendor: "",
-    });
-    setErrors({});
-    onClose();
-  }, [
-    validate,
-    formData,
-    currentUser,
-    activeTenantId,
-    addExpense,
-    addTenantLog,
-    generateId,
-    onClose,
-    today,
-  ]);
+      {
+        onSuccess: () => {
+          // Reset form and close
+          setFormData({
+            date: today,
+            category: "other",
+            expenseType: "operational",
+            amount: "",
+            description: "",
+            vendor: "",
+          });
+          setErrors({});
+          onClose();
+        },
+      },
+    );
+  }, [validate, formData, activeTenantId, createMutation, onClose, today]);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} className="max-w-[600px] m-4">
@@ -165,6 +147,12 @@ export default function AddExpenseModal({
             handleSubmit();
           }}
         >
+          {errors.form && (
+            <div className="mb-4 p-3 bg-red-50 text-red-600 dark:bg-red-900/10 dark:text-red-400 rounded-lg text-sm">
+              {errors.form}
+            </div>
+          )}
+
           <div className="px-2 pb-3">
             <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
               {/* Date */}
@@ -259,10 +247,17 @@ export default function AddExpenseModal({
           </div>
 
           <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={createMutation.isPending}
+            >
               Cancel
             </Button>
-            <Button type="submit">Add Expense</Button>
+            <Button type="submit" disabled={createMutation.isPending}>
+              {createMutation.isPending ? "Adding..." : "Add Expense"}
+            </Button>
           </div>
         </form>
       </div>

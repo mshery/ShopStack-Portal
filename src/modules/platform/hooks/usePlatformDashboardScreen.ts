@@ -1,89 +1,54 @@
 import { useMemo } from "react";
-import { useActivityLogsStore } from "@/modules/platform/store/activityLogs.store";
-import { useTenantsStore } from "@/modules/platform";
-import { useUsersStore } from "@/modules/tenant";
-import { usePOSStore } from "@/modules/pos";
+import { useDashboardStatsFetch } from "../api/queries";
 import { formatCurrency } from "@/shared/utils/format";
 
 export type DashboardStatus = "loading" | "error" | "empty" | "success";
 
+/**
+ * Platform Dashboard Screen Hook
+ *
+ * Fetches all dashboard data from API via centralized /platform/stats endpoint.
+ * The stats API provides all aggregated data needed for the dashboard:
+ * - metrics (tenant count, user count, etc.)
+ * - recentActivity (logs)
+ * - planDistribution (for pie chart)
+ * - tenantGrowth (for area chart)
+ */
 export function usePlatformDashboardScreen() {
-  const { platformLogs } = useActivityLogsStore();
-  const { tenants } = useTenantsStore();
-  const { platformUsers } = useUsersStore();
-  const { sales } = usePOSStore();
+  // Fetch aggregated stats - this is the ONLY API call needed for the dashboard
+  const {
+    data: stats,
+    isLoading: statsLoading,
+    isError: statsError,
+  } = useDashboardStatsFetch();
 
-  const totalRevenue = useMemo(() => {
-    return sales.reduce((sum, sale) => sum + sale.grandTotal, 0);
-  }, [sales]);
-
-  const metrics = useMemo(
-    () => [
-      {
-        title: "Total Tenants",
-        value: tenants.length,
-        change: { value: "12%", isUp: true },
-      },
-      {
-        title: "Active Users",
-        value: platformUsers.length,
-        change: { value: "5.4%", isUp: true },
-      },
-      {
-        title: "Total Revenue",
-        value: formatCurrency(totalRevenue),
-        change: { value: "8.2%", isUp: true },
-      },
-    ],
-    [tenants.length, platformUsers.length, totalRevenue],
-  );
-
-  const recentLogs = useMemo(() => {
-    return [...platformLogs]
-      .sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-      )
-      .slice(0, 5);
-  }, [platformLogs]);
-
-  const planDistribution = useMemo(() => {
-    const counts = tenants.reduce(
-      (acc, tenant) => {
-        acc[tenant.plan] = (acc[tenant.plan] || 0) + 1;
-        return acc;
-      },
-      {} as Record<string, number>,
-    );
-
-    return Object.entries(counts).map(([name, value]) => ({
-      name: name.charAt(0).toUpperCase() + name.slice(1),
-      value,
+  const metrics = useMemo(() => {
+    if (!stats) return [];
+    return stats.metrics.map((m) => ({
+      ...m,
+      value:
+        typeof m.value === "number" && m.title.includes("Revenue")
+          ? formatCurrency(m.value)
+          : m.value,
     }));
-  }, [tenants]);
+  }, [stats]);
 
-  const tenantGrowth = useMemo(() => {
-    const growth = tenants
-      .sort(
-        (a, b) =>
-          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-      )
-      .reduce(
-        (acc, tenant, index) => {
-          const date = new Date(tenant.createdAt).toLocaleDateString("en-US", {
-            month: "short",
-            year: "2-digit",
-          });
-          // Simplistic growth chart: incremental count
-          acc.push({ name: date, count: index + 1 });
-          return acc;
-        },
-        [] as { name: string; count: number }[],
-      );
+  const recentLogs = useMemo(() => stats?.recentActivity || [], [stats]);
+  const planDistribution = useMemo(
+    () => stats?.planDistribution || [],
+    [stats],
+  );
+  const tenantGrowth = useMemo(() => stats?.tenantGrowth || [], [stats]);
 
-    return growth;
-  }, [tenants]);
+  const status: DashboardStatus = statsLoading
+    ? "loading"
+    : statsError
+      ? "error"
+      : !stats
+        ? "empty"
+        : "success";
 
+  // View Model - only includes data from stats API
   const vm = useMemo(
     () => ({
       metrics,
@@ -94,12 +59,7 @@ export function usePlatformDashboardScreen() {
     [metrics, recentLogs, planDistribution, tenantGrowth],
   );
 
-  const actions = useMemo(
-    () => ({
-      // Add refresh logic if needed
-    }),
-    [],
-  );
+  const actions = useMemo(() => ({}), []);
 
-  return { status: "success" as DashboardStatus, vm, actions };
+  return { status, vm, actions };
 }

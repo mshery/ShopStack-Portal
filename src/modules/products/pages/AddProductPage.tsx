@@ -1,10 +1,3 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuthStore } from "@/modules/auth";
-import { useProductsStore } from "@/modules/products";
-import { useCategoriesStore } from "@/modules/catalog";
-import { useBrandsStore } from "@/modules/catalog";
-import { useProductsScreen } from "../hooks/useProductsScreen";
 import {
   Card,
   CardContent,
@@ -23,93 +16,18 @@ import {
   Tag,
   DollarSign,
   ChevronDown,
-  AlertTriangle,
+  RefreshCw,
+  Sparkles,
 } from "lucide-react";
-import type { Product } from "@/shared/types/models";
+import { useAddProductScreen } from "../hooks/useAddProductScreen";
+import { PageSkeleton } from "@/shared/components/skeletons/PageSkeleton";
 
 export default function AddProductPage() {
-  const navigate = useNavigate();
-  const { vm } = useProductsScreen();
-  const { activeTenantId } = useAuthStore();
-  const { addProduct } = useProductsStore();
-  const { categories } = useCategoriesStore();
-  const { brands } = useBrandsStore();
+  const { status, vm, actions } = useAddProductScreen();
 
-  // Filter by tenant
-  const tenantCategories = categories.filter(
-    (c) => c.tenant_id === activeTenantId
-  );
-  const tenantBrands = brands.filter((b) => b.tenant_id === activeTenantId);
-
-  const [formData, setFormData] = useState({
-    name: "",
-    sku: "",
-    categoryId: "",
-    brandId: "",
-    unitPrice: "",
-    currentStock: "",
-    minimumStock: "",
-    description: "",
-  });
-
-  // Guard: if over limit, redirect back (unless loading)
-  useEffect(() => {
-    if (!vm.canAddMore) {
-      // Just to be safe, we could show a toast or message here
-    }
-  }, [vm.canAddMore, navigate]);
-
-  if (!vm.canAddMore) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] text-center p-6 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm">
-        <div className="w-16 h-16 bg-red-50 dark:bg-red-900/10 rounded-full flex items-center justify-center mb-4">
-          <AlertTriangle className="w-8 h-8 text-red-500" />
-        </div>
-        <h2 className="text-xl font-bold text-gray-800 dark:text-white/90 mb-2">
-          Product Limit Reached
-        </h2>
-        <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-sm">
-          Your current plan allows for a maximum of <b>{vm.maxProducts}</b>{" "}
-          products. Please upgrade your plan to add more.
-        </p>
-        <Button onClick={() => navigate("/tenant/products")} variant="primary">
-          Back to Products
-        </Button>
-      </div>
-    );
+  if (status === "loading") {
+    return <PageSkeleton />;
   }
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!activeTenantId) return;
-
-    const newProduct: Product = {
-      id: `prod-${Date.now()}`,
-      tenant_id: activeTenantId,
-      name: formData.name,
-      sku: formData.sku,
-      categoryId: formData.categoryId,
-      brandId: formData.brandId,
-      unitPrice: parseFloat(formData.unitPrice),
-      currentStock: parseInt(formData.currentStock),
-      minimumStock: parseInt(formData.minimumStock),
-      status:
-        parseInt(formData.currentStock) <= 0
-          ? "out_of_stock"
-          : parseInt(formData.currentStock) <= parseInt(formData.minimumStock)
-            ? "low_stock"
-            : "in_stock",
-      imageUrl: null,
-      description: formData.description,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      costPrice: 0,
-      vendorId: null,
-    };
-
-    addProduct(newProduct);
-    navigate("/tenant/products");
-  };
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-10">
@@ -117,7 +35,7 @@ export default function AddProductPage() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => navigate("/tenant/products")}
+          onClick={actions.goBack}
           className="rounded-full size-10 p-0"
         >
           <ArrowLeft className="size-5" />
@@ -132,7 +50,13 @@ export default function AddProductPage() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          actions.submitForm();
+        }}
+        className="space-y-6"
+      >
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
             <Card className="border-gray-200 dark:border-gray-800">
@@ -155,9 +79,9 @@ export default function AddProductPage() {
                       required
                       placeholder="e.g. Wireless Headphones"
                       className="pl-10"
-                      value={formData.name}
+                      value={vm.formData.name}
                       onChange={(e) =>
-                        setFormData({ ...formData, name: e.target.value })
+                        actions.updateField("name", e.target.value)
                       }
                     />
                   </div>
@@ -168,20 +92,36 @@ export default function AddProductPage() {
                     <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                       SKU / Barcode
                     </Label>
-                    <div className="relative">
-                      <Tag className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
-                      <Input
-                        required
-                        placeholder="WH-001"
-                        className="pl-10 uppercase"
-                        value={formData.sku}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            sku: e.target.value.toUpperCase(),
-                          })
-                        }
-                      />
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Tag className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
+                        <Input
+                          required
+                          placeholder="PROD-20260130-001"
+                          className="pl-10 uppercase"
+                          value={vm.formData.sku}
+                          onChange={(e) =>
+                            actions.updateField(
+                              "sku",
+                              e.target.value.toUpperCase(),
+                            )
+                          }
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={actions.generateSku}
+                        disabled={vm.isGeneratingSku}
+                        className="shrink-0"
+                        title="Auto-generate SKU"
+                      >
+                        {vm.isGeneratingSku ? (
+                          <RefreshCw className="size-4 animate-spin" />
+                        ) : (
+                          <Sparkles className="size-4" />
+                        )}
+                      </Button>
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -192,13 +132,13 @@ export default function AddProductPage() {
                       <select
                         required
                         className="w-full h-11 px-4 pr-10 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 appearance-none focus:outline-none focus:ring-2 focus:ring-brand-500"
-                        value={formData.categoryId}
+                        value={vm.formData.categoryId}
                         onChange={(e) =>
-                          setFormData({ ...formData, categoryId: e.target.value })
+                          actions.updateField("categoryId", e.target.value)
                         }
                       >
                         <option value="">Select a category</option>
-                        {tenantCategories.map((cat) => (
+                        {vm.categories.map((cat) => (
                           <option key={cat.id} value={cat.id}>
                             {cat.name}
                           </option>
@@ -206,7 +146,7 @@ export default function AddProductPage() {
                       </select>
                       <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-gray-400 pointer-events-none" />
                     </div>
-                    {tenantCategories.length === 0 && (
+                    {vm.categories.length === 0 && !vm.isDataLoading && (
                       <p className="text-xs text-amber-600 dark:text-amber-400">
                         No categories found. Add categories in Settings.
                       </p>
@@ -222,13 +162,13 @@ export default function AddProductPage() {
                     <select
                       required
                       className="w-full h-11 px-4 pr-10 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 appearance-none focus:outline-none focus:ring-2 focus:ring-brand-500"
-                      value={formData.brandId}
+                      value={vm.formData.brandId}
                       onChange={(e) =>
-                        setFormData({ ...formData, brandId: e.target.value })
+                        actions.updateField("brandId", e.target.value)
                       }
                     >
                       <option value="">Select a brand</option>
-                      {tenantBrands.map((brand) => (
+                      {vm.brands.map((brand) => (
                         <option key={brand.id} value={brand.id}>
                           {brand.name}
                         </option>
@@ -236,7 +176,7 @@ export default function AddProductPage() {
                     </select>
                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-gray-400 pointer-events-none" />
                   </div>
-                  {tenantBrands.length === 0 && (
+                  {vm.brands.length === 0 && !vm.isDataLoading && (
                     <p className="text-xs text-amber-600 dark:text-amber-400">
                       No brands found. Add brands in Settings.
                     </p>
@@ -249,9 +189,9 @@ export default function AddProductPage() {
                   </Label>
                   <Textarea
                     placeholder="Enter product description..."
-                    value={formData.description}
+                    value={vm.formData.description}
                     onChange={(e) =>
-                      setFormData({ ...formData, description: e.target.value })
+                      actions.updateField("description", e.target.value)
                     }
                   />
                 </div>
@@ -268,7 +208,7 @@ export default function AddProductPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                       Unit Price
@@ -279,18 +219,43 @@ export default function AddProductPage() {
                         required
                         type="number"
                         step="0.01"
+                        min="0"
                         placeholder="0.00"
                         className="pl-10"
-                        value={formData.unitPrice}
+                        value={vm.formData.unitPrice || ""}
                         onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            unitPrice: e.target.value,
-                          })
+                          actions.updateField(
+                            "unitPrice",
+                            parseFloat(e.target.value) || 0,
+                          )
                         }
                       />
                     </div>
                   </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Cost Price
+                    </Label>
+                    <div className="relative">
+                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        className="pl-10"
+                        value={vm.formData.costPrice || ""}
+                        onChange={(e) =>
+                          actions.updateField(
+                            "costPrice",
+                            parseFloat(e.target.value) || 0,
+                          )
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                       Current Stock
@@ -298,13 +263,14 @@ export default function AddProductPage() {
                     <Input
                       required
                       type="number"
+                      min="0"
                       placeholder="0"
-                      value={formData.currentStock}
+                      value={vm.formData.currentStock || ""}
                       onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          currentStock: e.target.value,
-                        })
+                        actions.updateField(
+                          "currentStock",
+                          parseInt(e.target.value) || 0,
+                        )
                       }
                     />
                   </div>
@@ -315,13 +281,14 @@ export default function AddProductPage() {
                     <Input
                       required
                       type="number"
+                      min="0"
                       placeholder="5"
-                      value={formData.minimumStock}
+                      value={vm.formData.minimumStock || ""}
                       onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          minimumStock: e.target.value,
-                        })
+                        actions.updateField(
+                          "minimumStock",
+                          parseInt(e.target.value) || 0,
+                        )
                       }
                     />
                   </div>
@@ -338,11 +305,48 @@ export default function AddProductPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="aspect-square rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-800 flex flex-col items-center justify-center p-6 text-center">
-                  <Package className="size-10 text-gray-400 mb-2" />
-                  <p className="text-xs text-gray-500">
-                    Image upload is disabled in this demo
-                  </p>
+                <div className="rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-800 flex flex-col items-center justify-center p-6 text-center relative overflow-hidden group">
+                  {vm.formData.imageUrl ? (
+                    <div className="relative w-full aspect-square">
+                      <img
+                        src={vm.formData.imageUrl}
+                        alt="Product"
+                        className="w-full h-full object-contain rounded-lg"
+                      />
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          type="button"
+                          onClick={() => actions.updateField("imageUrl", "")}
+                        >
+                          Remove Image
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <Package className="size-10 text-gray-400 mb-2" />
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {vm.isUploading
+                          ? "Uploading..."
+                          : "Click to upload image"}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        MAX 5MB (JPEG, PNG, WEBP)
+                      </p>
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        disabled={vm.isUploading}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) actions.uploadImage(file);
+                        }}
+                      />
+                    </>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -350,15 +354,20 @@ export default function AddProductPage() {
             <div className="flex flex-col gap-3">
               <Button
                 type="submit"
+                disabled={vm.isCreating}
                 className="w-full h-12 text-base shadow-lg shadow-brand-500/20"
               >
-                <Save className="mr-2 size-5" />
-                Save Product
+                {vm.isCreating ? (
+                  <RefreshCw className="mr-2 size-5 animate-spin" />
+                ) : (
+                  <Save className="mr-2 size-5" />
+                )}
+                {vm.isCreating ? "Saving..." : "Save Product"}
               </Button>
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate("/tenant/products")}
+                onClick={actions.goBack}
                 className="w-full h-12 text-base"
               >
                 Cancel

@@ -12,18 +12,15 @@ export interface ApiResponse<T> {
 }
 
 export interface PaginatedResponse<T> {
-  success: boolean;
-  message: string;
-  data: T[];
-  pagination: Pagination;
-  timestamp: string;
-}
-
-export interface Pagination {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
+  items: T[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
 }
 
 export interface ApiError {
@@ -43,3 +40,8 @@ export interface ListParams {
   sortOrder?: "asc" | "desc";
   search?: string;
 }
+
+/**
+ * Standard async status for screen hooks
+ */
+export type AsyncStatus = "loading" | "error" | "empty" | "success";

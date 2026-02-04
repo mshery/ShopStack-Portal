@@ -1,9 +1,17 @@
 import { useState, useCallback, useMemo } from "react";
-import { useTenantsStore } from "../store/tenants.store";
+import { useUpdateTenant } from "../api/queries";
 import { useActivityLogsStore } from "../store/activityLogs.store";
 import { useAuthStore } from "@/modules/auth";
 import { generateId } from "@/shared/utils/normalize";
-import type { Tenant, TenantStatus, PlatformActivityLog } from "@/shared/types/models";
+import type {
+  Tenant,
+  TenantStatus,
+  PlatformActivityLog,
+} from "@/shared/types/models";
+import toast from "react-hot-toast";
+import { useSearchParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { refetchTenantListPage } from "../utils/tenantQueriesUtils";
 
 export interface EditTenantData {
   companyName: string;
@@ -12,12 +20,19 @@ export interface EditTenantData {
 }
 
 /**
- * useEditTenantLogic - Edit tenant logic hook
+ * useEditTenantLogic - Edit tenant logic hook with TanStack Query
  */
 export function useEditTenantLogic(tenant: Tenant, onClose: () => void) {
-  const { updateTenant } = useTenantsStore();
+  const updateTenantMutation = useUpdateTenant();
+  const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
+
   const { addPlatformLog } = useActivityLogsStore();
   const { currentUser } = useAuthStore();
+
+  const pageFromParams = Number(searchParams.get("page") ?? 1);
+  const limitFromParams = Number(searchParams.get("limit") ?? 10);
+  const searchFromParams = searchParams.get("search") ?? "";
 
   const [formData, setFormData] = useState<EditTenantData>({
     companyName: tenant.companyName,
@@ -67,46 +82,66 @@ export function useEditTenantLogic(tenant: Tenant, onClose: () => void) {
     }
   }, []);
 
-  const submit = useCallback(() => {
+  const submit = useCallback(async () => {
     if (!validateForm()) return;
 
     const statusChanged = formData.status !== tenant.status;
 
-    // Update tenant
-    updateTenant(tenant.id, {
-      companyName: formData.companyName,
-      slug: formData.slug,
-      status: formData.status,
-    });
-
-    // Log activity if status changed
-    if (statusChanged) {
-      const log: PlatformActivityLog = {
-        id: generateId("plog"),
-        action: "tenant_status_updated",
-        actorId: currentUser?.id ?? "unknown",
-        targetType: "tenant",
-        targetId: tenant.id,
-        details: {
-          oldStatus: tenant.status,
-          newStatus: formData.status,
+    try {
+      // Update tenant via TanStack Query mutation
+      await updateTenantMutation.mutateAsync({
+        id: tenant.id,
+        data: {
           companyName: formData.companyName,
+          slug: formData.slug,
+          status: formData.status,
         },
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      addPlatformLog(log);
-    }
+      });
 
-    onClose();
+      // Log activity if status changed
+      if (statusChanged) {
+        const log: PlatformActivityLog = {
+          id: generateId("plog"),
+          action: "tenant_status_updated",
+          actorId: currentUser?.id ?? "unknown",
+          targetType: "tenant",
+          targetId: tenant.id,
+          details: {
+            oldStatus: tenant.status,
+            newStatus: formData.status,
+            companyName: formData.companyName,
+          },
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        addPlatformLog(log);
+      }
+
+      await refetchTenantListPage(queryClient, {
+        page: pageFromParams,
+        limit: limitFromParams,
+        search: searchFromParams,
+      });
+      toast.success("Tenant updated successfully");
+      onClose();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to update tenant";
+      toast.error(message);
+      console.error("Failed to update tenant:", error);
+    }
   }, [
     formData,
     tenant,
     validateForm,
-    updateTenant,
+    updateTenantMutation,
     addPlatformLog,
     currentUser,
     onClose,
+    queryClient,
+    pageFromParams,
+    limitFromParams,
+    searchFromParams,
   ]);
 
   const vm = useMemo(
@@ -118,8 +153,15 @@ export function useEditTenantLogic(tenant: Tenant, onClose: () => void) {
         formData.companyName !== tenant.companyName ||
         formData.slug !== tenant.slug ||
         formData.status !== tenant.status,
+      isSubmitting: updateTenantMutation.isPending,
     }),
-    [formData, errors, showStatusWarning, tenant],
+    [
+      formData,
+      errors,
+      showStatusWarning,
+      tenant,
+      updateTenantMutation.isPending,
+    ],
   );
 
   const actions = useMemo(

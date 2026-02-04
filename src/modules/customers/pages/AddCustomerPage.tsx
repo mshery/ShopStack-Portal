@@ -3,12 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
-import { useCustomersStore } from "@/modules/customers";
+import { useCreateCustomer } from "../api/queries";
 import { useAuthStore } from "@/modules/auth";
 
 export default function AddCustomerPage() {
   const navigate = useNavigate();
-  const { addCustomer } = useCustomersStore();
+  const createMutation = useCreateCustomer();
   const { activeTenantId } = useAuthStore();
 
   const [formData, setFormData] = useState({
@@ -17,8 +17,11 @@ export default function AddCustomerPage() {
     phone: "",
   });
 
+  const [formError, setFormError] = useState<string | null>(null);
+
   const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    if (formError) setFormError(null);
   };
 
   const validateEmail = (email: string): boolean => {
@@ -29,46 +32,53 @@ export default function AddCustomerPage() {
 
   const validatePhone = (phone: string): boolean => {
     if (!phone) return true; // Phone is optional
-    // Basic phone validation (10+ digits)
+    // Basic phone validation
     const phoneRegex = /^\+?[\d\s\-()]{10,}$/;
     return phoneRegex.test(phone);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
 
-    if (!activeTenantId) return;
+    if (!activeTenantId) {
+      setFormError("Session expired. Please reload the page.");
+      return;
+    }
 
     // Validation
     if (!formData.name.trim()) {
-      alert("Please enter a customer name");
+      setFormError("Please enter a customer name");
       return;
     }
 
     if (formData.email && !validateEmail(formData.email)) {
-      alert("Please enter a valid email address");
+      setFormError("Please enter a valid email address");
       return;
     }
 
     if (formData.phone && !validatePhone(formData.phone)) {
-      alert("Please enter a valid phone number");
+      setFormError("Please enter a valid phone number");
       return;
     }
 
-    // Create customer
-    addCustomer({
-      id: `cust-${Date.now()}`,
-      tenant_id: activeTenantId,
-      name: formData.name.trim(),
-      email: formData.email.trim() || null,
-      phone: formData.phone.trim() || null,
-      isDefault: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    });
-
-    // Navigate back to customers page
-    navigate("/tenant/customers");
+    // Create customer via API
+    createMutation.mutate(
+      {
+        name: formData.name.trim(),
+        email: formData.email.trim() || undefined,
+        phone: formData.phone.trim() || undefined,
+      },
+      {
+        onSuccess: () => {
+          navigate("/tenant/customers");
+        },
+        onError: (error) => {
+          console.error("Failed to create customer:", error);
+          setFormError("Failed to create customer. Please try again.");
+        },
+      },
+    );
   };
 
   return (
@@ -84,6 +94,12 @@ export default function AddCustomerPage() {
 
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
         <form onSubmit={handleSubmit} className="space-y-6">
+          {formError && (
+            <div className="p-3 text-sm text-red-600 bg-red-50 dark:bg-red-900/10 dark:text-red-400 rounded-lg">
+              {formError}
+            </div>
+          )}
+
           <div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
               Customer Information
@@ -108,11 +124,6 @@ export default function AddCustomerPage() {
                   onChange={(e) => handleChange("email", e.target.value)}
                   placeholder="customer@example.com"
                 />
-                {formData.email && !validateEmail(formData.email) && (
-                  <p className="text-sm text-red-600 mt-1">
-                    Please enter a valid email address
-                  </p>
-                )}
               </div>
 
               <div>
@@ -123,11 +134,6 @@ export default function AddCustomerPage() {
                   onChange={(e) => handleChange("phone", e.target.value)}
                   placeholder="+1 (555) 123-4567"
                 />
-                {formData.phone && !validatePhone(formData.phone) && (
-                  <p className="text-sm text-red-600 mt-1">
-                    Please enter a valid phone number
-                  </p>
-                )}
               </div>
             </div>
           </div>
@@ -138,10 +144,13 @@ export default function AddCustomerPage() {
               type="button"
               variant="outline"
               onClick={() => navigate("/tenant/customers")}
+              disabled={createMutation.isPending}
             >
               Cancel
             </Button>
-            <Button type="submit">Add Customer</Button>
+            <Button type="submit" disabled={createMutation.isPending}>
+              {createMutation.isPending ? "Creating..." : "Add Customer"}
+            </Button>
           </div>
         </form>
       </div>

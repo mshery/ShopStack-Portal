@@ -1,54 +1,146 @@
 /**
- * Auth Module API
+ * Unified Auth API
  *
- * Placeholder API for auth operations.
- * Currently uses local data, will connect to real backend in the future.
+ * Uses the new unified /auth/* backend endpoints.
+ * Auto-detects user type based on tenantId in response.
  */
 
-import { simulateDelay } from "@/core/api/httpClient";
+import { httpClient } from "@/core/api/httpClient";
+import { endpoints } from "@/core/config/endpoints";
+import type { ApiResponse } from "@/shared/types/api";
 
-// Mock auth API functions (for future backend integration)
-export async function loginApi(
-    email: string,
-    password: string
-): Promise<{ success: boolean; error?: string }> {
-    await simulateDelay(300);
-    // This will be replaced with real API call
-    console.log("Auth API: login", { email, password });
-    return { success: true };
+// ============================================
+// RESPONSE TYPES (matching backend)
+// ============================================
+
+export interface AuthUser {
+  id: string;
+  tenantId: string | null;
+  email: string;
+  name: string;
+  role: "super_admin" | "owner" | "cashier";
+  status: "active" | "inactive" | "suspended";
+  avatarUrl: string | null;
+  phone: string | null;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export async function signUpApi(
-    data: {
-        companyName: string;
-        email: string;
-        password: string;
-        ownerName: string;
-    }
-): Promise<{ success: boolean; error?: string }> {
-    await simulateDelay(300);
-    console.log("Auth API: signup", data);
-    return { success: true };
+export interface AuthTenant {
+  id: string;
+  slug: string;
+  companyName: string;
+  status: string;
+  features: Record<string, boolean>;
+  settings: Record<string, unknown>;
+  // Tenant limits (from plan)
+  maxUsers?: number;
+  maxProducts?: number;
+  maxOrders?: number;
 }
 
-export async function forgotPasswordApi(
-    email: string
-): Promise<{ success: boolean; error?: string }> {
-    await simulateDelay(300);
-    console.log("Auth API: forgot password", { email });
-    return { success: true };
+export interface LoginResponse {
+  user: AuthUser;
+  tenant: AuthTenant | null; // null for platform users
+  token: string;
+  refreshToken: string;
 }
 
-export async function resetPasswordApi(
-    token: string,
-    newPassword: string
-): Promise<{ success: boolean; error?: string }> {
-    await simulateDelay(300);
-    console.log("Auth API: reset password", { token, newPassword });
-    return { success: true };
+export interface RegisterInput {
+  companyName: string;
+  slug: string;
+  planId: string;
+  name: string;
+  email: string;
+  password: string;
 }
 
-export async function logoutApi(): Promise<void> {
-    await simulateDelay(100);
-    console.log("Auth API: logout");
+export interface UpdateProfileInput {
+  name?: string;
+  email?: string;
+  phone?: string;
+  avatarUrl?: string;
 }
+
+export interface ChangePasswordInput {
+  currentPassword: string;
+  newPassword: string;
+}
+
+// ============================================
+// AUTH API
+// ============================================
+
+export const authApi = {
+  /**
+   * Login - works for both platform and tenant users
+   * Backend auto-detects based on user's tenantId
+   */
+  login: async (email: string, password: string): Promise<LoginResponse> => {
+    const res = await httpClient.post<ApiResponse<LoginResponse>>(
+      endpoints.auth.login,
+      { email, password },
+    );
+    return res.data.data;
+  },
+
+  /**
+   * Register new tenant
+   */
+  register: async (data: RegisterInput): Promise<LoginResponse> => {
+    const res = await httpClient.post<ApiResponse<LoginResponse>>(
+      endpoints.auth.register,
+      data,
+    );
+    return res.data.data;
+  },
+
+  /**
+   * Refresh access token
+   */
+  refreshToken: async (
+    refreshToken: string,
+  ): Promise<{ token: string; refreshToken: string }> => {
+    const res = await httpClient.post<
+      ApiResponse<{ token: string; refreshToken: string }>
+    >(endpoints.auth.refreshToken, { refreshToken });
+    return res.data.data;
+  },
+
+  /**
+   * Get current user profile
+   */
+  getProfile: async (): Promise<AuthUser> => {
+    const res = await httpClient.get<ApiResponse<AuthUser>>(endpoints.auth.me);
+    return res.data.data;
+  },
+
+  /**
+   * Update profile
+   */
+  updateProfile: async (data: UpdateProfileInput): Promise<AuthUser> => {
+    const res = await httpClient.put<ApiResponse<AuthUser>>(
+      endpoints.auth.me,
+      data,
+    );
+    return res.data.data;
+  },
+
+  /**
+   * Change password
+   */
+  changePassword: async (data: ChangePasswordInput): Promise<void> => {
+    await httpClient.put(`${endpoints.auth.me}/change-password`, data);
+  },
+
+  /**
+   * Logout - clears tokens (handled client-side, no API call needed)
+   */
+  logout: async (): Promise<void> => {
+    // No API call needed, just return
+    return Promise.resolve();
+  },
+};
+
+export default authApi;

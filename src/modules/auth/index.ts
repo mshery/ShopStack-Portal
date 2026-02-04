@@ -6,7 +6,7 @@
  */
 
 // Store
-export { useAuthStore } from "./store/auth.store";
+export { useAuthStore, useAuthHydrated } from "./store/auth.store";
 
 // Hooks
 export { useAuthLogic } from "./hooks/useAuthLogic";
@@ -15,15 +15,22 @@ export { useAuthLogic } from "./hooks/useAuthLogic";
 export { ProtectedRoute } from "./components/ProtectedRoute";
 
 // Types
-export type { AuthUserType, LoginCredentials, SignUpData, ResetPasswordData } from "./types";
+export type {
+  AuthUserType,
+  LoginCredentials,
+  SignUpData,
+  ResetPasswordData,
+} from "./types";
 
-// API (for cross-module usage)
-export {
-    loginApi,
-    signUpApi,
-    forgotPasswordApi,
-    resetPasswordApi,
-    logoutApi,
+// API (unified auth API)
+export { authApi } from "./api/authApi";
+export type {
+  AuthUser,
+  AuthTenant,
+  LoginResponse,
+  RegisterInput,
+  UpdateProfileInput,
+  ChangePasswordInput,
 } from "./api/authApi";
 
 // Pages - Only exported for router configuration

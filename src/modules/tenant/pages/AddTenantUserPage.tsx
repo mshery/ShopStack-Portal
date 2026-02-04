@@ -1,6 +1,7 @@
+// cleaned imports
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
+import toast from "react-hot-toast"; // moved to top
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
@@ -12,8 +13,6 @@ import {
   SelectValue,
 } from "@/shared/components/ui/select";
 import { Stepper } from "@/shared/components/ui/Stepper";
-import { useUsersStore } from "@/modules/tenant";
-import { useAuthStore } from "@/modules/auth";
 import { useTenantUsersScreen } from "../hooks/useTenantUsersScreen";
 import {
   ChevronLeft,
@@ -53,9 +52,7 @@ const STEPS = [
 
 export default function AddTenantUserPage() {
   const navigate = useNavigate();
-  const { vm } = useTenantUsersScreen();
-  const { addTenantUser, tenantUsers } = useUsersStore();
-  const { activeTenantId } = useAuthStore();
+  const { vm, actions } = useTenantUsersScreen();
   const [currentStep, setCurrentStep] = useState(1);
 
   const [formData, setFormData] = useState({
@@ -70,12 +67,9 @@ export default function AddTenantUserPage() {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Guard: if over limit, redirect back (unless loading)
-  useEffect(() => {
-    if (!vm.canAddMore) {
-      // Just to be safe, we could show a toast or message here
-    }
-  }, [vm.canAddMore, navigate]);
+  // Guard: if over limit, redirect back
+  // Note: we check !vm.canAddMore which checks isOwner and maxUsers
+  // We use a separate effect or just render check
 
   if (!vm.canAddMore) {
     return (
@@ -113,14 +107,6 @@ export default function AddTenantUserPage() {
     return emailRegex.test(email);
   };
 
-  const checkEmailUniqueness = (email: string): boolean => {
-    return !tenantUsers.some(
-      (user) =>
-        user.email.toLowerCase() === email.toLowerCase() &&
-        user.tenant_id === activeTenantId,
-    );
-  };
-
   const validateStep = (step: number): boolean => {
     const newErrors: Record<string, string> = {};
 
@@ -132,8 +118,6 @@ export default function AddTenantUserPage() {
         newErrors.email = "Email is required";
       } else if (!validateEmail(formData.email)) {
         newErrors.email = "Please enter a valid email address";
-      } else if (!checkEmailUniqueness(formData.email)) {
-        newErrors.email = "This email is already in use";
       }
     }
 
@@ -162,26 +146,26 @@ export default function AddTenantUserPage() {
     setCurrentStep((prev) => Math.max(prev - 1, 1));
   };
 
-  const handleSubmit = () => {
-    if (!activeTenantId) return;
+  const handleSubmit = async () => {
+    // vm.isMutating check handled by button disabled usually?
+    // But good to have here.
+    if (vm.isMutating) return;
 
     const fullName =
       `${formData.firstName.trim()} ${formData.lastName.trim()}`.trim();
 
-    addTenantUser({
-      id: `user-${Date.now()}`,
-      tenant_id: activeTenantId,
+    const result = await actions.createUser({
       name: fullName,
       email: formData.email.trim().toLowerCase(),
       password: formData.password,
-      role: formData.role,
-      status: formData.status,
-      phone: null,
-      avatarUrl: null,
-      createdBy: "tenant",
     });
 
-    navigate("/tenant/users");
+    if (result.success) {
+      toast.success("User added successfully");
+      navigate("/tenant/users");
+    } else {
+      toast.error(result.error || "Unknown error");
+    }
   };
 
   const renderStepContent = () => {

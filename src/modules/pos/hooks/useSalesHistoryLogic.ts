@@ -1,121 +1,197 @@
-import { useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
+import toast from "react-hot-toast";
 import { useAuthStore } from "@/modules/auth";
-import { useTenantsStore } from "@/modules/platform";
-import { usePOSStore } from "@/modules/pos";
-import type { AsyncStatus, RefundLineItem } from "@/shared/types/models";
-import { createRefund, restoreInventory } from "../logic/refund.logic";
+import {
+  type AsyncStatus,
+  type RefundLineItem,
+  type Sale,
+  type Refund,
+} from "@/shared/types/models";
+import {
+  useSalesFetch,
+  useRefundsFetch,
+  useProcessRefund,
+} from "../api/queries";
+import { type Sale as ApiSale, type Refund as ApiRefund } from "../api/posApi";
 
 /**
  * useSalesHistoryLogic - Sales history screen hook
+ * Implements server-side pagination for both Orders and Refunds
  */
 export function useSalesHistoryLogic() {
   const { activeTenantId, currentUser } = useAuthStore();
-  const { sales, refunds, addRefund } = usePOSStore();
-  const { tenants } = useTenantsStore();
 
-  const status: AsyncStatus = "success";
+  // Pagination State
+  const [ordersPage, setOrdersPage] = useState(1);
+  const [refundsPage, setRefundsPage] = useState(1);
+  const [limit] = useState(10);
 
+  const processRefundMutation = useProcessRefund();
+
+  // 1. Fetch Sales (Orders)
+  const {
+    data: salesData,
+    isLoading: isLoadingSales,
+    error: salesError,
+  } = useSalesFetch({
+    page: ordersPage,
+    limit,
+    // Add sorting/filtering here if needed
+  });
+
+  // 2. Fetch Refunds
+  const {
+    data: refundsData,
+    isLoading: isLoadingRefunds,
+    error: refundsError,
+  } = useRefundsFetch({
+    page: refundsPage,
+    limit,
+  });
+
+  const status: AsyncStatus =
+    isLoadingSales || isLoadingRefunds
+      ? "loading"
+      : salesError || refundsError
+        ? "error"
+        : "success";
+
+  // Map API Sales to Shared Model
   const tenantSales = useMemo(() => {
-    if (!activeTenantId) return [];
-    return sales.filter((s) => s.tenant_id === activeTenantId).reverse(); // Newest first
-  }, [activeTenantId, sales]);
+    if (!salesData?.items) return [];
 
+    return salesData.items.map(
+      (s: ApiSale): Sale => ({
+        ...s,
+        tenant_id: activeTenantId || "",
+        customerId: s.customerId || "",
+        subtotal: Number(s.subtotal),
+        tax: Number(s.tax),
+        grandTotal: Number(s.grandTotal),
+        paymentMethod: (s.paymentMethod?.toUpperCase() ||
+          "CASH") as Sale["paymentMethod"],
+        discount: s.discount
+          ? { ...s.discount, reason: s.discount.reason || "" }
+          : null,
+        lineItems: (s.items || []).map((i) => ({
+          ...i,
+          unitPriceSnapshot: Number(i.unitPriceSnapshot),
+          costPriceSnapshot: Number(i.costPriceSnapshot),
+          subtotal: Number(i.subtotal),
+        })),
+      }),
+    );
+  }, [salesData, activeTenantId]);
+
+  // Map API Refunds to Shared Model
   const tenantRefunds = useMemo(() => {
-    if (!activeTenantId) return [];
-    return refunds.filter((r) => r.tenant_id === activeTenantId).reverse();
-  }, [activeTenantId, refunds]);
+    if (!refundsData?.items) return [];
 
-  // Check order limits
-  const orderStats = useMemo(() => {
-    if (!activeTenantId) {
-      return { canAddMore: true, maxOrders: Infinity, currentCount: 0 };
-    }
+    return refundsData.items.map(
+      (r: ApiRefund): Refund => ({
+        id: r.id,
+        tenant_id: activeTenantId || "",
+        originalSaleId: r.originalSaleId,
+        refundNumber: r.refundNumber,
+        refundedItems: r.refundedItems.map((ri) => ({
+          ...ri,
+          // Ensure compatibility if types differ slightly
+        })),
+        refundTotal: Number(r.refundTotal),
+        reason: r.reason,
+        processedBy: currentUser?.id || "",
+        createdAt: r.createdAt,
+        updatedAt: r.createdAt, // fallback
+      }),
+    );
+  }, [refundsData, activeTenantId, currentUser]);
 
-    const tenant = tenants.find((t) => t.id === activeTenantId);
-    const maxOrders = tenant?.maxOrders ?? 100;
-    const currentCount = tenantSales.length;
-
-    return {
-      canAddMore: currentCount < maxOrders,
-      maxOrders,
-      currentCount,
-    };
-  }, [activeTenantId, tenants, tenantSales]);
-
-  const profitStats = useMemo(() => {
-    let totalProfit = 0;
-    let totalCost = 0;
-
-    tenantSales.forEach((sale) => {
-      // Check if this sale was refunded
-      const isRefunded = tenantRefunds.some(
-        (r) => r.originalSaleId === sale.id,
-      );
-      if (isRefunded) return;
-
-      sale.lineItems.forEach((item) => {
-        const itemCost = (item.costPriceSnapshot || 0) * item.quantity;
-        const itemRevenue = item.subtotal;
-        totalCost += itemCost;
-        totalProfit += itemRevenue - itemCost;
-      });
-    });
-
-    const margin =
-      totalProfit > 0 ? (totalProfit / (totalProfit + totalCost)) * 100 : 0;
-
-    return { totalProfit, totalCost, margin };
-  }, [tenantSales, tenantRefunds]);
+  // Order limits override (mock/placeholder)
+  const orderStats = useMemo(
+    () => ({
+      canAddMore: true,
+      maxOrders: 100,
+      currentCount: salesData?.pagination.total || 0,
+    }),
+    [salesData],
+  );
 
   const vm = useMemo(
     () => ({
       sales: tenantSales,
       refunds: tenantRefunds,
-      totalSales: tenantSales.length,
-      totalRevenue: tenantSales.reduce((sum, s) => sum + s.grandTotal, 0),
-      totalRefunds: tenantRefunds.reduce((sum, r) => sum + r.refundTotal, 0),
-      totalProfit: profitStats.totalProfit,
-      margin: profitStats.margin,
+
+      // Data Metrics
+      totalSales: salesData?.pagination.total || 0,
+      totalRefunds: refundsData?.pagination.total || 0,
+
       activeTenantId,
       currentUser,
       orderStats,
+
+      // Pagination Metadata for UI checks
+      ordersPagination: {
+        page: ordersPage,
+        totalPages: salesData?.pagination.totalPages || 1,
+        totalItems: salesData?.pagination.total || 0,
+        limit,
+      },
+      refundsPagination: {
+        page: refundsPage,
+        totalPages: refundsData?.pagination.totalPages || 1,
+        totalItems: refundsData?.pagination.total || 0,
+        limit,
+      },
+
+      // Loading states for buttons
+      isRefunding: processRefundMutation.isPending,
     }),
     [
       tenantSales,
       tenantRefunds,
-      profitStats,
+      salesData,
+      refundsData,
       activeTenantId,
       currentUser,
       orderStats,
+      ordersPage,
+      refundsPage,
+      limit,
+      processRefundMutation.isPending,
     ],
   );
 
   const handleRefund = useCallback(
-    (saleId: string, items: RefundLineItem[], reason: string) => {
+    async (saleId: string, items: RefundLineItem[], reason: string) => {
       if (!activeTenantId || !currentUser) return;
 
-      // Create refund using logic module
-      const refund = createRefund(
-        saleId,
-        items,
-        reason,
-        currentUser.id,
-        activeTenantId,
-      );
-
-      // Add to store
-      addRefund(refund);
-
-      // Restore inventory (logic module handles this)
-      restoreInventory(items);
-
-      return refund.id;
+      try {
+        const refund = await processRefundMutation.mutateAsync({
+          originalSaleId: saleId,
+          items: items.map((item) => ({
+            productId: item.productId,
+            productName: item.productName,
+            quantity: item.quantity,
+            refundAmount: item.refundAmount,
+          })),
+          reason,
+        });
+        toast.success("Refund processed successfully");
+        return refund.id;
+      } catch (e) {
+        const message = e instanceof Error ? e.message : "Refund failed";
+        toast.error(message);
+        console.error("Refund failed", e);
+        throw e;
+      }
     },
-    [activeTenantId, currentUser, addRefund],
+    [activeTenantId, currentUser, processRefundMutation],
   );
 
   const actions = useMemo(
     () => ({
+      setOrdersPage,
+      setRefundsPage,
       refund: handleRefund,
     }),
     [handleRefund],

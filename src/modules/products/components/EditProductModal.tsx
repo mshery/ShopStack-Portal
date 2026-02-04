@@ -3,23 +3,27 @@ import { Modal } from "@/shared/components/ui/Modal";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
-import { useProductsStore } from "@/modules/products";
-import { useInventoryStore } from "@/modules/inventory";
-import { useExpensesStore } from "@/modules/expenses";
-import { useActivityLogsStore } from "@/modules/platform";
 import { useAuthStore } from "@/modules/auth";
-import { useCategoriesStore } from "@/modules/catalog";
-import { useBrandsStore } from "@/modules/catalog";
+import {
+  useCategoriesFetch,
+  useBrandsFetch,
+} from "@/modules/catalog/api/queries";
+import { useCreateAdjustment } from "@/modules/inventory/api/queries";
 import type {
   Product,
   TenantUser,
   InventoryAdjustmentReason,
 } from "@/shared/types/models";
+import {
+  productsApi,
+  type UpdateProductInput,
+} from "@/modules/products/api/productsApi";
 
 interface EditProductModalProps {
   product: Product;
   isOpen: boolean;
   onClose: () => void;
+  onUpdate: (id: string, data: UpdateProductInput) => Promise<unknown>;
 }
 
 type StockAction = InventoryAdjustmentReason | "";
@@ -38,18 +42,26 @@ export default function EditProductModal({
   product,
   isOpen,
   onClose,
+  onUpdate,
 }: EditProductModalProps) {
-  const { updateProduct } = useProductsStore();
-  const { addAdjustment } = useInventoryStore();
-  const { addExpense } = useExpensesStore();
-  const { addTenantLog } = useActivityLogsStore();
+  // const { updateProduct } = useProductsStore(); // Removed legacy store usage
+  const { mutateAsync: createAdjustment } = useCreateAdjustment();
+  // const { addAdjustment } = useInventoryStore(); // Removed legacy
+  // const { addExpense } = useExpensesStore();
+  // const { addTenantLog } = useActivityLogsStore();
   const { currentUser, activeTenantId } = useAuthStore();
-  const { categories } = useCategoriesStore();
-  const { brands } = useBrandsStore();
 
-  // Filter by tenant
-  const tenantCategories = categories.filter((c) => c.tenant_id === activeTenantId);
-  const tenantBrands = brands.filter((b) => b.tenant_id === activeTenantId);
+  // Fetch categories and brands via TanStack Query (not Zustand stores)
+  const { data: categories = [] } = useCategoriesFetch();
+  const { data: brands = [] } = useBrandsFetch();
+
+  const [isUploading, setIsUploading] = useState(false);
+
+  // Filter by tenant (API should already return tenant-scoped data, but keep for safety)
+  const tenantCategories = categories.filter(
+    (c) => c.tenantId === activeTenantId,
+  );
+  const tenantBrands = brands.filter((b) => b.tenantId === activeTenantId);
 
   const isOwner = (currentUser as TenantUser)?.role === "owner";
 
@@ -62,7 +74,34 @@ export default function EditProductModal({
     categoryId: product.categoryId,
     brandId: product.brandId,
     unitPrice: product.unitPrice,
+    imageUrl: product.imageUrl,
   });
+
+  // Image upload handler
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate type
+    if (!file.type.startsWith("image/")) {
+      return; // TODO: Show error
+    }
+
+    // Validate size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      return; // TODO: Show error
+    }
+
+    try {
+      setIsUploading(true);
+      const url = await productsApi.uploadImage(file);
+      setFormData((prev) => ({ ...prev, imageUrl: url }));
+    } catch (error) {
+      console.error("Upload failed", error);
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   // Stock adjustment state (owner only)
   const [stockAction, setStockAction] = useState<StockAction>("");
@@ -74,18 +113,11 @@ export default function EditProductModal({
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const generateId = useCallback((prefix: string) => {
-    return `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  }, []);
+  const handleSave = useCallback(async () => {
+    // Prepare unified update data
+    const updateData: UpdateProductInput = { ...formData };
 
-  const handleSave = useCallback(() => {
-    const now = new Date().toISOString();
-    const userId = currentUser?.id || "system";
-
-    // Update basic product info
-    updateProduct(product.id, formData);
-
-    // Handle stock adjustment if action selected (owner only)
+    // Handle stock adjustment logic if needed
     if (isOwner && stockAction) {
       const previousStock = product.currentStock;
       let quantityChange = 0;
@@ -111,7 +143,7 @@ export default function EditProductModal({
           break;
       }
 
-      // Only proceed if there's an actual change
+      // Only proceed with stock logic if there's an actual change or forcing correction
       if (quantityChange !== 0 || stockAction === "count_correction") {
         // Calculate cost impact
         let costImpact = 0;
@@ -119,99 +151,35 @@ export default function EditProductModal({
           costImpact = product.costPrice * Math.abs(quantityChange);
         }
 
-        // Update product stock
-        const statusUpdate =
+        // Update product stock in the SAME update object
+        updateData.currentStock = newStock;
+        updateData.status =
           newStock <= 0
             ? "out_of_stock"
             : newStock <= product.minimumStock
               ? "low_stock"
               : "in_stock";
 
-        updateProduct(product.id, {
-          currentStock: newStock,
-          status: statusUpdate,
-        });
-
-        // Create expense for inventory loss (damaged/theft)
-        let relatedExpenseId: string | null = null;
-        if (
-          (stockAction === "damaged" || stockAction === "theft") &&
-          costImpact > 0
-        ) {
-          const expenseId = generateId("exp");
-          relatedExpenseId = expenseId;
-
-          addExpense({
-            tenant_id: product.tenant_id,
-            category: "inventory",
-            expenseType: "inventory_loss",
-            amount: costImpact,
-            description: `Inventory loss - ${product.name} (${stockAction})`,
-            vendor: null,
-            relatedVendorId: null,
-            relatedProductId: product.id,
-            relatedPurchaseId: null,
-            receiptUrl: null,
-            date: now,
-            createdBy: userId,
-          });
-
-          // Log expense creation
-          addTenantLog({
-            id: generateId("tlog"),
-            tenant_id: product.tenant_id,
-            action: "expense_created",
-            actorId: userId,
-            targetType: "expense",
-            targetId: expenseId,
-            details: {
-              category: "inventory",
-              expenseType: "inventory_loss",
-              amount: costImpact,
-              productName: product.name,
-            },
-          });
-        }
-
-        // Create inventory adjustment record
-        const adjustmentId = generateId("inv-adj");
-        addAdjustment({
-          id: adjustmentId,
-          tenant_id: product.tenant_id,
-          productId: product.id,
-          productName: product.name,
-          reason: stockAction as InventoryAdjustmentReason,
-          quantityChange,
-          previousStock,
-          newStock,
-          costImpact,
-          relatedExpenseId,
-          notes: adjustmentNotes,
-          createdBy: userId,
-        });
-
-        // Log inventory adjustment
-        addTenantLog({
-          id: generateId("tlog"),
-          tenant_id: product.tenant_id,
-          action: "inventory_adjusted",
-          actorId: userId,
-          targetType: "product",
-          targetId: product.id,
-          details: {
-            productName: product.name,
+        // Create inventory adjustment record via API
+        try {
+          await createAdjustment({
+            productId: product.id,
             reason: stockAction,
             quantityChange,
-            previousStock,
-            newStock,
-          },
-        });
+            costImpact,
+            notes: adjustmentNotes,
+          });
+        } catch (error) {
+          console.error("Failed to create inventory adjustment:", error);
+        }
       }
     }
 
+    // Execute SINGLE update call for Product Details (Name, Price, Current Stock)
+    await onUpdate(product.id, updateData);
+
     onClose();
   }, [
-    currentUser,
     product,
     formData,
     isOwner,
@@ -219,11 +187,8 @@ export default function EditProductModal({
     adjustmentQuantity,
     setStockTo,
     adjustmentNotes,
-    updateProduct,
-    addAdjustment,
-    addExpense,
-    addTenantLog,
-    generateId,
+    onUpdate,
+    createAdjustment,
     onClose,
   ]);
 
@@ -266,10 +231,11 @@ export default function EditProductModal({
                   key={step.id}
                   type="button"
                   onClick={() => setCurrentStep(step.id)}
-                  className={`flex-1 py-2 px-4 text-sm font-medium rounded-lg transition-colors ${currentStep === step.id
-                    ? "bg-brand-500 text-white"
-                    : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
-                    }`}
+                  className={`flex-1 py-2 px-4 text-sm font-medium rounded-lg transition-colors ${
+                    currentStep === step.id
+                      ? "bg-brand-500 text-white"
+                      : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                  }`}
                 >
                   <span className="mr-2">{index + 1}.</span>
                   {step.label}
@@ -301,6 +267,35 @@ export default function EditProductModal({
                     />
                   </div>
 
+                  <div className="col-span-2">
+                    <Label>Product Image</Label>
+                    <div className="flex items-center gap-4 mt-2">
+                      {formData.imageUrl && (
+                        <div className="relative w-16 h-16 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                          <img
+                            src={formData.imageUrl}
+                            alt="Product"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                      <div className="flex-1">
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          disabled={isUploading}
+                          className="cursor-pointer"
+                        />
+                        {isUploading && (
+                          <p className="text-xs text-brand-500 mt-1">
+                            Uploading...
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="col-span-2 lg:col-span-1">
                     <Label>SKU</Label>
                     <Input
@@ -314,7 +309,9 @@ export default function EditProductModal({
                     <Label>Category</Label>
                     <select
                       value={formData.categoryId}
-                      onChange={(e) => handleChange("categoryId", e.target.value)}
+                      onChange={(e) =>
+                        handleChange("categoryId", e.target.value)
+                      }
                       className="w-full h-11 px-4 pr-10 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 appearance-none focus:outline-none focus:ring-2 focus:ring-brand-500"
                     >
                       <option value="">Select a category</option>
@@ -480,12 +477,12 @@ export default function EditProductModal({
                             {stockAction === "count_correction"
                               ? setStockTo
                               : stockAction === "restock" ||
-                                stockAction === "return"
+                                  stockAction === "return"
                                 ? product.currentStock + adjustmentQuantity
                                 : Math.max(
-                                  0,
-                                  product.currentStock - adjustmentQuantity,
-                                )}
+                                    0,
+                                    product.currentStock - adjustmentQuantity,
+                                  )}
                           </span>{" "}
                           units
                         </p>
@@ -516,7 +513,14 @@ export default function EditProductModal({
               Close
             </Button>
             {currentStep === "info" && isOwner ? (
-              <Button type="button" onClick={() => setCurrentStep("stock")}>
+              <Button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setCurrentStep("stock");
+                }}
+              >
                 Next: Adjust Stock →
               </Button>
             ) : (

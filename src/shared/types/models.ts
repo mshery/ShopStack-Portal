@@ -182,7 +182,7 @@ export interface BillingInvoice {
 // ============================================
 
 export type UserRole = "owner" | "cashier";
-export type UserStatus = "active" | "inactive";
+export type UserStatus = "active" | "inactive" | "suspended";
 
 export interface TenantUser {
   id: string;
@@ -262,7 +262,6 @@ export interface Customer {
 // ============================================
 // POS Types
 // ============================================
-
 
 export interface SaleLineItem {
   productId: string;
@@ -390,7 +389,7 @@ export interface Vendor {
 // Purchase Types
 // ============================================
 
-export type PurchaseStatus = "pending" | "received" | "cancelled";
+export type PurchaseStatus = "pending" | "ordered" | "received" | "cancelled";
 
 export interface PurchaseLineItem {
   productId: string;

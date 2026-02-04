@@ -1,6 +1,7 @@
 import PageBreadcrumb from "@/shared/components/feedback/PageBreadcrumb";
 import MetricCard from "@/shared/components/dashboard/MetricCard";
 import RecentActivities from "@/shared/components/dashboard/RecentActivities";
+import { PageSkeleton } from "@/shared/components/skeletons/PageSkeleton";
 import { GridIcon, GroupIcon, ListIcon } from "@/shared/components/ui/Icons";
 import { usePlatformDashboardScreen } from "../hooks/usePlatformDashboardScreen";
 import {
@@ -16,14 +17,22 @@ import {
   YAxis,
   CartesianGrid,
 } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/shared/components/ui/card";
 
 const COLORS = ["#465fff", "#12b76a", "#f59e0b", "#ef4444", "#8b5cf6"];
 
 export default function PlatformDashboardPage() {
   const { status, vm } = usePlatformDashboardScreen();
 
-  if (status === "loading") return <div>Loading...</div>;
+  if (status === "loading") {
+    return <PageSkeleton />;
+  }
+
   if (status === "error") return <div>Error loading dashboard</div>;
 
   const metricIcons = [
@@ -63,7 +72,9 @@ export default function PlatformDashboardPage() {
         {/* Plan Distribution */}
         <Card className="border-gray-200 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-lg font-bold">Plan Distribution</CardTitle>
+            <CardTitle className="text-lg font-bold">
+              Plan Distribution
+            </CardTitle>
           </CardHeader>
           <CardContent className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">

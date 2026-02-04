@@ -2,7 +2,7 @@ import { useState } from "react";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { useAuthStore } from "@/modules/auth";
-import { User, LogOut, Settings, HelpCircle } from "lucide-react";
+import { User, LogOut } from "lucide-react";
 
 export default function UserDropdown() {
   const [isOpen, setIsOpen] = useState(false);
@@ -91,26 +91,6 @@ export default function UserDropdown() {
           >
             <User className="size-4" />
             My Profile
-          </DropdownItem>
-
-          <DropdownItem
-            onItemClick={closeDropdown}
-            tag="a"
-            to="/settings"
-            className="flex items-center gap-2.5 px-3 py-2 text-sm font-medium text-gray-600 rounded-lg hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-white transition-colors"
-          >
-            <Settings className="size-4" />
-            Account Settings
-          </DropdownItem>
-
-          <DropdownItem
-            onItemClick={closeDropdown}
-            tag="a"
-            to="/help"
-            className="flex items-center gap-2.5 px-3 py-2 text-sm font-medium text-gray-600 rounded-lg hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-white transition-colors"
-          >
-            <HelpCircle className="size-4" />
-            Support Center
           </DropdownItem>
         </div>
 

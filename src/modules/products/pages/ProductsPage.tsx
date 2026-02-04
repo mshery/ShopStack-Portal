@@ -8,14 +8,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/shared/components/ui/table";
+import { TableSkeleton } from "@/shared/components/skeletons/TableSkeleton";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { useProductsScreen } from "../hooks/useProductsScreen";
 import { BoxCubeIcon } from "@/shared/components/ui/Icons";
 import EditProductModal from "../components/EditProductModal";
 import DeleteConfirmationModal from "@/shared/components/feedback/DeleteConfirmationModal";
-import { useCategoriesStore } from "@/modules/catalog";
-import { useBrandsStore } from "@/modules/catalog";
+
 import { Pencil, Trash2 } from "lucide-react";
 import type { Product } from "@/shared/types/models";
 import { useTenantCurrency } from "@/modules/tenant";
@@ -23,22 +23,31 @@ import Pagination from "@/shared/components/feedback/Pagination";
 
 export default function ProductsPage() {
   const { status, vm, actions } = useProductsScreen();
-  const { categories } = useCategoriesStore();
-  const { brands } = useBrandsStore();
   const { formatPrice } = useTenantCurrency();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
 
   // Create lookup maps for category and brand names
   const getCategoryName = useMemo(() => {
-    const map = new Map(categories.map((c) => [c.id, c.name]));
+    const map = new Map(vm.categories.map((c) => [c.id, c.name]));
     return (id: string) => map.get(id) || "Unknown";
-  }, [categories]);
+  }, [vm.categories]);
 
   const getBrandName = useMemo(() => {
-    const map = new Map(brands.map((b) => [b.id, b.name]));
+    const map = new Map(vm.brands.map((b) => [b.id, b.name]));
     return (id: string) => map.get(id) || "Unknown";
-  }, [brands]);
+  }, [vm.brands]);
+
+  if (status === "loading") {
+    return (
+      <div className="p-6">
+        <PageBreadcrumb pageTitle="Products" />
+        <div className="mt-6">
+          <TableSkeleton rows={10} columns={7} />
+        </div>
+      </div>
+    );
+  }
 
   if (status === "error") return <div>Error: Tenant context not found.</div>;
 
@@ -62,8 +71,9 @@ export default function ProductsPage() {
               Usage
             </span>
             <span
-              className={`text-sm font-bold ${!vm.canAddMore ? "text-red-500" : "text-gray-700"
-                }`}
+              className={`text-sm font-bold ${
+                !vm.canAddMore ? "text-red-500" : "text-gray-700"
+              }`}
             >
               {vm.currentCount} / {vm.maxProducts}
             </span>
@@ -282,6 +292,7 @@ export default function ProductsPage() {
           product={selectedProduct}
           isOpen={!!selectedProduct}
           onClose={() => setSelectedProduct(null)}
+          onUpdate={actions.updateProduct}
         />
       )}
 

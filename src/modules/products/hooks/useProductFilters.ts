@@ -71,10 +71,12 @@ export function useProductFilters({
     const uniqueBrandIds = new Set(
       products.map((p) => p.brandId).filter(Boolean),
     );
-    const brandNames = Array.from(uniqueBrandIds)
-      .map((id) => brandMap.get(id))
-      .filter((name): name is string => !!name);
-    return brandNames.sort();
+    return Array.from(uniqueBrandIds)
+      .map((id) => ({
+        id,
+        name: brandMap.get(id) || "Unknown Brand",
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
   }, [products, brandMap]);
 
   // Extract unique categories from products (mapped to names)
@@ -82,10 +84,12 @@ export function useProductFilters({
     const uniqueCategoryIds = new Set(
       products.map((p) => p.categoryId).filter(Boolean),
     );
-    const categoryNames = Array.from(uniqueCategoryIds)
-      .map((id) => categoryMap.get(id))
-      .filter((name): name is string => !!name);
-    return categoryNames.sort();
+    return Array.from(uniqueCategoryIds)
+      .map((id) => ({
+        id,
+        name: categoryMap.get(id) || "Unknown Category",
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
   }, [products, categoryMap]);
 
   // Get price range bounds from products

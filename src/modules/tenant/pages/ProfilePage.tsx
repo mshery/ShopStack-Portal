@@ -1,7 +1,7 @@
 import PageBreadcrumb from "@/shared/components/feedback/PageBreadcrumb";
 import UserMetaCard from "../components/UserMetaCard";
 import UserInfoCard from "../components/UserInfoCard";
-import UserAddressCard from "../components/UserAddressCard";
+import SecurityCard from "../components/SecurityCard";
 
 export default function ProfilePage() {
   return (
@@ -14,7 +14,7 @@ export default function ProfilePage() {
         <div className="space-y-6">
           <UserMetaCard />
           <UserInfoCard />
-          <UserAddressCard />
+          <SecurityCard />
         </div>
       </div>
     </>

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { usePurchaseDetailsScreen } from "../hooks/usePurchaseDetailsScreen";
 import PageBreadcrumb from "@/shared/components/feedback/PageBreadcrumb";
@@ -5,12 +6,8 @@ import { DetailPageHeader } from "@/shared/components/feedback/DetailPageHeader"
 import { InfoSection, InfoRow } from "@/shared/components/feedback/InfoSection";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
-import EditPurchaseModal from "../components/EditPurchaseModal";
-import DeleteConfirmationModal from "@/shared/components/feedback/DeleteConfirmationModal";
 import {
   ArrowLeft,
-  Pencil,
-  Trash2,
   FileText,
   Package,
   DollarSign,
@@ -19,13 +16,24 @@ import {
   CheckCircle2,
   Clock,
   XCircle,
+  Truck,
+  Ban,
+  ClipboardCheck,
 } from "lucide-react";
 import { formatDateTime } from "@/shared/utils/format";
 import { useTenantCurrency } from "@/modules/tenant";
+import ConfirmModal from "@/shared/components/feedback/ConfirmModal";
 
 export default function PurchaseDetailsPage() {
   const { status, vm, actions } = usePurchaseDetailsScreen();
   const { formatPrice } = useTenantCurrency();
+  const [showCancelModal, setShowCancelModal] = useState(false);
+
+  // Loading state
+  if (status === "loading") {
+    // You might want a skeleton here, but for now basic loading is fine or handled by parent
+    return <div>Loading...</div>;
+  }
 
   // Error/Not found state
   if (status === "error" || !vm.purchase) {
@@ -52,10 +60,17 @@ export default function PurchaseDetailsPage() {
     );
   }
 
-  const { purchase, vendor, items, totals } = vm;
+  // Safely access properties after check
+  const { purchase, vendor, items } = vm;
+
+  // Calculate totals if not present (though backend should provide)
+  const totalUnits = items.reduce(
+    (sum: number, item) => sum + item.quantity,
+    0,
+  );
 
   const getStatusBadge = () => {
-    switch (purchase.status) {
+    switch (purchase.status as string) {
       case "received":
         return (
           <Badge
@@ -64,6 +79,16 @@ export default function PurchaseDetailsPage() {
           >
             <CheckCircle2 className="h-3.5 w-3.5" />
             Received
+          </Badge>
+        );
+      case "ordered":
+        return (
+          <Badge
+            variant="outline"
+            className="gap-1.5 bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800"
+          >
+            <Truck className="h-3.5 w-3.5" />
+            Ordered
           </Badge>
         );
       case "pending":
@@ -93,6 +118,36 @@ export default function PurchaseDetailsPage() {
 
   const purchaseIcon = <FileText className="w-10 h-10 text-brand-500" />;
 
+  // Define actions based on state
+  const headerActions = [];
+
+  if (vm.canOrder) {
+    headerActions.push({
+      label: "Mark as Ordered",
+      icon: ClipboardCheck,
+      onClick: actions.markAsOrdered,
+      variant: "default" as const,
+    });
+  }
+
+  if (vm.canReceive) {
+    headerActions.push({
+      label: "Receive Order",
+      icon: CheckCircle2,
+      onClick: actions.receive,
+      // variant: "default" as const // success is not supported by Button/ActionButton types typically
+    });
+  }
+
+  if (vm.canCancel) {
+    headerActions.push({
+      label: "Cancel Order",
+      icon: Ban,
+      onClick: () => setShowCancelModal(true),
+      variant: "danger" as const,
+    });
+  }
+
   return (
     <>
       <PageBreadcrumb pageTitle="Purchase Order Details" />
@@ -104,15 +159,7 @@ export default function PurchaseDetailsPage() {
         title={purchase.purchaseNumber}
         status={getStatusBadge()}
         image={purchaseIcon}
-        actions={[
-          { label: "Edit", icon: Pencil, onClick: actions.openEdit },
-          {
-            label: "Delete",
-            icon: Trash2,
-            onClick: actions.openDelete,
-            variant: "danger",
-          },
-        ]}
+        actions={headerActions}
       />
 
       {/* Notes section if available */}
@@ -139,7 +186,7 @@ export default function PurchaseDetailsPage() {
             <div className="space-y-3">
               {items.map((item, index) => (
                 <div
-                  key={index}
+                  key={item.productId || index}
                   className="flex items-center justify-between p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-brand-200 dark:hover:border-brand-800 transition-colors bg-gray-50/50 dark:bg-gray-800/20"
                 >
                   <div className="flex items-center gap-4 flex-1">
@@ -191,7 +238,7 @@ export default function PurchaseDetailsPage() {
                 Total Units
               </span>
               <span className="text-sm font-medium text-gray-900 dark:text-white">
-                {totals.units}
+                {totalUnits}
               </span>
             </div>
             <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
@@ -200,7 +247,7 @@ export default function PurchaseDetailsPage() {
                   Total Cost
                 </span>
                 <span className="text-2xl font-bold text-brand-600 dark:text-brand-400">
-                  {formatPrice(totals.cost)}
+                  {formatPrice(purchase.totalCost)}
                 </span>
               </div>
             </div>
@@ -250,23 +297,19 @@ export default function PurchaseDetailsPage() {
         </div>
       </div>
 
-      {/* Edit Modal */}
-      {vm.isEditModalOpen && (
-        <EditPurchaseModal
-          purchase={purchase}
-          isOpen={vm.isEditModalOpen}
-          onClose={actions.closeEdit}
-        />
-      )}
-
-      {/* Delete Confirmation Modal */}
-      <DeleteConfirmationModal
-        isOpen={vm.isDeleteModalOpen}
-        onClose={actions.closeDelete}
-        onConfirm={actions.confirmDelete}
-        title="Delete Purchase Order"
-        message="Are you sure you want to delete this purchase order? This action cannot be undone."
-        itemName={purchase.purchaseNumber}
+      {/* Cancel Order Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showCancelModal}
+        onClose={() => setShowCancelModal(false)}
+        onConfirm={async () => {
+          await actions.cancel();
+          setShowCancelModal(false);
+        }}
+        title="Cancel Purchase Order"
+        message={`Are you sure you want to cancel purchase order ${purchase.purchaseNumber}? This action cannot be undone.`}
+        confirmText="Cancel Order"
+        variant="danger"
+        isLoading={vm.isLoading}
       />
     </>
   );

@@ -14,11 +14,13 @@ import { Switch } from "@/shared/components/ui/switch";
 import { Separator } from "@/shared/components/ui/separator";
 import { useAuthStore } from "@/modules/auth";
 import { useTenantsStore } from "@/modules/platform";
-import { useCategoriesStore } from "@/modules/catalog";
-import { useBrandsStore } from "@/modules/catalog";
 import PageBreadcrumb from "@/shared/components/feedback/PageBreadcrumb";
 import { Check, ChevronRight, Package, Tag, ShieldAlert } from "lucide-react";
 import { usePermissions } from "@/shared/hooks/usePermissions";
+import {
+  useBrandsFetch,
+  useCategoriesFetch,
+} from "@/modules/catalog/api/queries";
 
 export default function TenantSettingsPage() {
   const { isSuperAdmin } = usePermissions();
@@ -26,17 +28,12 @@ export default function TenantSettingsPage() {
   const { tenants, updateTenantSettings } = useTenantsStore();
   const tenant = tenants.find((t) => t.id === activeTenantId);
 
-  const { categories } = useCategoriesStore();
-  const { brands } = useBrandsStore();
-
-  // Filter by tenant
-  const tenantCategories = categories.filter(
-    (c) => c.tenant_id === activeTenantId
-  );
-  const tenantBrands = brands.filter((b) => b.tenant_id === activeTenantId);
+  // Fetch categories and brands via TanStack Query (not Zustand stores)
+  const { data: tenantCategories = [] } = useCategoriesFetch();
+  const { data: tenantBrands = [] } = useBrandsFetch();
 
   const [currencySymbol, setCurrencySymbol] = useState(
-    tenant?.settings?.currencySymbol || "$"
+    tenant?.settings?.currencySymbol || "Rs",
   );
   const [showSuccess, setShowSuccess] = useState(false);
 
@@ -56,85 +53,7 @@ export default function TenantSettingsPage() {
       <PageBreadcrumb pageTitle="Settings" />
 
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-white/90">
-            Store Settings
-          </h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Configure your business details and preferences
-          </p>
-        </div>
-
         <div className="grid gap-6 max-w-7xl">
-          <Card className="border-gray-200 dark:border-gray-800">
-            <CardHeader className="space-y-1 pb-6">
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 dark:bg-brand-900/20">
-                  <svg
-                    className="h-6 w-6 text-brand-600 dark:text-brand-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                    />
-                  </svg>
-                </div>
-                <div>
-                  <CardTitle className="text-lg dark:text-white/90">
-                    Company Information
-                  </CardTitle>
-                  <CardDescription className="dark:text-white/90">
-                    Your business details shown on receipts and invoices
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div className="space-y-2">
-                  <Label htmlFor="companyName" className="text-sm font-medium">
-                    Company Name
-                  </Label>
-                  <Input
-                    id="companyName"
-                    defaultValue={tenant?.companyName}
-                    className="h-11"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="slug" className="text-sm font-medium">
-                    Slug{" "}
-                    <span className="text-xs text-gray-500">(Read Only)</span>
-                  </Label>
-                  <Input
-                    id="slug"
-                    defaultValue={tenant?.slug}
-                    disabled
-                    className="h-11 bg-gray-50 dark:bg-gray-900"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="taxId" className="text-sm font-medium">
-                  Tax ID / VAT Number
-                </Label>
-                <Input
-                  id="taxId"
-                  placeholder="Enter your tax registration number"
-                  className="h-11"
-                />
-              </div>
-              <div className="pt-2">
-                <Button className="h-11 px-6">Save Changes</Button>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Product Configuration Quick Links */}
           <Card className="border-gray-200 dark:border-gray-800">
             <CardHeader className="space-y-1 pb-6">

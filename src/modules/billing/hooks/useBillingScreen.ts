@@ -1,73 +1,76 @@
 import { useCallback, useMemo, useState } from "react";
 import { useAuthStore } from "@/modules/auth";
-import { useBillingsStore } from "@/modules/billing";
-import { useTenantsStore } from "@/modules/platform";
+import {
+  useBillingFetch,
+  useInvoicesFetch,
+  usePaymentMethodsFetch,
+  useAddPaymentMethod,
+  useDeletePaymentMethod,
+  useSetDefaultPaymentMethod,
+} from "@/modules/tenant";
 import { usePOSStore } from "@/modules/pos";
-import type { AsyncStatus, BillingAddress, BillingInvoice } from "@/shared/types/models";
+import type {
+  AsyncStatus,
+  BillingAddress,
+  BillingInvoice,
+  BillingPaymentMethod,
+} from "@/shared/types/models";
 
 /**
  * Billing Screen Hook
  *
- * Follows RULES:
- * - Returns status, vm, actions
- * - vm is UI-ready, memoized
- * - actions are stable
+ * Uses Real API via TanStack Query
+ * Exposes actions for UI interactions
  */
 export function useBillingScreen() {
-  const { activeTenantId } = useAuthStore();
-  const { billings, invoices, subscriptionPlans, paymentMethods } =
-    useBillingsStore();
-  const { tenants } = useTenantsStore();
-  const { sales } = usePOSStore();
+  const { activeTenantId, currentTenant } = useAuthStore();
+  const { sales } = usePOSStore(); // Client-side store for sales metrics
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
-  // Get current tenant and billing
-  const tenant = useMemo(
-    () => tenants.find((t) => t.id === activeTenantId),
-    [tenants, activeTenantId],
-  );
+  // ============ QUERIES ============
 
-  const billing = useMemo(
-    () => billings.find((b) => b.tenant_id === activeTenantId),
-    [billings, activeTenantId],
-  );
+  // 1. Fetch Billing Info
+  const { data: billing, isLoading: isBillingLoading } =
+    useBillingFetch(!!activeTenantId);
 
-  const currentPlan = useMemo(
-    () => subscriptionPlans.find((p) => p.slug === billing?.plan),
-    [subscriptionPlans, billing?.plan],
-  );
+  // 2. Fetch Invoices (Paginated)
+  const {
+    data: invoicesData,
+    isLoading: isInvoicesLoading,
+    refetch: refetchInvoices,
+  } = useInvoicesFetch({
+    page: currentPage,
+    limit: itemsPerPage,
+  });
 
-  // Get tenant invoices sorted by date
-  const tenantInvoices = useMemo(
-    () =>
-      invoices
-        .filter((inv) => inv.tenant_id === activeTenantId)
-        .sort(
-          (a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-        ),
-    [invoices, activeTenantId],
-  );
+  // 3. Fetch Payment Methods
+  const {
+    data: paymentMethods = [],
+    isLoading: isPmLoading,
+    refetch: refetchPm,
+  } = usePaymentMethodsFetch(!!activeTenantId);
 
-  // Pagination
-  const totalPages = Math.ceil(tenantInvoices.length / itemsPerPage);
-  const paginatedInvoices = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return tenantInvoices.slice(startIndex, startIndex + itemsPerPage);
-  }, [tenantInvoices, currentPage]);
+  // ============ MUTATIONS ============
+  const addPmMutation = useAddPaymentMethod();
+  const deletePmMutation = useDeletePaymentMethod();
+  const setDefaultPmMutation = useSetDefaultPaymentMethod();
 
-  // Get tenant payment methods
-  const tenantPaymentMethods = useMemo(
-    () => paymentMethods.filter((pm) => pm.tenant_id === activeTenantId),
-    [paymentMethods, activeTenantId],
-  );
+  // ============ STATUS ============
+  const status: AsyncStatus = useMemo(() => {
+    if (isBillingLoading || isInvoicesLoading || isPmLoading) return "loading";
+    // If billing is null, it means no billing info found (rare but possible)
+    if (!billing) return "empty";
+    return "success";
+  }, [isBillingLoading, isInvoicesLoading, isPmLoading, billing]);
 
-  // Get billing address from tenant settings
+  // ============ DERIVED DATA ============
+
+  // Billing Address from Auth Tenant Settings
   const billingAddress = useMemo((): BillingAddress | null => {
     const raw = (
-      tenant?.settings as { billingAddress?: Record<string, unknown> }
+      currentTenant?.settings as { billingAddress?: Record<string, unknown> }
     )?.billingAddress;
     if (!raw) return null;
     return {
@@ -79,9 +82,9 @@ export function useBillingScreen() {
       country: (raw.country as string) ?? "",
       vatNumber: (raw.vatNumber as string | null) ?? null,
     };
-  }, [tenant]);
+  }, [currentTenant]);
 
-  // Calculate orders used this month
+  // Orders Used (metrics)
   const ordersUsed = useMemo(() => {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -91,82 +94,127 @@ export function useBillingScreen() {
     ).length;
   }, [sales, activeTenantId]);
 
-  const ordersLimit = currentPlan?.limits.maxOrders ?? tenant?.maxOrders ?? 100;
+  const currentPlan = billing?.plan;
+  const ordersLimit = currentPlan?.limits.maxOrders ?? 100;
 
-  // Derive status from data - no useEffect needed
-  const status: AsyncStatus = useMemo(() => {
-    if (billing) return "success";
-    if (activeTenantId) return "empty";
-    return "loading";
-  }, [billing, activeTenantId]);
+  // Pagination
+  const totalPages = invoicesData?.pagination.totalPages ?? 1;
 
-  // Refresh action (placeholder for future API integration)
-  const refresh = useCallback(() => {
-    // No-op for now - in real app, would refetch billing data
-  }, []);
+  // ============ ACTIONS ============
 
-  // Pagination actions
+  const refresh = useCallback(async () => {
+    await Promise.all([refetchInvoices(), refetchPm()]);
+  }, [refetchInvoices, refetchPm]);
+
   const goToPage = useCallback(
     (page: number) => {
-      if (page >= 1 && page <= totalPages) {
-        setCurrentPage(page);
-      }
+      if (page >= 1 && page <= totalPages) setCurrentPage(page);
     },
     [totalPages],
   );
 
   const nextPage = useCallback(() => {
-    if (currentPage < totalPages) {
-      setCurrentPage((p) => p + 1);
-    }
+    if (currentPage < totalPages) setCurrentPage((p) => p + 1);
   }, [currentPage, totalPages]);
 
   const prevPage = useCallback(() => {
-    if (currentPage > 1) {
-      setCurrentPage((p) => p - 1);
-    }
+    if (currentPage > 1) setCurrentPage((p) => p - 1);
   }, [currentPage]);
 
-  // VM - UI-ready data
+  // Payment Method Actions
+  // Payment Method Actions
+  const addPaymentMethod = useCallback(
+    async (data: {
+      type: "card" | "paypal";
+      brand?: string;
+      last4?: string;
+      expiryMonth?: number;
+      expiryYear?: number;
+      email?: string;
+      isDefault?: boolean;
+    }) => {
+      await addPmMutation.mutateAsync({
+        ...data,
+        expiryMonth: data.expiryMonth ?? 12, // Default fallback if needed, or better let backend handle validation
+        expiryYear: data.expiryYear ?? 2030,
+      });
+    },
+    [addPmMutation],
+  );
+
+  const removePaymentMethod = useCallback(
+    async (id: string) => {
+      await deletePmMutation.mutateAsync(id);
+    },
+    [deletePmMutation],
+  );
+
+  const setDefaultPaymentMethod = useCallback(
+    async (id: string) => {
+      await setDefaultPmMutation.mutateAsync(id);
+    },
+    [setDefaultPmMutation],
+  );
+
+  // VM construction
   const vm = useMemo(
     () => ({
-      billing,
-      currentPlan,
+      billing: billing
+        ? {
+            ...billing,
+          }
+        : undefined,
+      currentPlan: currentPlan
+        ? {
+            ...currentPlan,
+            monthlyPrice: currentPlan.monthlyPrice,
+            features: currentPlan.features ?? [],
+          }
+        : undefined,
       billingAddress,
-      paymentMethods: tenantPaymentMethods,
-      invoices: paginatedInvoices as BillingInvoice[],
+      paymentMethods: paymentMethods as unknown as BillingPaymentMethod[],
+      invoices: (invoicesData?.items ?? []) as unknown as BillingInvoice[],
       ordersUsed,
       ordersLimit,
       pagination: {
         currentPage,
         totalPages,
-        totalItems: tenantInvoices.length,
+        totalItems: invoicesData?.pagination.total ?? 0,
       },
-      canUpgrade: billing?.plan === "starter",
+      canUpgrade: currentPlan?.slug === "starter",
     }),
     [
       billing,
       currentPlan,
       billingAddress,
-      tenantPaymentMethods,
-      paginatedInvoices,
+      paymentMethods,
+      invoicesData,
       ordersUsed,
       ordersLimit,
       currentPage,
       totalPages,
-      tenantInvoices.length,
     ],
   );
 
-  // Actions - stable references
   const actions = useMemo(
     () => ({
       refresh,
       goToPage,
       nextPage,
       prevPage,
+      addPaymentMethod,
+      removePaymentMethod,
+      setDefaultPaymentMethod,
     }),
-    [refresh, goToPage, nextPage, prevPage],
+    [
+      refresh,
+      goToPage,
+      nextPage,
+      prevPage,
+      addPaymentMethod,
+      removePaymentMethod,
+      setDefaultPaymentMethod,
+    ],
   );
 
   return { status, vm, actions };

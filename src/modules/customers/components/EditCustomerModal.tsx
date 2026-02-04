@@ -3,7 +3,7 @@ import { Modal } from "@/shared/components/ui/Modal";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
-import { useCustomersStore } from "@/modules/customers";
+import { useUpdateCustomer } from "../api/queries";
 import type { Customer } from "@/shared/types/models";
 
 interface EditCustomerModalProps {
@@ -17,7 +17,7 @@ export default function EditCustomerModal({
   isOpen,
   onClose,
 }: EditCustomerModalProps) {
-  const { updateCustomer } = useCustomersStore();
+  const updateMutation = useUpdateCustomer();
   const [formData, setFormData] = useState({
     name: customer.name,
     email: customer.email || "",
@@ -29,12 +29,21 @@ export default function EditCustomerModal({
   };
 
   const handleSave = () => {
-    updateCustomer(customer.id, {
-      ...formData,
-      email: formData.email || null,
-      phone: formData.phone || null,
-    });
-    onClose();
+    updateMutation.mutate(
+      {
+        id: customer.id,
+        data: {
+          ...formData,
+          email: formData.email || undefined,
+          phone: formData.phone || undefined,
+        },
+      },
+      {
+        onSuccess: () => {
+          onClose();
+        },
+      },
+    );
   };
 
   return (
@@ -67,6 +76,7 @@ export default function EditCustomerModal({
                   type="text"
                   value={formData.name}
                   onChange={(e) => handleChange("name", e.target.value)}
+                  required
                 />
               </div>
 
@@ -92,10 +102,17 @@ export default function EditCustomerModal({
             </div>
           </div>
           <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={updateMutation.isPending}
+            >
               Close
             </Button>
-            <Button type="submit">Save Changes</Button>
+            <Button type="submit" disabled={updateMutation.isPending}>
+              {updateMutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
           </div>
         </form>
       </div>

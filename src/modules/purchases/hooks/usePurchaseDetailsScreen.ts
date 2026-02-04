@@ -1,96 +1,115 @@
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { usePurchasesStore } from "@/modules/purchases";
-import { useVendorsStore } from "@/modules/vendors";
-import { useProductsStore } from "@/modules/products";
-import { useAuthStore } from "@/modules/auth";
-
-export type PurchaseDetailsStatus = "error" | "empty" | "success";
+import {
+  usePurchaseFetch,
+  usePurchaseItemsFetch,
+  useMarkAsOrdered,
+  useReceivePurchase,
+  useCancelPurchase,
+} from "../api/queries";
+import { useVendorFetch } from "@/modules/vendors/api/queries";
+import type { AsyncStatus } from "@/shared/types/models";
+import { toast } from "react-hot-toast";
 
 export function usePurchaseDetailsScreen() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { purchases, removePurchase } = usePurchasesStore();
-  const { vendors } = useVendorsStore();
-  const { products } = useProductsStore();
-  const { activeTenantId } = useAuthStore();
 
-  // Modal state
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const {
+    data: purchase,
+    isLoading: isPurchaseLoading,
+    isError: isPurchaseError,
+  } = usePurchaseFetch(id!);
 
-  const purchase = useMemo(() => {
-    return purchases.find((p) => p.id === id && p.tenant_id === activeTenantId);
-  }, [purchases, id, activeTenantId]);
+  // Fetch related data separately
+  const { data: vendor, isLoading: isVendorLoading } = useVendorFetch(
+    purchase?.vendorId || "",
+  );
 
-  const vendor = useMemo(() => {
-    if (!purchase?.vendorId) return null;
-    return vendors.find((v) => v.id === purchase.vendorId);
-  }, [vendors, purchase]);
+  const { data: items, isLoading: isItemsLoading } = usePurchaseItemsFetch(id!);
 
-  const enrichedItems = useMemo(() => {
-    if (!purchase) return [];
-    return purchase.items.map((item) => ({
-      ...item,
-      product: products.find((p) => p.id === item.productId),
-    }));
-  }, [purchase, products]);
+  const markAsOrderedMutation = useMarkAsOrdered();
+  const receivePurchaseMutation = useReceivePurchase();
+  const cancelPurchaseMutation = useCancelPurchase();
 
-  const totals = useMemo(() => {
-    if (!purchase) return { units: 0, cost: 0 };
-    return {
-      units: purchase.items.reduce((sum, item) => sum + item.quantity, 0),
-      cost: purchase.totalCost,
-    };
-  }, [purchase]);
-
-  // Actions - all memoized for stability
-  const openEdit = useCallback(() => setIsEditModalOpen(true), []);
-  const closeEdit = useCallback(() => setIsEditModalOpen(false), []);
-  const openDelete = useCallback(() => setIsDeleteModalOpen(true), []);
-  const closeDelete = useCallback(() => setIsDeleteModalOpen(false), []);
-
-  const confirmDelete = useCallback(() => {
-    if (purchase) {
-      removePurchase(purchase.id);
-      navigate("/tenant/purchases");
+  const handleMarkAsOrdered = useCallback(async () => {
+    if (!purchase) return;
+    try {
+      await markAsOrderedMutation.mutateAsync(purchase.id);
+      toast.success("Purchase marked as ordered");
+    } catch (error) {
+      toast.error("Failed to update purchase status");
+      console.error(error);
     }
-  }, [purchase, removePurchase, navigate]);
+  }, [purchase, markAsOrderedMutation]);
 
-  // View Model - memoized
-  const vm = useMemo(
-    () => ({
-      purchase,
+  const handleReceive = useCallback(async () => {
+    if (!purchase) return;
+    try {
+      await receivePurchaseMutation.mutateAsync({
+        id: purchase.id,
+        date: { receivedDate: new Date().toISOString() },
+      });
+      toast.success("Purchase received and inventory updated");
+    } catch (error) {
+      toast.error("Failed to receive purchase");
+      console.error(error);
+    }
+  }, [purchase, receivePurchaseMutation]);
+
+  const handleCancel = useCallback(async () => {
+    if (!purchase) return;
+
+    try {
+      await cancelPurchaseMutation.mutateAsync(purchase.id);
+      toast.success("Purchase cancelled");
+    } catch (error) {
+      toast.error("Failed to cancel purchase");
+      console.error(error);
+    }
+  }, [purchase, cancelPurchaseMutation]);
+
+  const isLoading =
+    isPurchaseLoading ||
+    isVendorLoading ||
+    isItemsLoading ||
+    markAsOrderedMutation.isPending ||
+    receivePurchaseMutation.isPending ||
+    cancelPurchaseMutation.isPending;
+
+  const vm = useMemo(() => {
+    const normalizedPurchase = purchase
+      ? { ...purchase, totalCost: Number(purchase.totalCost || 0) }
+      : null;
+
+    return {
+      purchase: normalizedPurchase,
       vendor,
-      items: enrichedItems,
-      totals,
-      isValid: !!purchase,
-      isEditModalOpen,
-      isDeleteModalOpen,
-    }),
-    [
-      purchase,
-      vendor,
-      enrichedItems,
-      totals,
-      isEditModalOpen,
-      isDeleteModalOpen,
-    ],
-  );
+      items: items || [],
+      isLoading,
+      canEdit: purchase?.status === "pending",
+      canOrder: purchase?.status === "pending",
+      canReceive: purchase?.status === "ordered",
+      canCancel:
+        purchase?.status === "pending" || purchase?.status === "ordered",
+    };
+  }, [purchase, vendor, items, isLoading]);
 
-  // Actions object - memoized
-  const actions = useMemo(
-    () => ({
-      openEdit,
-      closeEdit,
-      openDelete,
-      closeDelete,
-      confirmDelete,
-    }),
-    [openEdit, closeEdit, openDelete, closeDelete, confirmDelete],
-  );
+  const status: AsyncStatus =
+    isPurchaseLoading || isVendorLoading || isItemsLoading
+      ? "loading"
+      : isPurchaseError || !purchase
+        ? "error"
+        : "success";
 
-  const status: PurchaseDetailsStatus = !purchase ? "error" : "success";
-
-  return { status, vm, actions };
+  return {
+    status,
+    vm,
+    actions: {
+      markAsOrdered: handleMarkAsOrdered,
+      receive: handleReceive,
+      cancel: handleCancel,
+      goBack: () => navigate("/tenant/purchases"),
+    },
+  };
 }

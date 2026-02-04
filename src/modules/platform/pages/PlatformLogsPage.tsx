@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import PageBreadcrumb from "@/shared/components/feedback/PageBreadcrumb";
 import RecentActivities from "@/shared/components/dashboard/RecentActivities";
-import { useActivityLogsStore } from "@/modules/platform/store/activityLogs.store";
+import { useActivityLogsFetch } from "../api/queries";
 import { Input } from "@/shared/components/ui/input";
 import {
   Select,
@@ -11,17 +11,36 @@ import {
   SelectValue,
 } from "@/shared/components/ui/select";
 import { Button } from "@/shared/components/ui/button";
-import { ChevronLeft, ChevronRight, FilterX } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  FilterX,
+  RefreshCw,
+  AlertCircle,
+} from "lucide-react";
+import { TableSkeleton } from "@/shared/components/skeletons/TableSkeleton";
 
 const ITEMS_PER_PAGE = 10;
 
 export default function PlatformLogsPage() {
-  const { platformLogs } = useActivityLogsStore();
+  // Fetch logs from API
+  const [page, setPage] = useState(1);
+  const {
+    data: logsData,
+    isLoading,
+    isError,
+    refetch,
+  } = useActivityLogsFetch({
+    page,
+    limit: ITEMS_PER_PAGE,
+  });
+  // Stable reference to logs from API
+  const platformLogs = useMemo(() => logsData?.items || [], [logsData?.items]);
+  const pagination = logsData?.pagination;
 
   // Filters
   const [actionFilter, setActionFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
 
   // Derive unique actions for filter
   const uniqueActions = useMemo(() => {
@@ -29,7 +48,7 @@ export default function PlatformLogsPage() {
     return Array.from(actions).sort();
   }, [platformLogs]);
 
-  // Filtering logic
+  // Filtering logic (client-side on current page)
   const filteredLogs = useMemo(() => {
     let result = [...platformLogs];
 
@@ -53,18 +72,47 @@ export default function PlatformLogsPage() {
     );
   }, [platformLogs, actionFilter, searchQuery]);
 
-  // Pagination logic
-  const totalPages = Math.ceil(filteredLogs.length / ITEMS_PER_PAGE);
-  const paginatedLogs = useMemo(() => {
-    const start = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredLogs.slice(start, start + ITEMS_PER_PAGE);
-  }, [filteredLogs, currentPage]);
+  const totalPages = pagination
+    ? Math.ceil(pagination.total / ITEMS_PER_PAGE)
+    : 1;
 
   const resetFilters = () => {
     setActionFilter("all");
     setSearchQuery("");
-    setCurrentPage(1);
+    setPage(1);
   };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <PageBreadcrumb pageTitle="Platform Logs" />
+        <TableSkeleton rows={10} columns={4} />
+      </div>
+    );
+  }
+
+  // Error state
+  if (isError) {
+    return (
+      <div className="space-y-6">
+        <PageBreadcrumb pageTitle="Platform Logs" />
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            Failed to load activity logs
+          </h3>
+          <p className="text-gray-500 mb-4">
+            Something went wrong. Please try again.
+          </p>
+          <Button variant="outline" onClick={() => refetch()}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -82,7 +130,6 @@ export default function PlatformLogsPage() {
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
-                setCurrentPage(1);
               }}
               className="h-10"
             />
@@ -96,7 +143,6 @@ export default function PlatformLogsPage() {
               value={actionFilter}
               onValueChange={(val) => {
                 setActionFilter(val);
-                setCurrentPage(1);
               }}
             >
               <SelectTrigger className="h-10">
@@ -124,12 +170,13 @@ export default function PlatformLogsPage() {
         </div>
 
         <div className="text-sm text-gray-500">
-          Showing {paginatedLogs.length} of {filteredLogs.length} logs
+          Showing {filteredLogs.length} of{" "}
+          {pagination?.total || filteredLogs.length} logs
         </div>
       </div>
 
       <div className="">
-        <RecentActivities logs={paginatedLogs} title="System Audit Logs" />
+        <RecentActivities logs={filteredLogs} title="System Audit Logs" />
       </div>
 
       {/* Pagination */}
@@ -138,30 +185,31 @@ export default function PlatformLogsPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
           >
             <ChevronLeft className="h-4 w-4 mr-1" />
             Previous
           </Button>
           <div className="flex items-center gap-1">
-            {Array.from({ length: totalPages }).map((_, i) => (
+            {Array.from({ length: Math.min(totalPages, 5) }).map((_, i) => (
               <Button
                 key={i}
-                variant={currentPage === i + 1 ? "primary" : "outline"}
+                variant={page === i + 1 ? "primary" : "outline"}
                 size="sm"
-                onClick={() => setCurrentPage(i + 1)}
+                onClick={() => setPage(i + 1)}
                 className="w-8 h-8 p-0"
               >
                 {i + 1}
               </Button>
             ))}
+            {totalPages > 5 && <span className="px-2 text-gray-500">...</span>}
           </div>
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages}
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
           >
             Next
             <ChevronRight className="h-4 w-4 ml-1" />

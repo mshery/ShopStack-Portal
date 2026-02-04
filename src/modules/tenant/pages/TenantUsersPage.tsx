@@ -15,14 +15,15 @@ import { UserCircleIcon } from "@/shared/components/ui/Icons";
 import EditUserModal from "../components/EditUserModal";
 import DeleteConfirmationModal from "@/shared/components/feedback/DeleteConfirmationModal";
 import { usePermissions } from "@/shared/hooks/usePermissions";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import type { TeamMember } from "../api/tenantApi";
 import type { TenantUser } from "@/shared/types/models";
 
 export default function TenantUsersPage() {
   const { status, vm, actions } = useTenantUsersScreen();
   const { can } = usePermissions();
-  const [selectedUser, setSelectedUser] = useState<TenantUser | null>(null);
-  const [userToDelete, setUserToDelete] = useState<TenantUser | null>(null);
+  const [selectedUser, setSelectedUser] = useState<TeamMember | null>(null);
+  const [userToDelete, setUserToDelete] = useState<TeamMember | null>(null);
 
   if (status === "error") return <div>Error: Tenant context not found.</div>;
 
@@ -46,8 +47,9 @@ export default function TenantUsersPage() {
               Usage
             </span>
             <span
-              className={`text-sm font-bold ${!vm.canAddMore ? "text-red-500" : "text-gray-700"
-                }`}
+              className={`text-sm font-bold ${
+                !vm.canAddMore ? "text-red-500" : "text-gray-700"
+              }`}
             >
               {vm.currentCount} / {vm.maxUsers}
             </span>
@@ -60,7 +62,6 @@ export default function TenantUsersPage() {
               onClick={(e) => !vm.canAddMore && e.preventDefault()}
             >
               <Button
-                variant="primary"
                 disabled={!vm.canAddMore}
                 title={!vm.canAddMore ? "User limit reached for your plan" : ""}
               >
@@ -109,7 +110,7 @@ export default function TenantUsersPage() {
               </TableRow>
             </TableHeader>
             <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
-              {vm.users.map((user: TenantUser) => (
+              {vm.users.map((user: TeamMember) => (
                 <TableRow
                   key={user.id}
                   className="hover:bg-gray-50 dark:hover:bg-white/[0.01]"
@@ -163,7 +164,7 @@ export default function TenantUsersPage() {
                       >
                         <Pencil className="h-4 w-4" />
                       </button>
-                      {(vm.isSuperAdmin || user.createdBy === "tenant") && (
+                      {(vm.isOwner || user.createdBy === "tenant") && (
                         <button
                           onClick={() => setUserToDelete(user)}
                           className="p-2 rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
@@ -176,7 +177,7 @@ export default function TenantUsersPage() {
                   </TableCell>
                 </TableRow>
               ))}
-              {vm.isEmpty && (
+              {vm.users.length === 0 && (
                 <TableRow>
                   <TableCell
                     colSpan={5}
@@ -189,22 +190,69 @@ export default function TenantUsersPage() {
             </TableBody>
           </Table>
         </div>
+
+        {/* Pagination */}
+        {vm.pagination.totalPages > 1 && (
+          <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 dark:border-gray-800">
+            <span className="text-sm text-gray-500 dark:text-gray-400">
+              Page {vm.pagination.currentPage} of {vm.pagination.totalPages}
+            </span>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={actions.prevPage}
+                disabled={vm.pagination.currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={actions.nextPage}
+                disabled={
+                  vm.pagination.currentPage === vm.pagination.totalPages
+                }
+              >
+                Next
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {selectedUser && (
         <EditUserModal
-          user={selectedUser}
+          user={selectedUser as unknown as TenantUser}
           isOpen={!!selectedUser}
           onClose={() => setSelectedUser(null)}
+          onSave={async (id, data) => {
+            const result = await actions.updateUser(id, {
+              name: data.name,
+              email: data.email,
+              role: data.role,
+              status: data.status,
+              phone: data.phone || undefined,
+            });
+            if (result.success) {
+              setSelectedUser(null);
+            }
+            return result;
+          }}
         />
       )}
 
       <DeleteConfirmationModal
         isOpen={!!userToDelete}
         onClose={() => setUserToDelete(null)}
-        onConfirm={() => {
+        onConfirm={async () => {
           if (userToDelete) {
-            actions.deleteUser(userToDelete.id);
+            const result = await actions.deleteUser(userToDelete.id);
+            if (result.success) {
+              setUserToDelete(null);
+            }
           }
         }}
         title="Delete User"

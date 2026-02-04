@@ -16,6 +16,32 @@ interface RecentOrdersProps {
 
 export default function RecentOrders({ orders }: RecentOrdersProps) {
   const { formatPrice } = useTenantCurrency();
+
+  const renderOrderItem = (item: Sale, index: number) => {
+    if (!item) return null;
+    return (
+      <TableRow key={item.id + index} className="">
+        <TableCell className="py-3 text-sm font-medium text-gray-800 dark:text-white/90">
+          {item?.number}
+        </TableCell>
+        <TableCell className="py-3 text-sm text-gray-500 dark:text-gray-400">
+          Customer #{item?.customerId?.split("-").pop()}
+        </TableCell>
+        <TableCell className="py-3 text-sm font-bold text-gray-800 dark:text-white/90">
+          {formatPrice(item?.grandTotal)}
+        </TableCell>
+        <TableCell className="py-3 text-sm text-gray-500 dark:text-gray-400">
+          {formatDate(item?.createdAt)}
+        </TableCell>
+        <TableCell className="py-3">
+          <Badge color="success" size="sm">
+            Completed
+          </Badge>
+        </TableCell>
+      </TableRow>
+    );
+  };
+
   return (
     <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 pb-3 pt-4 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6">
       <div className="flex flex-col gap-2 mb-4 sm:flex-row sm:items-center sm:justify-between">
@@ -69,28 +95,8 @@ export default function RecentOrders({ orders }: RecentOrdersProps) {
           </TableHeader>
 
           <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
-            {orders.map((order) => (
-              <TableRow key={order.id} className="">
-                <TableCell className="py-3 text-sm font-medium text-gray-800 dark:text-white/90">
-                  {order.number}
-                </TableCell>
-                <TableCell className="py-3 text-sm text-gray-500 dark:text-gray-400">
-                  Customer #{order.customerId.split("-").pop()}
-                </TableCell>
-                <TableCell className="py-3 text-sm font-bold text-gray-800 dark:text-white/90">
-                  {formatPrice(order.grandTotal)}
-                </TableCell>
-                <TableCell className="py-3 text-sm text-gray-500 dark:text-gray-400">
-                  {formatDate(order.createdAt)}
-                </TableCell>
-                <TableCell className="py-3">
-                  <Badge color="success" size="sm">
-                    Completed
-                  </Badge>
-                </TableCell>
-              </TableRow>
-            ))}
-            {orders.length === 0 && (
+            {orders?.map(renderOrderItem)}
+            {orders?.length === 0 && (
               <TableRow>
                 <TableCell
                   colSpan={5}

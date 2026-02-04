@@ -1,136 +1,176 @@
-import { useParams, Link } from "react-router-dom";
-import { useTenantsStore } from "@/modules/platform/store/tenants.store";
-import { useUsersStore } from "@/modules/tenant";
-import { useProductsStore } from "@/modules/products";
-import { useActivityLogsStore } from "@/modules/platform/store/activityLogs.store";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import {
+  useTenantFetch,
+  useDeleteTenant,
+  usePlansFetch,
+  useTenantBillingFetch,
+  platformKeys,
+} from "../api/queries";
 import PageBreadcrumb from "@/shared/components/feedback/PageBreadcrumb";
 import MetricCard from "@/shared/components/dashboard/MetricCard";
-import RecentActivities from "@/shared/components/dashboard/RecentActivities";
 import Badge from "@/shared/components/ui/badge";
 import Button from "@/shared/components/ui/button";
+import { Skeleton } from "@/shared/components/ui/skeleton";
 import {
   GroupIcon,
   BoxCubeIcon,
-  ListIcon,
   ArrowLeftIcon,
+  DollarSignIcon,
 } from "@/shared/components/ui/Icons";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { EditTenantModal } from "@/modules/platform/components/EditTenantModal";
 import { DeleteTenantModal } from "@/modules/platform/components/DeleteTenantModal";
 import { TenantBillingTab } from "@/modules/platform/components/TenantBillingTab";
 import { useImpersonation } from "../hooks/useImpersonation";
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuthStore } from "@/modules/auth/store/auth.store";
-import { generateId } from "@/shared/utils/normalize";
-import type {
-  TenantUser,
-  Product,
-  TenantActivityLog,
-  PlatformActivityLog,
-} from "@/shared/types/models";
+import type { Tenant } from "@/shared/types/models";
+import { refetchTenantListPage } from "../utils/tenantQueriesUtils";
+import { useSearchParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 
-type TabType = "overview" | "billing" | "activity";
-
-const LOGS_PER_PAGE = 10;
+// Define strict TabType
+type TabType = "overview" | "billing";
 
 export default function TenantDetailPage() {
   const { tenantId } = useParams<{ tenantId: string }>();
-  const { tenants } = useTenantsStore();
-  const { tenantUsers: allUsers } = useUsersStore();
-  const { products: allProducts } = useProductsStore();
-  const { tenantLogs: allLogs, addPlatformLog } = useActivityLogsStore();
-  const { currentUser } = useAuthStore();
   const navigate = useNavigate();
-  const { removeTenant } = useTenantsStore();
+
+  // Queries
+  const {
+    mutate: deleteTenant,
+    isPending: isDeleting,
+    isSuccess: isDeleted,
+  } = useDeleteTenant();
+
+  const {
+    data: tenant,
+    isLoading,
+    isError,
+    refetch,
+  } = useTenantFetch(tenantId!, !isDeleting && !isDeleted); // Disable fetch if deleting or deleted
+  const { data: plans = [] } = usePlansFetch();
+  const { data: billing } = useTenantBillingFetch(
+    tenantId!,
+    !isDeleting && !isDeleted,
+  ); // Disable fetch if deleting or deleted
+
   const { actions: impersonationActions } = useImpersonation();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>("overview");
-  const [logPage, setLogPage] = useState(1);
 
-  const tenant = useMemo(
-    () => tenants.find((t) => t.id === tenantId),
-    [tenants, tenantId],
+  const [searchParams] = useSearchParams();
+  const queryClient = useQueryClient();
+
+  // Read page/limit/search (safe defaults)
+  const pageFromParams = Number(searchParams.get("page") ?? 1);
+  const limitFromParams = Number(searchParams.get("limit") ?? 10);
+  const searchFromParams = searchParams.get("search") ?? "";
+
+  // Build URL to go back to tenants list with correct page
+  const backToListUrl = `/platform/tenants?page=${pageFromParams}&limit=${limitFromParams}${searchFromParams ? `&search=${searchFromParams}` : ""}`;
+
+  // Derived
+  const currentPlan = useMemo(
+    () => plans.find((p) => p.id === tenant?.planId),
+    [plans, tenant],
   );
-
-  const tenantUsers = useMemo(
-    () => allUsers.filter((u: TenantUser) => u.tenant_id === tenantId),
-    [allUsers, tenantId],
-  );
-
-  const tenantProducts = useMemo(
-    () => allProducts.filter((p: Product) => p.tenant_id === tenantId),
-    [allProducts, tenantId],
-  );
-
-  const tenantLogs = useMemo(
-    () => allLogs.filter((l: TenantActivityLog) => l.tenant_id === tenantId)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
-    [allLogs, tenantId],
-  );
-
-  // Pagination for logs
-  const totalLogPages = Math.ceil(tenantLogs.length / LOGS_PER_PAGE);
-  const paginatedLogs = useMemo(() => {
-    const start = (logPage - 1) * LOGS_PER_PAGE;
-    return tenantLogs.slice(start, start + LOGS_PER_PAGE);
-  }, [tenantLogs, logPage]);
 
   const handleDelete = () => {
-    // Log the deletion
-    const log: PlatformActivityLog = {
-      id: generateId("plog"),
-      action: "tenant_deleted",
-      actorId: currentUser?.id ?? "unknown",
-      targetType: "tenant",
-      targetId: tenant!.id,
-      details: {
-        companyName: tenant!.companyName,
-        slug: tenant!.slug,
+    if (!tenant) return;
+
+    deleteTenant(tenant.id, {
+      onSuccess: async () => {
+        await refetchTenantListPage(queryClient, {
+          page: pageFromParams,
+          limit: limitFromParams,
+          search: searchFromParams,
+        });
+
+        // Optional: remove deleted tenant detail cache
+        queryClient.removeQueries({
+          queryKey: platformKeys.tenantDetail(tenant.id),
+        });
+        navigate("/platform/tenants");
       },
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    addPlatformLog(log);
-
-    // Remove tenant
-    removeTenant(tenantId!);
-
-    // Navigate back to tenants list
-    navigate("/platform/tenants");
+    });
   };
 
-  if (!tenant)
+  if (isLoading) {
     return (
-      <div className="p-6 text-center text-gray-500">Tenant not found</div>
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-10 w-10 rounded-full" />
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-4 w-32" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Skeleton className="h-32" />
+          <Skeleton className="h-32" />
+          <Skeleton className="h-32" />
+        </div>
+      </div>
     );
+  }
 
+  if (isError || !tenant) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center h-[50vh]">
+        <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+          Tenant not found
+        </h3>
+        <p className="text-gray-500 dark:text-gray-400 mb-4">
+          The tenant you are looking for does not exist or has been deleted.
+        </p>
+        <div className="flex gap-4">
+          <Link to={backToListUrl}>
+            <Button variant="outline">Back to List</Button>
+          </Link>
+          <Button variant="primary" onClick={() => refetch()}>
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Use _count from API for metrics
   const metrics = [
     {
       title: "Active Users",
-      value: tenantUsers.length,
-      change: { value: `${tenant.maxUsers} max`, isUp: true },
+      value: tenant._count?.users ?? 0,
+      change: {
+        value: `${currentPlan?.limits.maxUsers ?? "Unlimited"} max`,
+        isUp: true,
+      },
       icon: <GroupIcon className="size-6" />,
     },
     {
       title: "Products",
-      value: tenantProducts.length,
-      change: { value: `${tenant.maxProducts} max`, isUp: true },
+      value: tenant._count?.products ?? 0,
+      change: {
+        value: `${currentPlan?.limits.maxProducts ?? "Unlimited"} max`,
+        isUp: true,
+      },
       icon: <BoxCubeIcon className="size-6" />,
     },
     {
-      title: "Activity Count",
-      value: tenantLogs.length,
-      change: { value: "Recent", isUp: true },
-      icon: <ListIcon className="size-6" />,
+      title: "Sales",
+      value: tenant._count?.sales ?? 0,
+      change: {
+        value: "Total Processed",
+        isUp: true,
+      },
+      icon: <DollarSignIcon className="size-6" />,
     },
   ];
 
   const tabs: { id: TabType; label: string }[] = [
     { id: "overview", label: "Overview" },
     { id: "billing", label: "Billing" },
-    { id: "activity", label: "Activity" },
   ];
 
   return (
@@ -138,7 +178,7 @@ export default function TenantDetailPage() {
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           <Link
-            to="/platform/tenants"
+            to={backToListUrl}
             className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           >
             <ArrowLeftIcon className="size-5 text-gray-500" />
@@ -157,7 +197,8 @@ export default function TenantDetailPage() {
               </Badge>
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Slug: {tenant.slug} • Plan: {tenant.plan.toUpperCase()}
+              Slug: {tenant.slug} • Plan:{" "}
+              {currentPlan?.name?.toUpperCase() ?? "UNKNOWN"}
             </p>
           </div>
         </div>
@@ -190,10 +231,11 @@ export default function TenantDetailPage() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === tab.id
-                ? "border-brand-500 text-brand-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
+              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === tab.id
+                  ? "border-brand-500 text-brand-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
             >
               {tab.label}
             </button>
@@ -218,54 +260,20 @@ export default function TenantDetailPage() {
         </>
       )}
 
-      {activeTab === "billing" && <TenantBillingTab tenantId={tenantId!} />}
-
-      {activeTab === "activity" && (
-        <div className="space-y-4">
-          <RecentActivities
-            logs={paginatedLogs}
-            title="Tenant Activity Audit"
-          />
-
-          {/* Activity Pagination */}
-          {totalLogPages > 1 && (
-            <div className="flex items-center justify-center gap-2 py-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setLogPage((p) => Math.max(1, p - 1))}
-                disabled={logPage === 1}
-              >
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Previous
-              </Button>
-              <span className="text-sm text-gray-500 px-4">
-                Page {logPage} of {totalLogPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setLogPage((p) => Math.min(totalLogPages, p + 1))}
-                disabled={logPage === totalLogPages}
-              >
-                Next
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-            </div>
-          )}
-        </div>
+      {activeTab === "billing" && (
+        <TenantBillingTab billing={billing} invoices={tenant.invoices || []} />
       )}
 
       {/* Edit Modal */}
       <EditTenantModal
-        tenant={tenant}
+        tenant={tenant as unknown as Tenant}
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
       />
 
       {/* Delete Modal */}
       <DeleteTenantModal
-        tenant={tenant}
+        tenant={tenant as unknown as Tenant}
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={handleDelete}
