@@ -27,6 +27,7 @@ import type {
   InvoiceStatus,
   SubscriptionPlan,
 } from "@/shared/types/models";
+import ConfirmModal from "@/shared/components/feedback/ConfirmModal";
 
 // Card brand logos as simple SVG components
 function MastercardLogo() {
@@ -75,6 +76,10 @@ export default function BillingPage() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [editingPaymentMethod, setEditingPaymentMethod] =
     useState<BillingPaymentMethod | null>(null);
+  const [deletePaymentMethodId, setDeletePaymentMethodId] = useState<
+    string | null
+  >(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleUpgradeClick = (plan: SubscriptionPlan) => {
     setSelectedPlan(plan);
@@ -115,10 +120,20 @@ export default function BillingPage() {
   };
 
   // Handle delete payment method
-  const handleDeletePaymentMethod = async (methodId: string) => {
-    if (confirm("Are you sure you want to delete this payment method?")) {
-      await actions.removePaymentMethod(methodId);
+  const handleDeletePaymentMethod = (methodId: string) => {
+    setDeletePaymentMethodId(methodId);
+  };
+
+  const confirmDeletePaymentMethod = async () => {
+    if (!deletePaymentMethodId) return;
+
+    setIsDeleting(true);
+    try {
+      await actions.removePaymentMethod(deletePaymentMethodId);
       actions.refresh();
+    } finally {
+      setIsDeleting(false);
+      setDeletePaymentMethodId(null);
     }
   };
 
@@ -567,6 +582,18 @@ export default function BillingPage() {
         }}
         method={editingPaymentMethod}
         onSave={handlePaymentMethodSave}
+      />
+
+      {/* Delete Payment Method Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!deletePaymentMethodId}
+        onClose={() => setDeletePaymentMethodId(null)}
+        onConfirm={confirmDeletePaymentMethod}
+        title="Delete Payment Method"
+        message="Are you sure you want to delete this payment method? This action cannot be undone."
+        confirmText="Delete"
+        variant="danger"
+        isLoading={isDeleting}
       />
     </>
   );

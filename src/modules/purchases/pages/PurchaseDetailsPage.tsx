@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { usePurchaseDetailsScreen } from "../hooks/usePurchaseDetailsScreen";
 import PageBreadcrumb from "@/shared/components/feedback/PageBreadcrumb";
@@ -21,10 +22,12 @@ import {
 } from "lucide-react";
 import { formatDateTime } from "@/shared/utils/format";
 import { useTenantCurrency } from "@/modules/tenant";
+import ConfirmModal from "@/shared/components/feedback/ConfirmModal";
 
 export default function PurchaseDetailsPage() {
   const { status, vm, actions } = usePurchaseDetailsScreen();
   const { formatPrice } = useTenantCurrency();
+  const [showCancelModal, setShowCancelModal] = useState(false);
 
   // Loading state
   if (status === "loading") {
@@ -140,7 +143,7 @@ export default function PurchaseDetailsPage() {
     headerActions.push({
       label: "Cancel Order",
       icon: Ban,
-      onClick: actions.cancel,
+      onClick: () => setShowCancelModal(true),
       variant: "danger" as const,
     });
   }
@@ -293,6 +296,21 @@ export default function PurchaseDetailsPage() {
           </InfoSection>
         </div>
       </div>
+
+      {/* Cancel Order Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showCancelModal}
+        onClose={() => setShowCancelModal(false)}
+        onConfirm={async () => {
+          await actions.cancel();
+          setShowCancelModal(false);
+        }}
+        title="Cancel Purchase Order"
+        message={`Are you sure you want to cancel purchase order ${purchase.purchaseNumber}? This action cannot be undone.`}
+        confirmText="Cancel Order"
+        variant="danger"
+        isLoading={vm.isLoading}
+      />
     </>
   );
 }

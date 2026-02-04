@@ -29,6 +29,7 @@ import {
 } from "@/shared/components/ui/tabs";
 import { useState } from "react";
 import type { Sale } from "@/shared/types/models";
+import ConfirmModal from "@/shared/components/feedback/ConfirmModal";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -36,28 +37,30 @@ export default function SalesHistoryPage() {
   const { status, vm, actions } = useSalesHistoryLogic();
   const { formatPrice } = useTenantCurrency();
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
+  const [refundConfirm, setRefundConfirm] = useState<Sale | null>(null);
 
   if (status === "loading") {
     return <PageSkeleton />;
   }
 
   const handleRefundSale = async (sale: Sale) => {
-    if (
-      confirm(
-        `Are you sure you want to refund order #${sale.number}? This will restore stock for all items.`,
-      )
-    ) {
-      setIsProcessing(sale.id);
-      const refundItems = sale.lineItems.map((item) => ({
-        productId: item.productId,
-        productName: item.nameSnapshot,
-        quantity: item.quantity,
-        refundAmount: item.subtotal,
-      }));
+    setRefundConfirm(sale);
+  };
 
-      actions.refund(sale.id, refundItems, "Customer Return");
-      setIsProcessing(null);
-    }
+  const confirmRefund = async () => {
+    if (!refundConfirm) return;
+
+    setIsProcessing(refundConfirm.id);
+    const refundItems = refundConfirm.lineItems.map((item) => ({
+      productId: item.productId,
+      productName: item.nameSnapshot,
+      quantity: item.quantity,
+      refundAmount: item.subtotal,
+    }));
+
+    await actions.refund(refundConfirm.id, refundItems, "Customer Return");
+    setIsProcessing(null);
+    setRefundConfirm(null);
   };
 
   return (
@@ -355,6 +358,18 @@ export default function SalesHistoryPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Refund Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!refundConfirm}
+        onClose={() => setRefundConfirm(null)}
+        onConfirm={confirmRefund}
+        title="Confirm Refund"
+        message={`Are you sure you want to refund order #${refundConfirm?.number}? This will restore stock for all items.`}
+        confirmText="Process Refund"
+        variant="warning"
+        isLoading={isProcessing === refundConfirm?.id}
+      />
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
+import toast from "react-hot-toast";
 import { useAuthStore } from "@/modules/auth";
 import {
   type AsyncStatus,
@@ -141,6 +142,9 @@ export function useSalesHistoryLogic() {
         totalItems: refundsData?.pagination.total || 0,
         limit,
       },
+
+      // Loading states for buttons
+      isRefunding: processRefundMutation.isPending,
     }),
     [
       tenantSales,
@@ -153,6 +157,7 @@ export function useSalesHistoryLogic() {
       ordersPage,
       refundsPage,
       limit,
+      processRefundMutation.isPending,
     ],
   );
 
@@ -171,8 +176,11 @@ export function useSalesHistoryLogic() {
           })),
           reason,
         });
+        toast.success("Refund processed successfully");
         return refund.id;
       } catch (e) {
+        const message = e instanceof Error ? e.message : "Refund failed";
+        toast.error(message);
         console.error("Refund failed", e);
         throw e;
       }

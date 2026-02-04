@@ -59,8 +59,6 @@ export function usePurchaseDetailsScreen() {
 
   const handleCancel = useCallback(async () => {
     if (!purchase) return;
-    if (!confirm("Are you sure you want to cancel this purchase order?"))
-      return;
 
     try {
       await cancelPurchaseMutation.mutateAsync(purchase.id);

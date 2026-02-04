@@ -3,6 +3,7 @@ import { useAuthStore } from "@/modules/auth";
 import { useParams, useSearchParams } from "react-router-dom";
 import { useCustomersFetch, useDeleteCustomer } from "../api/queries";
 import { useDebounce } from "@/shared/hooks/useDebounce";
+import toast from "react-hot-toast";
 
 export type CustomersStatus = "loading" | "error" | "empty" | "success";
 
@@ -55,8 +56,15 @@ export function useCustomersScreen() {
   const deleteMutation = useDeleteCustomer();
 
   const deleteCustomer = useCallback(
-    (customerId: string) => {
-      deleteMutation.mutate(customerId);
+    async (customerId: string) => {
+      try {
+        await deleteMutation.mutateAsync(customerId);
+        toast.success("Customer deleted successfully");
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Failed to delete customer";
+        toast.error(message);
+      }
     },
     [deleteMutation],
   );
@@ -81,6 +89,7 @@ export function useCustomersScreen() {
       isEmpty: !isLoading && customers.length === 0,
       tenantId,
       isSuperAdmin,
+      isDeleting: deleteMutation.isPending,
     }),
     [
       customers,
@@ -92,6 +101,7 @@ export function useCustomersScreen() {
       isLoading,
       tenantId,
       isSuperAdmin,
+      deleteMutation.isPending,
     ],
   );
 

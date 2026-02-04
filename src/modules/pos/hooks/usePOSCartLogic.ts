@@ -1,4 +1,5 @@
 import { useMemo, useCallback, useState } from "react";
+import toast from "react-hot-toast";
 import { useAuthStore } from "@/modules/auth";
 import { usePOSStore } from "@/modules/pos";
 import { useCustomersStore } from "@/modules/customers";
@@ -169,6 +170,10 @@ export function usePOSCartLogic() {
       heldOrders,
       tenantSettings,
       orderStats,
+
+      // Loading states for buttons
+      isCheckingOut: createSaleMutation.isPending,
+      isHolding: createHeldOrderMutation.isPending,
     }),
     [
       tenantCustomers,
@@ -183,6 +188,8 @@ export function usePOSCartLogic() {
       heldOrders,
       tenantSettings,
       orderStats,
+      createSaleMutation.isPending,
+      createHeldOrderMutation.isPending,
     ],
   );
 
@@ -195,7 +202,7 @@ export function usePOSCartLogic() {
       const currentQty = existingItem?.quantity || 0;
 
       if (currentQty >= product.currentStock) {
-        // Could show a toast notification here
+        toast.error(`Only ${product.currentStock} items available in stock`);
         return;
       }
 
@@ -219,7 +226,7 @@ export function usePOSCartLogic() {
       }
 
       if (newQty > item.product.currentStock) {
-        // Could show a toast notification here
+        toast.error(`Only ${item.product.currentStock} items available`);
         return;
       }
 
@@ -293,13 +300,15 @@ export function usePOSCartLogic() {
       // 3. Clear Cart & Update Local State
       clearCart();
       setLastCheckout({ sale, receipt });
+      toast.success("Sale completed successfully");
 
       // 4. Log audit events (optional, if frontend logging is still needed)
       // logSaleCompletion(sale, currentUser.id);
     } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Checkout failed";
+      toast.error(message);
       console.error("Checkout failed:", error);
-      // Handle error (show toast)
-      alert("Checkout failed. Please try again.");
     }
   }, [
     activeTenantId,
@@ -330,13 +339,16 @@ export function usePOSCartLogic() {
       await createHeldOrderMutation.mutateAsync(heldOrderInput);
 
       clearCart();
+      toast.success("Order held successfully");
 
       // Log audit event
       // const tenantId = cart[0]?.product.tenant_id || activeTenantId;
       // logOrderHold(order, currentUser.id, tenantId); // Need to adapt logger if needed
     } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to hold order";
+      toast.error(message);
       console.error("Failed to hold order", error);
-      alert("Failed to hold order");
     }
   }, [
     cart,

@@ -6,6 +6,7 @@ import {
   useExpenseSummaryFetch,
   useDeleteExpense,
 } from "../api/queries";
+import toast from "react-hot-toast";
 
 export type ExpensesStatus = "loading" | "error" | "empty" | "success";
 
@@ -100,8 +101,15 @@ export function useExpensesScreen() {
   const deleteMutation = useDeleteExpense();
 
   const deleteExpense = useCallback(
-    (expenseId: string) => {
-      deleteMutation.mutate(expenseId);
+    async (expenseId: string) => {
+      try {
+        await deleteMutation.mutateAsync(expenseId);
+        toast.success("Expense deleted successfully");
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Failed to delete expense";
+        toast.error(message);
+      }
     },
     [deleteMutation],
   );
@@ -163,6 +171,7 @@ export function useExpensesScreen() {
       isEmpty: !isListLoading && expenses.length === 0,
       tenantId,
       isOwner,
+      isDeleting: deleteMutation.isPending,
     }),
     [
       expenses,
@@ -177,6 +186,7 @@ export function useExpensesScreen() {
       isListLoading,
       tenantId,
       isOwner,
+      deleteMutation.isPending,
     ],
   );
 

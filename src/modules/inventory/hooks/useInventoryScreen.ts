@@ -49,6 +49,7 @@ export function useInventoryScreen() {
     isAdjustmentModalOpen,
     isLoading: status === "loading",
     isError: status === "error",
+    isCreating: createMutation.isPending,
   };
 
   const actions = {
