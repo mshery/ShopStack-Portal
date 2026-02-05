@@ -71,31 +71,80 @@ export const ProductGrid = memo(function ProductGrid({
     };
   };
 
-  // Loading skeleton
+  // Loading skeleton - Premium shimmer effect
   if (isLoading) {
     return (
       <div className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 no-scrollbar">
         <div className="p-4 md:p-6">
+          {/* Results count skeleton */}
+          <div className="mb-5">
+            <Skeleton className="h-4 w-32" />
+          </div>
+
           <div
-            className={`grid gap-5 ${
+            className={`grid gap-4 md:gap-5 ${
               viewMode === "grid"
                 ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
                 : "grid-cols-1"
             }`}
           >
-            {Array.from({ length: 12 }).map((_, i) => (
-              <div
-                key={i}
-                className="rounded-2xl bg-white dark:bg-gray-900 overflow-hidden"
-              >
-                <Skeleton className="aspect-square w-full rounded-none" />
-                <div className="p-4 space-y-3">
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-3 w-1/2" />
-                  <Skeleton className="h-11 w-full mt-3 rounded-xl" />
+            {Array.from({ length: 12 }).map((_, i) =>
+              viewMode === "grid" ? (
+                // Grid view skeleton - matches product card exactly
+                <div
+                  key={i}
+                  className="rounded-2xl bg-white dark:bg-gray-800 overflow-hidden border border-gray-100 dark:border-gray-700"
+                >
+                  {/* Image placeholder */}
+                  <Skeleton className="aspect-square w-full rounded-none" />
+
+                  {/* Content */}
+                  <div className="p-4 space-y-3">
+                    {/* Stock badge */}
+                    <Skeleton className="h-6 w-20 rounded-full" />
+
+                    {/* Title */}
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-4 w-3/4" />
+                    </div>
+
+                    {/* SKU */}
+                    <Skeleton className="h-3 w-16" />
+
+                    {/* Price */}
+                    <Skeleton className="h-6 w-24" />
+
+                    {/* Add to cart button */}
+                    <Skeleton className="h-12 w-full rounded-xl" />
+                  </div>
                 </div>
-              </div>
-            ))}
+              ) : (
+                // List view skeleton
+                <div
+                  key={i}
+                  className="flex items-center gap-4 p-4 rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700"
+                >
+                  {/* Image */}
+                  <Skeleton className="w-20 h-20 rounded-xl shrink-0" />
+
+                  {/* Content */}
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <Skeleton className="h-5 w-48" />
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-3 w-20" />
+                      <Skeleton className="h-5 w-16 rounded-full" />
+                    </div>
+                  </div>
+
+                  {/* Price */}
+                  <Skeleton className="h-6 w-20 shrink-0" />
+
+                  {/* Button */}
+                  <Skeleton className="h-12 w-24 rounded-xl shrink-0" />
+                </div>
+              ),
+            )}
           </div>
         </div>
       </div>

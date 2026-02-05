@@ -198,6 +198,7 @@ export default function CartPage() {
       selectedCategory: selectedCategoryName,
       search: filters.search,
       getCategoryName,
+      isLoading: productQuery.isLoading,
     }),
     [
       products,
@@ -208,6 +209,7 @@ export default function CartPage() {
       selectedCategoryName,
       filters.search,
       getCategoryName,
+      productQuery.isLoading,
     ],
   );
 
