@@ -210,10 +210,10 @@ export default function AddPurchaseModal({
                 {lineItems.map((item, index) => (
                   <div
                     key={index}
-                    className="flex gap-3 items-end p-3 border border-gray-200 dark:border-gray-700 rounded-lg"
+                    className="flex flex-col md:flex-row gap-3 md:items-end p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50/50 dark:bg-gray-800/50"
                   >
-                    <div className="flex-1">
-                      <Label className="text-xs">Product</Label>
+                    <div className="flex-1 w-full">
+                      <Label className="text-xs mb-1.5 block">Product</Label>
                       <AsyncProductSelect
                         value={item.productId}
                         onSelect={(product) =>
@@ -221,54 +221,62 @@ export default function AddPurchaseModal({
                         }
                       />
                     </div>
-                    <div className="w-24">
-                      <Label className="text-xs">Quantity</Label>
-                      <Input
-                        type="number"
-                        min="1"
-                        value={item.quantity}
-                        onChange={(e) =>
-                          updateLineItem(
-                            index,
-                            "quantity",
-                            parseInt(e.target.value) || 1,
-                          )
-                        }
-                        className="h-9"
-                      />
+                    <div className="grid grid-cols-2 md:flex gap-3 w-full md:w-auto">
+                      <div className="w-full md:w-24">
+                        <Label className="text-xs mb-1.5 block">Quantity</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={item.quantity}
+                          onChange={(e) =>
+                            updateLineItem(
+                              index,
+                              "quantity",
+                              parseInt(e.target.value) || 1,
+                            )
+                          }
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="w-full md:w-28">
+                        <Label className="text-xs mb-1.5 block">
+                          Cost Price
+                        </Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={item.costPrice}
+                          onChange={(e) =>
+                            updateLineItem(
+                              index,
+                              "costPrice",
+                              parseFloat(e.target.value) || 0,
+                            )
+                          }
+                          className="h-9"
+                        />
+                      </div>
                     </div>
-                    <div className="w-28">
-                      <Label className="text-xs">Cost Price</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={item.costPrice}
-                        onChange={(e) =>
-                          updateLineItem(
-                            index,
-                            "costPrice",
-                            parseFloat(e.target.value) || 0,
-                          )
-                        }
-                        className="h-9"
-                      />
-                    </div>
-                    <div className="w-28">
-                      <Label className="text-xs">Subtotal</Label>
-                      <div className="h-9 flex items-center text-sm font-semibold">
+                    <div className="flex items-center justify-between md:block w-full md:w-28 mt-2 md:mt-0">
+                      <div className="md:hidden text-sm font-medium text-gray-500">
+                        Subtotal
+                      </div>
+                      <div className="h-9 flex items-center text-sm font-semibold text-brand-600 dark:text-brand-400">
                         {formatPrice(item.quantity * item.costPrice)}
                       </div>
                     </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => removeLineItem(index)}
-                      className="h-9 w-9 p-0"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
+                    <div className="flex justify-end md:block mt-2 md:mt-0">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeLineItem(index)}
+                        className="h-9 w-9 p-0 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
                 {lineItems.length === 0 && (

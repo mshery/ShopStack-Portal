@@ -100,9 +100,9 @@ export const ProductGrid = memo(function ProductGrid({
           </div>
 
           <div
-            className={`grid gap-4 md:gap-5 ${
+            className={`grid gap-3 md:gap-5 ${
               viewMode === "grid"
-                ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+                ? "grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
                 : "grid-cols-1"
             }`}
           >
@@ -226,7 +226,7 @@ export const ProductGrid = memo(function ProductGrid({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.15 }}
-                className="grid grid-cols-2 gap-4 md:gap-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+                className="grid grid-cols-1 xs:grid-cols-2 gap-3 md:gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 pb-20 md:pb-0"
               >
                 {products.map((product) => {
                   const inCart = cartProductIds.has(product.id);
@@ -321,11 +321,11 @@ export const ProductGrid = memo(function ProductGrid({
                               Add More
                             </>
                           ) : isOutOfStock ? (
-                            "Out of Stock"
+                            "Out"
                           ) : (
                             <>
                               <Plus className="w-4 h-4" />
-                              Add to Cart
+                              Add
                             </>
                           )}
                         </button>
@@ -357,12 +357,12 @@ export const ProductGrid = memo(function ProductGrid({
                   return (
                     <div
                       key={product.id}
-                      className={`group flex items-center gap-4 p-4 rounded-2xl bg-white dark:bg-gray-800 hover:shadow-lg hover:shadow-gray-200/50 dark:shadow-gray-950/50 dark:hover:shadow-gray-950/80 border border-gray-100 dark:border-gray-700 transition-all ${
+                      className={`group flex items-center gap-3 md:gap-4 p-3 md:p-4 rounded-2xl bg-white dark:bg-gray-800 hover:shadow-lg hover:shadow-gray-200/50 dark:shadow-gray-950/50 dark:hover:shadow-gray-950/80 border border-gray-100 dark:border-gray-700 transition-all ${
                         isOutOfStock ? "opacity-60" : ""
                       }`}
                     >
                       {/* Product Image */}
-                      <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-850 flex-shrink-0">
+                      <div className="relative w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-850 flex-shrink-0">
                         {product.imageUrl ? (
                           <img
                             src={product.imageUrl}
@@ -371,7 +371,7 @@ export const ProductGrid = memo(function ProductGrid({
                           />
                         ) : (
                           <div className="h-full w-full flex items-center justify-center">
-                            <Package className="h-8 w-8 text-gray-200 dark:text-gray-700" />
+                            <Package className="h-6 w-6 md:h-8 md:w-8 text-gray-200 dark:text-gray-700" />
                           </div>
                         )}
                       </div>
@@ -421,7 +421,7 @@ export const ProductGrid = memo(function ProductGrid({
                       <button
                         onClick={() => handleProductClick(product)}
                         disabled={isOutOfStock}
-                        className={`flex-shrink-0 flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold transition-all ${
+                        className={`flex-shrink-0 flex items-center justify-center gap-2 px-3 py-2 md:px-5 md:py-3 rounded-xl text-sm font-semibold transition-all ${
                           inCart
                             ? "bg-brand-500 text-white hover:bg-brand-600 active:scale-[0.98]"
                             : isOutOfStock
@@ -430,9 +430,10 @@ export const ProductGrid = memo(function ProductGrid({
                         }`}
                       >
                         <Plus className="w-4 h-4" />
-                        <span>
+                        <span className="hidden md:inline">
                           {inCart ? "Add" : isOutOfStock ? "N/A" : "Add"}
                         </span>
+                        <span className="md:hidden">Add</span>
                       </button>
                     </div>
                   );

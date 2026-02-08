@@ -124,105 +124,109 @@ export default function PurchasesPage() {
             </div>
           ) : (
             <>
-              <Table>
-                <TableHeader className="border-y border-gray-100 dark:border-gray-800">
-                  <TableRow>
-                    <TableCell
-                      isHeader
-                      className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-start text-xs uppercase tracking-wider"
-                    >
-                      PO Number
-                    </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-start text-xs uppercase tracking-wider"
-                    >
-                      Vendor
-                    </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-start text-xs uppercase tracking-wider"
-                    >
-                      Total Cost
-                    </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-start text-xs uppercase tracking-wider"
-                    >
-                      Status
-                    </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-start text-xs uppercase tracking-wider"
-                    >
-                      Date
-                    </TableCell>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {vm.purchases.map((purchase) => (
-                    <TableRow
-                      key={purchase.id}
-                      className="hover:bg-gray-50/50 dark:hover:bg-white/[0.01] cursor-pointer"
-                    >
-                      <TableCell className="px-6 py-4">
-                        <Link
-                          to={`/tenant/purchases/${purchase.id}`}
-                          className="flex items-center gap-2"
-                        >
-                          <FileText className="h-4 w-4 text-gray-400" />
-                          <span className="font-bold text-brand-600 dark:text-brand-400">
-                            {purchase.purchaseNumber}
-                          </span>
-                        </Link>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader className="border-y border-gray-100 dark:border-gray-800">
+                    <TableRow>
+                      <TableCell
+                        isHeader
+                        className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-start text-xs uppercase tracking-wider whitespace-nowrap"
+                      >
+                        PO Number
                       </TableCell>
-                      <TableCell className="px-6 py-4">
-                        <Link to={`/tenant/purchases/${purchase.id}`}>
-                          <span className="font-medium text-gray-900 dark:text-white">
-                            {(
-                              purchase as Purchase & {
-                                vendor?: { name: string };
-                              }
-                            ).vendor?.name || "Unknown Vendor"}
-                          </span>
-                        </Link>
+                      <TableCell
+                        isHeader
+                        className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-start text-xs uppercase tracking-wider"
+                      >
+                        Vendor
                       </TableCell>
-                      <TableCell className="px-6 py-4">
-                        <Link
-                          to={`/tenant/purchases/${purchase.id}`}
-                          className="font-bold text-gray-900 dark:text-white"
-                        >
-                          {formatPrice(purchase.totalCost)}
-                        </Link>
+                      <TableCell
+                        isHeader
+                        className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-start text-xs uppercase tracking-wider"
+                      >
+                        Total Cost
                       </TableCell>
-                      <TableCell className="px-6 py-4">
-                        <Link
-                          to={`/tenant/purchases/${purchase.id}`}
-                          className="inline-block"
-                        >
-                          {getStatusBadge(purchase.status)}
-                        </Link>
+                      <TableCell
+                        isHeader
+                        className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-start text-xs uppercase tracking-wider"
+                      >
+                        Status
                       </TableCell>
-                      <TableCell className="px-6 py-4">
-                        <Link
-                          to={`/tenant/purchases/${purchase.id}`}
-                          className="text-xs text-gray-500"
-                        >
-                          <div className="flex flex-col">
-                            <span>{formatDateTime(purchase.purchaseDate)}</span>
-                            {purchase.receivedDate && (
-                              <span className="text-[10px] text-green-600 dark:text-green-500 flex items-center gap-0.5">
-                                <CheckCircle2 className="h-2 w-2" /> Received:{" "}
-                                {formatDateTime(purchase.receivedDate)}
-                              </span>
-                            )}
-                          </div>
-                        </Link>
+                      <TableCell
+                        isHeader
+                        className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-start text-xs uppercase tracking-wider"
+                      >
+                        Date
                       </TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {vm.purchases.map((purchase) => (
+                      <TableRow
+                        key={purchase.id}
+                        className="hover:bg-gray-50/50 dark:hover:bg-white/[0.01] cursor-pointer"
+                      >
+                        <TableCell className="px-6 py-4">
+                          <Link
+                            to={`/tenant/purchases/${purchase.id}`}
+                            className="flex items-center gap-2"
+                          >
+                            <FileText className="h-4 w-4 text-gray-400" />
+                            <span className="font-bold text-brand-600 dark:text-brand-400">
+                              {purchase.purchaseNumber}
+                            </span>
+                          </Link>
+                        </TableCell>
+                        <TableCell className="px-6 py-4">
+                          <Link to={`/tenant/purchases/${purchase.id}`}>
+                            <span className="font-medium text-gray-900 dark:text-white">
+                              {(
+                                purchase as Purchase & {
+                                  vendor?: { name: string };
+                                }
+                              ).vendor?.name || "Unknown Vendor"}
+                            </span>
+                          </Link>
+                        </TableCell>
+                        <TableCell className="px-6 py-4">
+                          <Link
+                            to={`/tenant/purchases/${purchase.id}`}
+                            className="font-bold text-gray-900 dark:text-white"
+                          >
+                            {formatPrice(purchase.totalCost)}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="px-6 py-4">
+                          <Link
+                            to={`/tenant/purchases/${purchase.id}`}
+                            className="inline-block"
+                          >
+                            {getStatusBadge(purchase.status)}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="px-6 py-4">
+                          <Link
+                            to={`/tenant/purchases/${purchase.id}`}
+                            className="text-xs text-gray-500"
+                          >
+                            <div className="flex flex-col">
+                              <span>
+                                {formatDateTime(purchase.purchaseDate)}
+                              </span>
+                              {purchase.receivedDate && (
+                                <span className="text-[10px] text-green-600 dark:text-green-500 flex items-center gap-0.5">
+                                  <CheckCircle2 className="h-2 w-2" /> Received:{" "}
+                                  {formatDateTime(purchase.receivedDate)}
+                                </span>
+                              )}
+                            </div>
+                          </Link>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
               {vm.pagination.totalPages > 1 && (
                 <div className="p-4 border-t border-gray-100 dark:border-gray-800">
                   <Pagination

@@ -3,6 +3,7 @@ import { Modal } from "@/shared/components/ui/Modal";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
+import { X } from "lucide-react";
 import type { Vendor } from "@/shared/types/models";
 
 import type { UpdateVendorInput } from "@/modules/vendors/api/vendorsApi";
@@ -64,8 +65,20 @@ export default function EditVendorModal({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} className="max-w-[700px] m-4">
-      <div className="relative w-full max-w-[700px] overflow-y-auto rounded-3xl bg-white p-4 dark:bg-gray-900 lg:p-11">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      className="max-w-[700px] m-4"
+      showCloseButton={false}
+    >
+      <div className="relative w-full max-w-[700px] max-h-[90vh] overflow-y-auto rounded-3xl bg-white p-4 dark:bg-gray-900 lg:p-11 custom-scrollbar">
+        {/* Custom Close Button */}
+        <button
+          onClick={onClose}
+          className="absolute right-4 top-4 p-2 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors z-10"
+        >
+          <X className="h-5 w-5" />
+        </button>
         <div className="px-2 pr-14">
           <h4 className="mb-2 text-2xl font-semibold text-gray-800 dark:text-white/90">
             Edit Vendor

@@ -126,10 +126,12 @@ export function CategoryFilter({
       <div className="md:hidden">
         <button
           onClick={() => setShowMobileModal(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 text-sm font-medium"
+          className="flex items-center gap-2 px-3 py-2 w-full rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 text-sm font-medium transition-colors hover:bg-gray-200 dark:hover:bg-gray-700"
         >
-          <Filter className="w-4 h-4" />
-          <span>{selectedCategoryName}</span>
+          <Filter className="w-4 h-4 flex-shrink-0" />
+          <span className="truncate flex-1 text-left">
+            {selectedCategoryName}
+          </span>
         </button>
       </div>
 

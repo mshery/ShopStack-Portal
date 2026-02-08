@@ -229,7 +229,7 @@ export default function CartPage() {
   }, [filters]);
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] flex-col bg-gray-50 dark:bg-gray-900">
+    <div className="flex h-[100dvh] md:h-[calc(100vh-4rem)] flex-col bg-gray-50 dark:bg-gray-900 overflow-hidden">
       {/* Header */}
       <CartHeader
         search={filters.search}
@@ -240,13 +240,15 @@ export default function CartPage() {
 
       {/* Control Bar - Floating card matching header */}
       <div className="px-4 md:px-6 pt-3">
-        <div className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-2xl shadow-sm">
+        <div className="flex items-center gap-2 md:gap-3 p-2 md:p-3 bg-white dark:bg-gray-800 rounded-2xl shadow-sm">
           {/* Categories */}
-          <CategoryFilter
-            categories={categories}
-            selectedCategory={filters.category || null}
-            onCategoryChange={productActions.setCategory}
-          />
+          <div className="flex-1 min-w-0">
+            <CategoryFilter
+              categories={categories}
+              selectedCategory={filters.category || null}
+              onCategoryChange={productActions.setCategory}
+            />
+          </div>
 
           {/* Right side controls */}
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -264,7 +266,7 @@ export default function CartPage() {
                 )
               }
             >
-              <SelectTrigger className="w-[110px] h-9 text-sm bg-gray-50 dark:bg-gray-800 border-0 rounded-xl">
+              <SelectTrigger className="w-[90px] md:w-[110px] h-9 text-sm bg-gray-50 dark:bg-gray-800 border-0 rounded-xl px-2">
                 <SelectValue placeholder="Sort" />
               </SelectTrigger>
               <SelectContent>

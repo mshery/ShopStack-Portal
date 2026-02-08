@@ -139,39 +139,47 @@ export default function CategoriesPage() {
       {isAddingNew && (
         <Card className="rounded-2xl border-brand-200 dark:border-brand-800 bg-brand-50/50 dark:bg-brand-900/10">
           <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 dark:bg-brand-900/20">
-                <Tag className="h-5 w-5 text-brand-600 dark:text-brand-400" />
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 dark:bg-brand-900/20">
+                  <Tag className="h-5 w-5 text-brand-600 dark:text-brand-400" />
+                </div>
+                <div className="flex-1 sm:hidden">
+                  {/* Values are mirrored here for mobile layout if needed, but we just want the input to be full width below or beside icon */}
+                </div>
               </div>
+
               <div className="flex-1">
                 <Input
                   autoFocus
                   placeholder="Enter category name..."
-                  className="h-10 border-brand-200 dark:border-brand-800"
+                  className="h-10 border-brand-200 dark:border-brand-800 w-full"
                   value={newCategoryName}
                   onChange={(e) => setNewCategoryName(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleAddCategory()}
                 />
               </div>
-              <Button
-                onClick={handleAddCategory}
-                disabled={!newCategoryName.trim() || vm.isCreating}
-                className="h-10 px-4 bg-brand-600 hover:bg-brand-700"
-              >
-                <Check className="h-4 w-4 mr-1" />
-                {vm.isCreating ? "Saving..." : "Save"}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setIsAddingNew(false);
-                  setNewCategoryName("");
-                }}
-                className="h-10 px-4"
-              >
-                <X className="h-4 w-4 mr-1" />
-                Cancel
-              </Button>
+              <div className="flex items-center gap-2 mt-2 sm:mt-0">
+                <Button
+                  onClick={handleAddCategory}
+                  disabled={!newCategoryName.trim() || vm.isCreating}
+                  className="h-10 px-4 flex-1 sm:flex-none bg-brand-600 hover:bg-brand-700"
+                >
+                  <Check className="h-4 w-4 mr-1" />
+                  {vm.isCreating ? "Saving..." : "Save"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsAddingNew(false);
+                    setNewCategoryName("");
+                  }}
+                  className="h-10 px-4 flex-1 sm:flex-none"
+                >
+                  <X className="h-4 w-4 mr-1" />
+                  Cancel
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -190,108 +198,110 @@ export default function CategoriesPage() {
       ) : viewMode === "table" ? (
         <Card className="rounded-2xl border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
           <CardContent className="p-0">
-            <Table>
-              <TableHeader className="border-y border-gray-100 dark:border-gray-800">
-                <TableRow>
-                  <TableCell
-                    isHeader
-                    className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-start text-xs uppercase tracking-wider"
-                  >
-                    Category
-                  </TableCell>
-                  <TableCell
-                    isHeader
-                    className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-start text-xs uppercase tracking-wider"
-                  >
-                    Products
-                  </TableCell>
-                  <TableCell
-                    isHeader
-                    className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-start text-xs uppercase tracking-wider"
-                  >
-                    Created On
-                  </TableCell>
-                  <TableCell
-                    isHeader
-                    className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-end text-xs uppercase tracking-wider w-32"
-                  >
-                    Actions
-                  </TableCell>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {vm.categories.map((category) => (
-                  <TableRow
-                    key={category.id}
-                    className="hover:bg-gray-50/50 dark:hover:bg-white/[0.01]"
-                  >
-                    <TableCell className="px-6 py-4">
-                      {vm.editingId === category.id ? (
-                        <div className="flex items-center gap-2">
-                          <Input
-                            autoFocus
-                            value={vm.editingName}
-                            onChange={(e) =>
-                              actions.setEditingName(e.target.value)
-                            }
-                            onKeyDown={(e) =>
-                              e.key === "Enter" && actions.saveEdit()
-                            }
-                            className="h-9 max-w-xs"
-                          />
-                          <button
-                            onClick={actions.saveEdit}
-                            disabled={vm.isUpdating}
-                            className="p-2 rounded-lg text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
-                          >
-                            <Check className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={actions.cancelEdit}
-                            className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 dark:bg-brand-900/20">
-                            <Tag className="h-5 w-5 text-brand-600 dark:text-brand-400" />
-                          </div>
-                          <span className="font-semibold text-gray-900 dark:text-white">
-                            {category.name}
-                          </span>
-                        </div>
-                      )}
+            <div className="overflow-x-auto custom-scrollbar">
+              <Table>
+                <TableHeader className="border-y border-gray-100 dark:border-gray-800">
+                  <TableRow>
+                    <TableCell
+                      isHeader
+                      className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-start text-xs uppercase tracking-wider"
+                    >
+                      Category
                     </TableCell>
-                    <TableCell className="px-6 py-4 text-sm text-gray-500">
-                      {category._count?.products ?? 0} products
+                    <TableCell
+                      isHeader
+                      className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-start text-xs uppercase tracking-wider"
+                    >
+                      Products
                     </TableCell>
-                    <TableCell className="px-6 py-4 text-sm text-gray-500">
-                      {formatDateTime(category.createdAt)}
+                    <TableCell
+                      isHeader
+                      className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-start text-xs uppercase tracking-wider"
+                    >
+                      Created On
                     </TableCell>
-                    <TableCell className="px-6 py-4 text-end">
-                      {vm.editingId !== category.id && (
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => actions.startEdit(category)}
-                            className="p-2 rounded-lg text-gray-500 hover:text-brand-500 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-colors"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => setCategoryToDelete(category)}
-                            className="p-2 rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      )}
+                    <TableCell
+                      isHeader
+                      className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-end text-xs uppercase tracking-wider w-32"
+                    >
+                      Actions
                     </TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {vm.categories.map((category) => (
+                    <TableRow
+                      key={category.id}
+                      className="hover:bg-gray-50/50 dark:hover:bg-white/[0.01]"
+                    >
+                      <TableCell className="px-6 py-4">
+                        {vm.editingId === category.id ? (
+                          <div className="flex items-center gap-2">
+                            <Input
+                              autoFocus
+                              value={vm.editingName}
+                              onChange={(e) =>
+                                actions.setEditingName(e.target.value)
+                              }
+                              onKeyDown={(e) =>
+                                e.key === "Enter" && actions.saveEdit()
+                              }
+                              className="h-9 max-w-xs"
+                            />
+                            <button
+                              onClick={actions.saveEdit}
+                              disabled={vm.isUpdating}
+                              className="p-2 rounded-lg text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+                            >
+                              <Check className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={actions.cancelEdit}
+                              className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 dark:bg-brand-900/20">
+                              <Tag className="h-5 w-5 text-brand-600 dark:text-brand-400" />
+                            </div>
+                            <span className="font-semibold text-gray-900 dark:text-white">
+                              {category.name}
+                            </span>
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="px-6 py-4 text-sm text-gray-500">
+                        {category._count?.products ?? 0} products
+                      </TableCell>
+                      <TableCell className="px-6 py-4 text-sm text-gray-500">
+                        {formatDateTime(category.createdAt)}
+                      </TableCell>
+                      <TableCell className="px-6 py-4 text-end">
+                        {vm.editingId !== category.id && (
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => actions.startEdit(category)}
+                              className="p-2 rounded-lg text-gray-500 hover:text-brand-500 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-colors"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => setCategoryToDelete(category)}
+                              className="p-2 rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
             <Pagination
               currentPage={vm.currentPage}
               totalPages={vm.totalPages}
