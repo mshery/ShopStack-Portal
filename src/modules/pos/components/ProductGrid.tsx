@@ -1,14 +1,15 @@
-import { memo, useMemo, useRef, useEffect } from "react";
+import { memo, useMemo, useRef, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Package, Plus, Check, ShoppingBag } from "lucide-react";
 import { formatCurrency } from "@/shared/utils/format";
 import type { Product, CartItem } from "@/shared/types/models";
 import { Skeleton } from "@/shared/components/ui/skeleton";
+import { WeightInputModal } from "./WeightInputModal";
 
 interface ProductGridProps {
   products: Product[];
   cart: CartItem[];
-  onAddToCart: (product: Product) => void;
+  onAddToCart: (product: Product, quantity?: number) => void;
   viewMode?: "grid" | "list";
   totalFilteredCount?: number;
   selectedCategory?: string | null;
@@ -37,6 +38,23 @@ export const ProductGrid = memo(function ProductGrid({
       scrollContainerRef.current.scrollTo({ top: 0, behavior: "instant" });
     }
   }, [products]);
+
+  const [selectedWeightedProduct, setSelectedWeightedProduct] =
+    useState<Product | null>(null);
+  const [isWeightModalOpen, setIsWeightModalOpen] = useState(false);
+
+  const handleProductClick = (product: Product) => {
+    if (product.productType === "weighted") {
+      setSelectedWeightedProduct(product);
+      setIsWeightModalOpen(true);
+    } else {
+      onAddToCart(product);
+    }
+  };
+
+  const handleWeightConfirm = (product: Product, weight: number) => {
+    onAddToCart(product, weight);
+  };
 
   const cartProductIds = useMemo(
     () => new Set(cart.map((item) => item.productId)),
@@ -82,9 +100,9 @@ export const ProductGrid = memo(function ProductGrid({
           </div>
 
           <div
-            className={`grid gap-4 md:gap-5 ${
+            className={`grid gap-3 md:gap-5 ${
               viewMode === "grid"
-                ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+                ? "grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
                 : "grid-cols-1"
             }`}
           >
@@ -177,241 +195,264 @@ export const ProductGrid = memo(function ProductGrid({
   const displayCount = totalFilteredCount ?? products.length;
 
   return (
-    <div
-      ref={scrollContainerRef}
-      className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 no-scrollbar scroll-smooth"
-    >
-      <div className="p-4 md:p-6">
-        {/* Results count */}
-        <div className="mb-5">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            <span className="font-semibold text-gray-800 dark:text-gray-100">
-              {displayCount.toLocaleString()}
-            </span>{" "}
-            products
-            {selectedCategory && (
-              <span className="text-gray-400 dark:text-gray-500">
-                {" "}
-                in {selectedCategory}
-              </span>
-            )}
-          </p>
-        </div>
+    <>
+      <div
+        ref={scrollContainerRef}
+        className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 no-scrollbar scroll-smooth"
+      >
+        <div className="p-4 md:p-6">
+          {/* Results count */}
+          <div className="mb-5">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              <span className="font-semibold text-gray-800 dark:text-gray-100">
+                {displayCount.toLocaleString()}
+              </span>{" "}
+              products
+              {selectedCategory && (
+                <span className="text-gray-400 dark:text-gray-500">
+                  {" "}
+                  in {selectedCategory}
+                </span>
+              )}
+            </p>
+          </div>
 
-        {/* Grid View */}
-        {viewMode === "grid" && (
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={selectedCategory || "all"}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
-              className="grid grid-cols-2 gap-4 md:gap-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
-            >
-              {products.map((product) => {
-                const inCart = cartProductIds.has(product.id);
-                const cartQuantity = getCartQuantity(product.id);
-                const stockStatus = getStockStatus(product.currentStock);
-                const isOutOfStock = product.currentStock === 0;
+          {/* Grid View */}
+          {viewMode === "grid" && (
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={selectedCategory || "all"}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                className="grid grid-cols-1 xs:grid-cols-2 gap-3 md:gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 pb-20 md:pb-0"
+              >
+                {products.map((product) => {
+                  const inCart = cartProductIds.has(product.id);
+                  const cartQuantity = getCartQuantity(product.id);
+                  const stockStatus = getStockStatus(product.currentStock);
+                  const isOutOfStock = product.currentStock === 0;
 
-                return (
-                  <motion.div
-                    key={product.id}
-                    layout
-                    className={`group relative flex flex-col bg-white dark:bg-gray-800 rounded-2xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:shadow-gray-200/60 dark:shadow-gray-950/50 dark:hover:shadow-gray-950/80 border border-gray-100 dark:border-gray-700 ${
-                      isOutOfStock ? "opacity-60" : ""
-                    }`}
-                  >
-                    {/* Cart Badge */}
-                    {inCart && (
-                      <div className="absolute top-3 right-3 z-10">
-                        <div className="w-8 h-8 rounded-full bg-brand-500 text-white flex items-center justify-center shadow-lg shadow-brand-500/40 ring-2 ring-white dark:ring-gray-800">
-                          <span className="text-xs font-bold">
-                            {cartQuantity}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Product Image */}
-                    <div className="relative aspect-square bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-850 overflow-hidden">
-                      {product.imageUrl ? (
-                        <img
-                          src={product.imageUrl}
-                          alt={product.name}
-                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                        />
-                      ) : (
-                        <div className="h-full w-full flex items-center justify-center">
-                          <Package className="h-16 w-16 text-gray-200 dark:text-gray-700" />
+                  return (
+                    <motion.div
+                      key={product.id}
+                      layout
+                      className={`group relative flex flex-col bg-white dark:bg-gray-800 rounded-2xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:shadow-gray-200/60 dark:shadow-gray-950/50 dark:hover:shadow-gray-950/80 border border-gray-100 dark:border-gray-700 ${
+                        isOutOfStock ? "opacity-60" : ""
+                      }`}
+                    >
+                      {/* Cart Badge */}
+                      {inCart && (
+                        <div className="absolute top-3 right-3 z-10">
+                          <div className="w-8 h-8 rounded-full bg-brand-500 text-white flex items-center justify-center shadow-lg shadow-brand-500/40 ring-2 ring-white dark:ring-gray-800">
+                            <span className="text-xs font-bold">
+                              {cartQuantity}
+                            </span>
+                          </div>
                         </div>
                       )}
-                    </div>
 
-                    {/* Product Info */}
-                    <div className="flex flex-col flex-1 p-4">
-                      {/* Stock Badge */}
-                      <div className="mb-2.5">
-                        <span
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${stockStatus.bg} ${stockStatus.text}`}
-                        >
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${stockStatus.dot}`}
+                      {/* Product Image */}
+                      <div className="relative aspect-square bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-850 overflow-hidden">
+                        {product.imageUrl ? (
+                          <img
+                            src={product.imageUrl}
+                            alt={product.name}
+                            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                           />
-                          {stockStatus.label}
-                        </span>
+                        ) : (
+                          <div className="h-full w-full flex items-center justify-center">
+                            <Package className="h-16 w-16 text-gray-200 dark:text-gray-700" />
+                          </div>
+                        )}
                       </div>
 
-                      <div className="flex-1 mb-3">
-                        <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-2 text-sm leading-snug">
-                          {product.name}
-                        </h3>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 font-mono">
-                          {product.sku}
-                        </p>
+                      {/* Product Info */}
+                      <div className="flex flex-col flex-1 p-4">
+                        {/* Stock Badge */}
+                        <div className="mb-2.5">
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${stockStatus.bg} ${stockStatus.text}`}
+                          >
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${stockStatus.dot}`}
+                            />
+                            {stockStatus.label}
+                          </span>
+                        </div>
+
+                        <div className="flex-1 mb-3">
+                          <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-2 text-sm leading-snug">
+                            {product.name}
+                          </h3>
+                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 font-mono">
+                            {product.sku}
+                          </p>
+                        </div>
+
+                        {/* Price */}
+                        <div className="mb-4">
+                          <span className="text-xl font-bold text-gray-900 dark:text-white">
+                            {formatCurrency(product.unitPrice)}
+                            {product.productType === "weighted" && (
+                              <span className="text-sm font-normal text-gray-500 ml-1">
+                                /kg
+                              </span>
+                            )}
+                          </span>
+                        </div>
+
+                        {/* Add to Cart Button */}
+                        <button
+                          onClick={() => handleProductClick(product)}
+                          disabled={isOutOfStock}
+                          className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all ${
+                            inCart
+                              ? "bg-brand-500 text-white hover:bg-brand-600 active:scale-[0.98] shadow-lg shadow-brand-500/25"
+                              : isOutOfStock
+                                ? "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed"
+                                : "bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 active:scale-[0.98]"
+                          }`}
+                        >
+                          {inCart ? (
+                            <>
+                              <Check className="w-4 h-4" />
+                              Add More
+                            </>
+                          ) : isOutOfStock ? (
+                            "Out"
+                          ) : (
+                            <>
+                              <Plus className="w-4 h-4" />
+                              Add
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </motion.div>
+            </AnimatePresence>
+          )}
+
+          {/* List View */}
+          {viewMode === "list" && (
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={selectedCategory || "all"}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                className="space-y-3"
+              >
+                {products.map((product) => {
+                  const inCart = cartProductIds.has(product.id);
+                  const cartQuantity = getCartQuantity(product.id);
+                  const stockStatus = getStockStatus(product.currentStock);
+                  const isOutOfStock = product.currentStock === 0;
+
+                  return (
+                    <div
+                      key={product.id}
+                      className={`group flex items-center gap-3 md:gap-4 p-3 md:p-4 rounded-2xl bg-white dark:bg-gray-800 hover:shadow-lg hover:shadow-gray-200/50 dark:shadow-gray-950/50 dark:hover:shadow-gray-950/80 border border-gray-100 dark:border-gray-700 transition-all ${
+                        isOutOfStock ? "opacity-60" : ""
+                      }`}
+                    >
+                      {/* Product Image */}
+                      <div className="relative w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-850 flex-shrink-0">
+                        {product.imageUrl ? (
+                          <img
+                            src={product.imageUrl}
+                            alt={product.name}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="h-full w-full flex items-center justify-center">
+                            <Package className="h-6 w-6 md:h-8 md:w-8 text-gray-200 dark:text-gray-700" />
+                          </div>
+                        )}
                       </div>
 
-                      {/* Price */}
-                      <div className="mb-4">
-                        <span className="text-xl font-bold text-gray-900 dark:text-white">
-                          {formatCurrency(product.unitPrice)}
-                        </span>
+                      {/* Product Details */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-gray-900 dark:text-white truncate">
+                              {product.name}
+                            </h3>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-xs text-gray-400 font-mono">
+                                {product.sku}
+                              </span>
+                              <span
+                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${stockStatus.bg} ${stockStatus.text}`}
+                              >
+                                <span
+                                  className={`w-1 h-1 rounded-full ${stockStatus.dot}`}
+                                />
+                                {stockStatus.label}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Price */}
+                          <div className="text-right flex-shrink-0">
+                            <span className="text-xl font-bold text-gray-900 dark:text-white">
+                              {formatCurrency(product.unitPrice)}
+                            </span>
+                            {product.productType === "weighted" && (
+                              <div className="text-xs text-gray-500">
+                                per kg
+                              </div>
+                            )}
+                            {inCart && (
+                              <div className="text-xs font-medium text-brand-600 dark:text-brand-400 mt-0.5">
+                                {cartQuantity}× in cart
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
 
                       {/* Add to Cart Button */}
                       <button
-                        onClick={() => onAddToCart(product)}
+                        onClick={() => handleProductClick(product)}
                         disabled={isOutOfStock}
-                        className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all ${
+                        className={`flex-shrink-0 flex items-center justify-center gap-2 px-3 py-2 md:px-5 md:py-3 rounded-xl text-sm font-semibold transition-all ${
                           inCart
-                            ? "bg-brand-500 text-white hover:bg-brand-600 active:scale-[0.98] shadow-lg shadow-brand-500/25"
+                            ? "bg-brand-500 text-white hover:bg-brand-600 active:scale-[0.98]"
                             : isOutOfStock
-                              ? "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed"
+                              ? "bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed"
                               : "bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 active:scale-[0.98]"
                         }`}
                       >
-                        {inCart ? (
-                          <>
-                            <Check className="w-4 h-4" />
-                            Add More
-                          </>
-                        ) : isOutOfStock ? (
-                          "Out of Stock"
-                        ) : (
-                          <>
-                            <Plus className="w-4 h-4" />
-                            Add to Cart
-                          </>
-                        )}
+                        <Plus className="w-4 h-4" />
+                        <span className="hidden md:inline">
+                          {inCart ? "Add" : isOutOfStock ? "N/A" : "Add"}
+                        </span>
+                        <span className="md:hidden">Add</span>
                       </button>
                     </div>
-                  </motion.div>
-                );
-              })}
-            </motion.div>
-          </AnimatePresence>
-        )}
-
-        {/* List View */}
-        {viewMode === "list" && (
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={selectedCategory || "all"}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
-              className="space-y-3"
-            >
-              {products.map((product) => {
-                const inCart = cartProductIds.has(product.id);
-                const cartQuantity = getCartQuantity(product.id);
-                const stockStatus = getStockStatus(product.currentStock);
-                const isOutOfStock = product.currentStock === 0;
-
-                return (
-                  <div
-                    key={product.id}
-                    className={`group flex items-center gap-4 p-4 rounded-2xl bg-white dark:bg-gray-800 hover:shadow-lg hover:shadow-gray-200/50 dark:shadow-gray-950/50 dark:hover:shadow-gray-950/80 border border-gray-100 dark:border-gray-700 transition-all ${
-                      isOutOfStock ? "opacity-60" : ""
-                    }`}
-                  >
-                    {/* Product Image */}
-                    <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-850 flex-shrink-0">
-                      {product.imageUrl ? (
-                        <img
-                          src={product.imageUrl}
-                          alt={product.name}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <div className="h-full w-full flex items-center justify-center">
-                          <Package className="h-8 w-8 text-gray-200 dark:text-gray-700" />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Product Details */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-gray-900 dark:text-white truncate">
-                            {product.name}
-                          </h3>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-xs text-gray-400 font-mono">
-                              {product.sku}
-                            </span>
-                            <span
-                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${stockStatus.bg} ${stockStatus.text}`}
-                            >
-                              <span
-                                className={`w-1 h-1 rounded-full ${stockStatus.dot}`}
-                              />
-                              {stockStatus.label}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Price */}
-                        <div className="text-right flex-shrink-0">
-                          <span className="text-xl font-bold text-gray-900 dark:text-white">
-                            {formatCurrency(product.unitPrice)}
-                          </span>
-                          {inCart && (
-                            <div className="text-xs font-medium text-brand-600 dark:text-brand-400 mt-0.5">
-                              {cartQuantity}× in cart
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Add to Cart Button */}
-                    <button
-                      onClick={() => onAddToCart(product)}
-                      disabled={isOutOfStock}
-                      className={`flex-shrink-0 flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold transition-all ${
-                        inCart
-                          ? "bg-brand-500 text-white hover:bg-brand-600 active:scale-[0.98]"
-                          : isOutOfStock
-                            ? "bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed"
-                            : "bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 active:scale-[0.98]"
-                      }`}
-                    >
-                      <Plus className="w-4 h-4" />
-                      <span>
-                        {inCart ? "Add" : isOutOfStock ? "N/A" : "Add"}
-                      </span>
-                    </button>
-                  </div>
-                );
-              })}
-            </motion.div>
-          </AnimatePresence>
-        )}
+                  );
+                })}
+              </motion.div>
+            </AnimatePresence>
+          )}
+        </div>
       </div>
-    </div>
+
+      {/* Weight Input Modal - Conditionally rendered to reset state on open */}
+      {isWeightModalOpen && selectedWeightedProduct && (
+        <WeightInputModal
+          isOpen={true}
+          onClose={() => setIsWeightModalOpen(false)}
+          product={selectedWeightedProduct}
+          onConfirm={handleWeightConfirm}
+        />
+      )}
+    </>
   );
 });

@@ -79,6 +79,21 @@ export const endpoints = {
       lowStock: "/tenant/inventory/low-stock",
       adjustments: "/tenant/inventory/adjustments",
     },
+    // Batch & Expiry Tracking
+    batches: {
+      list: "/tenant/batches",
+      byId: (id: string) => `/tenant/batches/${id}`,
+      expiring: "/tenant/batches/expiring",
+      expired: "/tenant/batches/expired",
+      selectForSale: "/tenant/batches/select-for-sale",
+      byProduct: (productId: string) => `/tenant/products/${productId}/batches`,
+    },
+    // Units of Measure
+    unitsOfMeasure: {
+      list: "/tenant/units-of-measure",
+      byId: (id: string) => `/tenant/units-of-measure/${id}`,
+      seed: "/tenant/units-of-measure/seed",
+    },
     // Customers
     customers: {
       list: "/tenant/customers",

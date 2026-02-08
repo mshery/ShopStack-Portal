@@ -44,7 +44,7 @@ export function useProductDetailsScreen() {
     if (!product) return null;
     return {
       ...product,
-      tenant_id: product.tenantId,
+      tenant_id: product.tenant_id,
       unitPrice:
         typeof product.unitPrice === "string"
           ? parseFloat(product.unitPrice)

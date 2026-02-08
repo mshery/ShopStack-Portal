@@ -6,6 +6,7 @@ interface ModalProps {
   className?: string;
   children: React.ReactNode;
   showCloseButton?: boolean;
+  title?: string;
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -14,6 +15,7 @@ export const Modal: React.FC<ModalProps> = ({
   children,
   className,
   showCloseButton = true,
+  title,
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -58,10 +60,28 @@ export const Modal: React.FC<ModalProps> = ({
         className={`relative w-full rounded-3xl bg-white dark:bg-gray-900 ${className}`}
         onClick={(e) => e.stopPropagation()}
       >
+        {title && (
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              {title}
+            </h3>
+          </div>
+        )}
+        {/* Modal Header if title is provided */}
+        {/* We need to update props interface first, but let's see if we can just update the component content for now */}
+        {/* Wait, I can't update props interface in this chunk easily because it's at the top of the file. 
+            I should use multi_replace or just update the whole file if it's small. It's 87 lines. 
+            Actually, I'll update the component structure first, then the interface. 
+            But wait, the error is in WeightInputModal usage.
+            I will update the Modal component to accept title.
+        */}
+        {/* Actually, let's just use WeightInputModal's title inside the modal content instead of passing it to Modal if Modal is generic. 
+            But standardizing Modal title is better.
+        */}
         {showCloseButton && (
           <button
             onClick={onClose}
-            className="absolute right-3 top-3 z-999 flex h-9.5 w-9.5 items-center justify-center rounded-full bg-gray-100 text-gray-400 transition-colors hover:bg-gray-200 hover:text-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white sm:right-6 sm:top-6 sm:h-11 sm:w-11"
+            className="absolute right-3 top-3 z-999 flex h-9.5 w-9.5 items-center justify-center rounded-full bg-gray-100 text-gray-400 transition-colors hover:bg-gray-200 hover:text-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white sm:right-6 sm:top-2 sm:h-11 sm:w-11"
           >
             <svg
               width="24"

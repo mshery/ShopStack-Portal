@@ -38,7 +38,7 @@ export function ReceiptModal({
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl dark:bg-gray-900"
+            className="relative w-full max-w-md max-h-[90vh] overflow-hidden rounded-3xl bg-white shadow-2xl dark:bg-gray-900 flex flex-col"
           >
             {/* Success Header */}
             <div className="bg-gradient-to-r from-brand-500 to-brand-600 px-6 py-8 text-center text-white">
@@ -50,7 +50,7 @@ export function ReceiptModal({
             </div>
 
             {/* Receipt Content */}
-            <div className="max-h-[60vh] overflow-y-auto p-8">
+            <div className="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar">
               <div className="text-center mb-8">
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white uppercase tracking-wider">
                   {tenantName}
@@ -155,7 +155,7 @@ export function ReceiptModal({
 
             <button
               onClick={onClose}
-              className="absolute right-4 top-4 text-white/60 hover:text-white transition-colors"
+              className="absolute right-4 top-4 p-2 rounded-full bg-black/20 text-white hover:bg-black/40 transition-colors z-50"
             >
               <X className="h-6 w-6" />
             </button>

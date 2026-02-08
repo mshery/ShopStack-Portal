@@ -90,116 +90,118 @@ export default function VendorsPage() {
               />
             </div>
           ) : (
-            <Table>
-              <TableHeader className="border-y border-gray-100 dark:border-gray-800">
-                <TableRow>
-                  <TableCell
-                    isHeader
-                    className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-start text-xs uppercase tracking-wider"
-                  >
-                    Vendor Info
-                  </TableCell>
-                  <TableCell
-                    isHeader
-                    className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-start text-xs uppercase tracking-wider"
-                  >
-                    Contact
-                  </TableCell>
-                  <TableCell
-                    isHeader
-                    className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-start text-xs uppercase tracking-wider"
-                  >
-                    Address
-                  </TableCell>
-                  <TableCell
-                    isHeader
-                    className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-start text-xs uppercase tracking-wider"
-                  >
-                    Terms
-                  </TableCell>
-                  <TableCell
-                    isHeader
-                    className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-start text-xs uppercase tracking-wider"
-                  >
-                    Added On
-                  </TableCell>
-                  <TableCell
-                    isHeader
-                    className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-end text-xs uppercase tracking-wider"
-                  >
-                    Actions
-                  </TableCell>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {vm.vendors.map((vendor) => (
-                  <TableRow
-                    key={vendor.id}
-                    className="hover:bg-gray-50/50 dark:hover:bg-white/[0.01]"
-                  >
-                    <TableCell className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="font-bold text-gray-900 dark:text-white">
-                          {vendor.name}
-                        </span>
-                        <div className="flex items-center gap-1 mt-1 text-xs text-gray-500">
-                          <User className="h-3 w-3" />
-                          {vendor.contactPerson}
-                        </div>
-                      </div>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="border-y border-gray-100 dark:border-gray-800">
+                  <TableRow>
+                    <TableCell
+                      isHeader
+                      className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-start text-xs uppercase tracking-wider whitespace-nowrap"
+                    >
+                      Vendor Info
                     </TableCell>
-                    <TableCell className="px-6 py-4">
-                      <div className="flex flex-col gap-1 text-xs">
-                        {vendor.email && (
-                          <div className="flex items-center gap-1.5 font-medium text-gray-700 dark:text-gray-300">
-                            <Mail className="h-3 w-3" />
-                            {vendor.email}
-                          </div>
-                        )}
-                        {vendor.phone && (
-                          <div className="flex items-center gap-1.5 text-gray-500">
-                            <Phone className="h-3 w-3" />
-                            {vendor.phone}
-                          </div>
-                        )}
-                      </div>
+                    <TableCell
+                      isHeader
+                      className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-start text-xs uppercase tracking-wider"
+                    >
+                      Contact
                     </TableCell>
-                    <TableCell className="px-6 py-4 max-w-[200px]">
-                      <div className="flex items-start gap-1.5 text-xs text-gray-500">
-                        <MapPin className="h-3 w-3 mt-0.5 flex-shrink-0" />
-                        <span className="line-clamp-2">{vendor.address}</span>
-                      </div>
+                    <TableCell
+                      isHeader
+                      className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-start text-xs uppercase tracking-wider"
+                    >
+                      Address
                     </TableCell>
-                    <TableCell className="px-6 py-4">
-                      <div className="text-xs font-semibold px-2 py-1 rounded-md bg-brand-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400 inline-block">
-                        {vendor.paymentTerms}
-                      </div>
+                    <TableCell
+                      isHeader
+                      className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-start text-xs uppercase tracking-wider"
+                    >
+                      Terms
                     </TableCell>
-                    <TableCell className="px-6 py-4 text-xs text-gray-500">
-                      {formatDateTime(vendor.createdAt)}
+                    <TableCell
+                      isHeader
+                      className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-start text-xs uppercase tracking-wider"
+                    >
+                      Added On
                     </TableCell>
-                    <TableCell className="px-6 py-4 text-end">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => actions.setSelectedVendor(vendor)}
-                          className="p-2 rounded-lg text-gray-500 hover:text-brand-500 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-colors"
-                          title="Edit vendor"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => actions.setVendorToDelete(vendor)}
-                          className="p-2 rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                          title="Delete vendor"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
+                    <TableCell
+                      isHeader
+                      className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-end text-xs uppercase tracking-wider"
+                    >
+                      Actions
                     </TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {vm.vendors.map((vendor) => (
+                    <TableRow
+                      key={vendor.id}
+                      className="hover:bg-gray-50/50 dark:hover:bg-white/[0.01]"
+                    >
+                      <TableCell className="px-6 py-4">
+                        <div className="flex flex-col">
+                          <span className="font-bold text-gray-900 dark:text-white">
+                            {vendor.name}
+                          </span>
+                          <div className="flex items-center gap-1 mt-1 text-xs text-gray-500">
+                            <User className="h-3 w-3" />
+                            {vendor.contactPerson}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-6 py-4">
+                        <div className="flex flex-col gap-1 text-xs">
+                          {vendor.email && (
+                            <div className="flex items-center gap-1.5 font-medium text-gray-700 dark:text-gray-300">
+                              <Mail className="h-3 w-3" />
+                              {vendor.email}
+                            </div>
+                          )}
+                          {vendor.phone && (
+                            <div className="flex items-center gap-1.5 text-gray-500">
+                              <Phone className="h-3 w-3" />
+                              {vendor.phone}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-6 py-4 max-w-[200px]">
+                        <div className="flex items-start gap-1.5 text-xs text-gray-500">
+                          <MapPin className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                          <span className="line-clamp-2">{vendor.address}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-6 py-4">
+                        <div className="text-xs font-semibold px-2 py-1 rounded-md bg-brand-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400 inline-block">
+                          {vendor.paymentTerms}
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-6 py-4 text-xs text-gray-500">
+                        {formatDateTime(vendor.createdAt)}
+                      </TableCell>
+                      <TableCell className="px-6 py-4 text-end">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => actions.setSelectedVendor(vendor)}
+                            className="p-2 rounded-lg text-gray-500 hover:text-brand-500 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-colors"
+                            title="Edit vendor"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => actions.setVendorToDelete(vendor)}
+                            className="p-2 rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                            title="Delete vendor"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>

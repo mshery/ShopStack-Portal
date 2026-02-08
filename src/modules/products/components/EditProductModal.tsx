@@ -75,6 +75,9 @@ export default function EditProductModal({
     brandId: product.brandId,
     unitPrice: product.unitPrice,
     imageUrl: product.imageUrl,
+    productType: product.productType || "unit",
+    minSaleWeight: product.minSaleWeight || 0.1,
+    weightIncrement: product.weightIncrement || 0.001,
   });
 
   // Image upload handler
@@ -267,6 +270,41 @@ export default function EditProductModal({
                     />
                   </div>
 
+                  {/* Product Type Selection */}
+                  <div className="col-span-2">
+                    <Label className="mb-2 block">Product Type</Label>
+                    <div className="flex gap-4">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="productType"
+                          value="unit"
+                          checked={formData.productType === "unit"}
+                          onChange={() => handleChange("productType", "unit")}
+                          className="w-4 h-4 text-brand-600 focus:ring-brand-500 border-gray-300"
+                        />
+                        <span className="text-sm text-gray-700 dark:text-gray-300">
+                          Unit (Piece)
+                        </span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="productType"
+                          value="weighted"
+                          checked={formData.productType === "weighted"}
+                          onChange={() =>
+                            handleChange("productType", "weighted")
+                          }
+                          className="w-4 h-4 text-brand-600 focus:ring-brand-500 border-gray-300"
+                        />
+                        <span className="text-sm text-gray-700 dark:text-gray-300">
+                          Weighted (Kg)
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+
                   <div className="col-span-2">
                     <Label>Product Image</Label>
                     <div className="flex items-center gap-4 mt-2">
@@ -340,7 +378,11 @@ export default function EditProductModal({
                   </div>
 
                   <div className="col-span-2 lg:col-span-1">
-                    <Label>Unit Price ($)</Label>
+                    <Label>
+                      {formData.productType === "weighted"
+                        ? "Price per Kg ($)"
+                        : "Unit Price ($)"}
+                    </Label>
                     <Input
                       type="number"
                       step="0.01"
@@ -353,12 +395,18 @@ export default function EditProductModal({
 
                   {/* Current Stock - Readonly Display */}
                   <div className="col-span-2">
-                    <Label>Current Stock</Label>
+                    <Label>
+                      {formData.productType === "weighted"
+                        ? "Current Stock (Kg)"
+                        : "Current Stock"}
+                    </Label>
                     <div className="flex items-center gap-2 h-11 px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800">
                       <span className="text-gray-900 dark:text-white font-medium">
                         {product.currentStock}
                       </span>
-                      <span className="text-gray-500 text-sm">units</span>
+                      <span className="text-gray-500 text-sm">
+                        {formData.productType === "weighted" ? "kg" : "units"}
+                      </span>
                     </div>
                     {isOwner && (
                       <p className="text-xs text-gray-500 mt-1">
@@ -406,10 +454,15 @@ export default function EditProductModal({
                       <Label>Quantity</Label>
                       <Input
                         type="number"
-                        min="1"
+                        min={
+                          formData.productType === "weighted" ? "0.001" : "1"
+                        }
+                        step={
+                          formData.productType === "weighted" ? "0.001" : "1"
+                        }
                         value={adjustmentQuantity || ""}
                         onChange={(e) =>
-                          setAdjustmentQuantity(parseInt(e.target.value) || 0)
+                          setAdjustmentQuantity(parseFloat(e.target.value) || 0)
                         }
                         placeholder="Enter quantity"
                       />
@@ -422,9 +475,12 @@ export default function EditProductModal({
                       <Input
                         type="number"
                         min="0"
+                        step={
+                          formData.productType === "weighted" ? "0.001" : "1"
+                        }
                         value={setStockTo}
                         onChange={(e) =>
-                          setSetStockTo(parseInt(e.target.value) || 0)
+                          setSetStockTo(parseFloat(e.target.value) || 0)
                         }
                         placeholder="Enter new stock count"
                       />
