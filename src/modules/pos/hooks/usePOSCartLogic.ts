@@ -79,6 +79,7 @@ export function usePOSCartLogic() {
           description: "",
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
+          productType: "unit",
         } as Product,
       })),
       customerId: order.customerId || null,
@@ -197,16 +198,18 @@ export function usePOSCartLogic() {
    * Handle adding product to cart with stock validation
    */
   const handleAddToCart = useCallback(
-    (product: Product) => {
+    (product: Product, quantity = 1) => {
       const existingItem = cart.find((item) => item.productId === product.id);
       const currentQty = existingItem?.quantity || 0;
+      const newTotalQty = currentQty + quantity;
 
-      if (currentQty >= product.currentStock) {
+      // For weighted products, we might allow decimal quantities, so check might need tolerance or just use >
+      if (newTotalQty > product.currentStock) {
         toast.error(`Only ${product.currentStock} items available in stock`);
         return;
       }
 
-      addToCart(product);
+      addToCart(product, quantity);
     },
     [cart, addToCart],
   );
@@ -388,6 +391,7 @@ export function usePOSCartLogic() {
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           vendorId: null,
+          productType: "unit", // Default for recalled items if unknown
         };
 
         addToCart(product); // Adds 1

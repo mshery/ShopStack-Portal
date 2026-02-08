@@ -18,9 +18,19 @@ export function CartItems({
   onUpdateQuantity,
   onRemoveItem,
 }: CartItemsProps) {
+  const getIncrement = (item: CartItem) => {
+    if (item.product.productType === "weighted") {
+      return item.product.weightIncrement || 0.1;
+    }
+    return 1;
+  };
+
   return (
     <div className="space-y-4">
       {items.map((item) => {
+        const isWeighted = item.product.productType === "weighted";
+        const increment = getIncrement(item);
+
         return (
           <motion.div
             key={item.productId}
@@ -58,24 +68,37 @@ export function CartItems({
                   </button>
                 </div>
 
-                <p className="text-xs text-gray-500 mb-2">Size 42 • Green</p>
+                <p className="text-xs text-gray-500 mb-2 font-mono">
+                  {item.product.sku}
+                </p>
 
                 {/* Quantity Controls - Rounded */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 bg-gray-50 rounded-xl p-1">
                     <motion.button
                       whileTap={{ scale: 0.9 }}
-                      onClick={() => onUpdateQuantity(item.productId, -1)}
+                      onClick={() =>
+                        onUpdateQuantity(item.productId, -increment)
+                      }
                       className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-gray-200 transition-colors"
                     >
                       <Minus className="h-3.5 w-3.5 text-gray-600" />
                     </motion.button>
-                    <span className="w-8 text-center text-sm font-semibold">
-                      {item.quantity}
+                    <span className="min-w-[2rem] px-1 text-center text-sm font-semibold">
+                      {isWeighted
+                        ? `${item.quantity.toFixed(3)}`
+                        : item.quantity}
+                      {isWeighted && (
+                        <span className="text-xs font-normal text-gray-500 ml-0.5">
+                          kg
+                        </span>
+                      )}
                     </span>
                     <motion.button
                       whileTap={{ scale: 0.9 }}
-                      onClick={() => onUpdateQuantity(item.productId, 1)}
+                      onClick={() =>
+                        onUpdateQuantity(item.productId, increment)
+                      }
                       className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-500 hover:bg-brand-600 transition-colors"
                     >
                       <Plus className="h-3.5 w-3.5 text-white" />

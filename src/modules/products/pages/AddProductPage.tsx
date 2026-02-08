@@ -208,10 +208,51 @@ export default function AddProductPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Product Type Selection */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Product Type
+                  </Label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="productType"
+                        value="unit"
+                        checked={vm.formData.productType === "unit"}
+                        onChange={() =>
+                          actions.updateField("productType", "unit")
+                        }
+                        className="w-4 h-4 text-brand-600 focus:ring-brand-500 border-gray-300"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">
+                        Unit (Piece)
+                      </span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="productType"
+                        value="weighted"
+                        checked={vm.formData.productType === "weighted"}
+                        onChange={() =>
+                          actions.updateField("productType", "weighted")
+                        }
+                        className="w-4 h-4 text-brand-600 focus:ring-brand-500 border-gray-300"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">
+                        Weighted (Kg)
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Unit Price
+                      {vm.formData.productType === "weighted"
+                        ? "Price per Kg"
+                        : "Unit Price"}
                     </Label>
                     <div className="relative">
                       <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
@@ -258,18 +299,23 @@ export default function AddProductPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Current Stock
+                      {vm.formData.productType === "weighted"
+                        ? "Current Stock (Kg)"
+                        : "Current Stock"}
                     </Label>
                     <Input
                       required
                       type="number"
                       min="0"
+                      step={
+                        vm.formData.productType === "weighted" ? "0.001" : "1"
+                      }
                       placeholder="0"
                       value={vm.formData.currentStock || ""}
                       onChange={(e) =>
                         actions.updateField(
                           "currentStock",
-                          parseInt(e.target.value) || 0,
+                          parseFloat(e.target.value) || 0,
                         )
                       }
                     />
@@ -282,17 +328,45 @@ export default function AddProductPage() {
                       required
                       type="number"
                       min="0"
+                      step={
+                        vm.formData.productType === "weighted" ? "0.001" : "1"
+                      }
                       placeholder="5"
                       value={vm.formData.minimumStock || ""}
                       onChange={(e) =>
                         actions.updateField(
                           "minimumStock",
-                          parseInt(e.target.value) || 0,
+                          parseFloat(e.target.value) || 0,
                         )
                       }
                     />
                   </div>
                 </div>
+
+                {/* Min Sale Weight for Weighted Products */}
+                {vm.formData.productType === "weighted" && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Min Sale Weight (Kg)
+                    </Label>
+                    <Input
+                      type="number"
+                      min="0.001"
+                      step="0.001"
+                      placeholder="0.100"
+                      value={vm.formData.minSaleWeight || ""}
+                      onChange={(e) =>
+                        actions.updateField(
+                          "minSaleWeight",
+                          parseFloat(e.target.value) || 0,
+                        )
+                      }
+                    />
+                    <p className="text-xs text-gray-500">
+                      Minimum weight allowed for sale (default 0.1 kg)
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

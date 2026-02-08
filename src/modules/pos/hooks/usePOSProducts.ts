@@ -133,10 +133,15 @@ export function usePOSProducts(initialLimit = 24) {
       vendorId: p.vendorId ?? null,
       imageUrl: p.imageUrl ?? null,
       description: p.description ?? "",
+      // API transformer already handles numbers, but we keep this for safety
       unitPrice:
         typeof p.unitPrice === "string" ? parseFloat(p.unitPrice) : p.unitPrice,
       costPrice:
         typeof p.costPrice === "string" ? parseFloat(p.costPrice) : p.costPrice,
+      minSaleWeight: p.minSaleWeight ? Number(p.minSaleWeight) : undefined,
+      weightIncrement: p.weightIncrement
+        ? Number(p.weightIncrement)
+        : undefined,
     }));
 
     return {
