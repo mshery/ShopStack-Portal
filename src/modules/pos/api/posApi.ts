@@ -4,6 +4,7 @@
  * API client for Sales, Refunds, Receipts, and Held Orders.
  */
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { httpClient } from "@/core/api/httpClient";
 import { endpoints } from "@/core/config/endpoints";
 import type { ApiResponse, PaginatedResponse } from "@/shared/types/api";
@@ -182,29 +183,75 @@ export interface TodaysSummary {
 // API
 // ============================================
 
+// Helpers
+const transformSaleItem = (item: any): SaleItem => ({
+  ...item,
+  quantity: Number(item.quantity),
+});
+
+const transformSale = (sale: any): Sale => ({
+  ...sale,
+  items: sale.items?.map(transformSaleItem) || [],
+  // Ensure other numeric fields if needed, but interface says string for totals
+});
+
+const transformRefundItem = (item: any): RefundItem => ({
+  ...item,
+  quantity: Number(item.quantity),
+  refundAmount: Number(item.refundAmount),
+});
+
+const transformRefund = (refund: any): Refund => ({
+  ...refund,
+  refundedItems: refund.refundedItems?.map(transformRefundItem) || [],
+});
+
+const transformReceipt = (receipt: any): Receipt => ({
+  ...receipt,
+  subtotal: Number(receipt.subtotal),
+  tax: Number(receipt.tax),
+  grandTotal: Number(receipt.grandTotal),
+  discount: receipt.discount ? Number(receipt.discount) : null,
+  items:
+    receipt.items?.map((item: any) => ({
+      ...item,
+      quantity: Number(item.quantity),
+      unitPrice: Number(item.unitPrice),
+      subtotal: Number(item.subtotal),
+    })) || [],
+  payment: {
+    ...receipt.payment,
+    amountTendered: Number(receipt.payment?.amountTendered || 0),
+    changeGiven: Number(receipt.payment?.changeGiven || 0),
+  },
+});
+
 export const posApi = {
   // Sales
   getSales: async (params?: SalesFilters): Promise<PaginatedResponse<Sale>> => {
-    const res = await httpClient.get<ApiResponse<PaginatedResponse<Sale>>>(
+    const res = await httpClient.get<ApiResponse<PaginatedResponse<any>>>(
       endpoints.tenant.sales.list,
       { params },
     );
-    return res.data.data;
+    return {
+      ...res.data.data,
+      items: res.data.data.items.map(transformSale),
+    };
   },
 
   getSale: async (id: string): Promise<Sale> => {
-    const res = await httpClient.get<ApiResponse<Sale>>(
+    const res = await httpClient.get<ApiResponse<any>>(
       endpoints.tenant.sales.byId(id),
     );
-    return res.data.data;
+    return transformSale(res.data.data);
   },
 
   createSale: async (data: CreateSaleInput): Promise<Sale> => {
-    const res = await httpClient.post<ApiResponse<Sale>>(
+    const res = await httpClient.post<ApiResponse<any>>(
       endpoints.tenant.sales.list,
       data,
     );
-    return res.data.data;
+    return transformSale(res.data.data);
   },
 
   getTodaysSummary: async (): Promise<TodaysSummary> => {
@@ -218,41 +265,44 @@ export const posApi = {
   getRefunds: async (
     params?: RefundsFilters,
   ): Promise<PaginatedResponse<Refund>> => {
-    const res = await httpClient.get<ApiResponse<PaginatedResponse<Refund>>>(
+    const res = await httpClient.get<ApiResponse<PaginatedResponse<any>>>(
       endpoints.tenant.refunds.list,
       { params },
     );
-    return res.data.data;
+    return {
+      ...res.data.data,
+      items: res.data.data.items.map(transformRefund),
+    };
   },
 
   getRefund: async (id: string): Promise<Refund> => {
-    const res = await httpClient.get<ApiResponse<Refund>>(
+    const res = await httpClient.get<ApiResponse<any>>(
       endpoints.tenant.refunds.byId(id),
     );
-    return res.data.data;
+    return transformRefund(res.data.data);
   },
 
   processRefund: async (data: CreateRefundInput): Promise<Refund> => {
-    const res = await httpClient.post<ApiResponse<Refund>>(
+    const res = await httpClient.post<ApiResponse<any>>(
       endpoints.tenant.refunds.list,
       data,
     );
-    return res.data.data;
+    return transformRefund(res.data.data);
   },
 
   // Receipts
   getReceiptBySale: async (saleId: string): Promise<Receipt> => {
-    const res = await httpClient.get<ApiResponse<Receipt>>(
+    const res = await httpClient.get<ApiResponse<any>>(
       endpoints.tenant.receipts.bySale(saleId),
     );
-    return res.data.data;
+    return transformReceipt(res.data.data);
   },
 
   getReceiptByNumber: async (number: string): Promise<Receipt> => {
-    const res = await httpClient.get<ApiResponse<Receipt>>(
+    const res = await httpClient.get<ApiResponse<any>>(
       endpoints.tenant.receipts.byNumber(number),
     );
-    return res.data.data;
+    return transformReceipt(res.data.data);
   },
 
   // Held Orders

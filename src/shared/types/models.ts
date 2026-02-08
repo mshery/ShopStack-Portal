@@ -218,6 +218,10 @@ export interface Product {
   currentStock: number;
   minimumStock: number;
   status: ProductStatus;
+  productType: "unit" | "weighted";
+  minSaleWeight?: number;
+  weightIncrement?: number;
+  unitOfMeasureId?: string;
   imageUrl: string | null;
   description: string;
   createdAt: string;

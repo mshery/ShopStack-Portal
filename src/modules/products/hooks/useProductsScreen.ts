@@ -175,7 +175,7 @@ export function useProductsScreen() {
 
     const normalizedItems = rawItems.map((p) => ({
       ...p,
-      tenant_id: p.tenantId,
+      tenant_id: p.tenant_id,
       categoryId: p.categoryId ?? "",
       brandId: p.brandId ?? "",
       vendorId: p.vendorId ?? null,
