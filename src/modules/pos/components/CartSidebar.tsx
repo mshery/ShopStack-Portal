@@ -20,6 +20,7 @@ interface CartSidebarProps {
   onHoldOrder: () => void;
   currencySymbol: string;
   taxRate: number;
+  isCheckingOut: boolean;
 }
 
 /**
@@ -39,6 +40,7 @@ export function CartSidebar({
   onHoldOrder,
   currencySymbol,
   taxRate,
+  isCheckingOut,
 }: CartSidebarProps) {
   return (
     <div className="flex w-[440px] flex-col border-l border-gray-200 bg-white">
@@ -102,6 +104,7 @@ export function CartSidebar({
         cartItemCount={cart.length}
         currencySymbol={currencySymbol}
         taxRate={taxRate}
+        isCheckingOut={isCheckingOut}
       />
     </div>
   );

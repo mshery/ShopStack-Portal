@@ -49,6 +49,7 @@ export default function EditProductModal({
   // const { addAdjustment } = useInventoryStore(); // Removed legacy
   // const { addExpense } = useExpensesStore();
   // const { addTenantLog } = useActivityLogsStore();
+  const [isSaving, setIsSaving] = useState(false);
   const { currentUser, activeTenantId } = useAuthStore();
 
   // Fetch categories and brands via TanStack Query (not Zustand stores)
@@ -178,10 +179,16 @@ export default function EditProductModal({
       }
     }
 
-    // Execute SINGLE update call for Product Details (Name, Price, Current Stock)
-    await onUpdate(product.id, updateData);
-
-    onClose();
+    try {
+      setIsSaving(true);
+      // Execute SINGLE update call for Product Details (Name, Price, Current Stock)
+      await onUpdate(product.id, updateData);
+      onClose();
+    } catch (error) {
+      console.error("Failed to update product:", error);
+    } finally {
+      setIsSaving(false);
+    }
   }, [
     product,
     formData,
@@ -565,7 +572,12 @@ export default function EditProductModal({
             )}
           </div>
           <div className="flex items-center gap-3">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={isSaving}
+            >
               Close
             </Button>
             {currentStep === "info" && isOwner ? (
@@ -580,8 +592,12 @@ export default function EditProductModal({
                 Next: Adjust Stock →
               </Button>
             ) : (
-              <Button type="submit" form="edit-product-form">
-                Save Changes
+              <Button
+                type="submit"
+                form="edit-product-form"
+                disabled={isSaving}
+              >
+                {isSaving ? "Saving..." : "Save Changes"}
               </Button>
             )}
           </div>

@@ -347,6 +347,7 @@ export default function CartPage() {
         onHoldOrder={handleHoldOrder}
         currencySymbol={currencySymbol}
         taxRate={taxRate}
+        isCheckingOut={vm.isCheckingOut}
       />
 
       {/* Held Orders Panel */}

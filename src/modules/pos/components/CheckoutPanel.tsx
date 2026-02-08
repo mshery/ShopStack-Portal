@@ -13,6 +13,7 @@ interface CheckoutPanelProps {
   cartItemCount: number;
   currencySymbol: string;
   taxRate: number;
+  isCheckingOut: boolean;
 }
 
 /**
@@ -27,6 +28,7 @@ export function CheckoutPanel({
   onHoldOrder,
   cartItemCount,
   taxRate,
+  isCheckingOut,
 }: CheckoutPanelProps) {
   const discountAmount = discount
     ? discount.type === "percentage"
@@ -125,12 +127,18 @@ export function CheckoutPanel({
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
         onClick={() => onCheckout()}
-        disabled={cartItemCount === 0}
-        className="w-full h-14 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors shadow-lg"
+        disabled={cartItemCount === 0 || isCheckingOut}
+        className="w-full h-14 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors shadow-lg flex items-center justify-center gap-2"
       >
-        Complete Sale (Cash)
+        {isCheckingOut ? (
+          <>
+            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            <span>Processing...</span>
+          </>
+        ) : (
+          <span>Complete Sale (Cash)</span>
+        )}
       </motion.button>
     </div>
   );
 }
-

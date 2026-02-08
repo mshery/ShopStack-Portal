@@ -21,6 +21,7 @@ interface CartModalProps {
   onHoldOrder: () => void;
   currencySymbol: string;
   taxRate: number;
+  isCheckingOut: boolean;
 }
 
 /**
@@ -40,6 +41,7 @@ export function CartModal({
   onHoldOrder,
   currencySymbol,
   taxRate,
+  isCheckingOut,
 }: CartModalProps) {
   return (
     <AnimatePresence>
@@ -101,6 +103,7 @@ export function CartModal({
               cartItemCount={cart.length}
               currencySymbol={currencySymbol}
               taxRate={taxRate}
+              isCheckingOut={isCheckingOut}
             />
           </motion.div>
         </>
