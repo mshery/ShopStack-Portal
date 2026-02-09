@@ -8,6 +8,7 @@ interface CartItemsProps {
   onUpdateQuantity: (productId: string, delta: number) => void;
   onRemoveItem: (productId: string) => void;
   currencySymbol: string;
+  disabled?: boolean;
 }
 
 /**
@@ -17,6 +18,7 @@ export function CartItems({
   items,
   onUpdateQuantity,
   onRemoveItem,
+  disabled = false,
 }: CartItemsProps) {
   const getIncrement = (item: CartItem) => {
     if (item.product.productType === "weighted") {
@@ -62,7 +64,8 @@ export function CartItems({
                   </h4>
                   <button
                     onClick={() => onRemoveItem(item.productId)}
-                    className="flex-shrink-0 p-1.5 rounded-full bg-red-500 hover:bg-red-600 transition-colors"
+                    disabled={disabled}
+                    className="flex-shrink-0 p-1.5 rounded-full bg-red-500 hover:bg-red-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
                   >
                     <X className="h-3.5 w-3.5 text-white" />
                   </button>
@@ -76,11 +79,13 @@ export function CartItems({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 bg-gray-50 rounded-xl p-1">
                     <motion.button
-                      whileTap={{ scale: 0.9 }}
+                      whileTap={{ scale: disabled ? 1 : 0.9 }}
                       onClick={() =>
+                        !disabled &&
                         onUpdateQuantity(item.productId, -increment)
                       }
-                      className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-gray-200 transition-colors"
+                      disabled={disabled}
+                      className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       <Minus className="h-3.5 w-3.5 text-gray-600" />
                     </motion.button>
@@ -95,11 +100,12 @@ export function CartItems({
                       )}
                     </span>
                     <motion.button
-                      whileTap={{ scale: 0.9 }}
+                      whileTap={{ scale: disabled ? 1 : 0.9 }}
                       onClick={() =>
-                        onUpdateQuantity(item.productId, increment)
+                        !disabled && onUpdateQuantity(item.productId, increment)
                       }
-                      className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-500 hover:bg-brand-600 transition-colors"
+                      disabled={disabled}
+                      className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-500 hover:bg-brand-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
                     >
                       <Plus className="h-3.5 w-3.5 text-white" />
                     </motion.button>

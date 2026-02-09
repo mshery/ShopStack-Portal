@@ -13,7 +13,8 @@ interface CheckoutPanelProps {
   cartItemCount: number;
   currencySymbol: string;
   taxRate: number;
-  isCheckingOut: boolean;
+
+  processingStatus: "idle" | "creating_sale" | "generating_receipt";
 }
 
 /**
@@ -28,8 +29,10 @@ export function CheckoutPanel({
   onHoldOrder,
   cartItemCount,
   taxRate,
-  isCheckingOut,
+
+  processingStatus,
 }: CheckoutPanelProps) {
+  const isProcessing = processingStatus !== "idle";
   const discountAmount = discount
     ? discount.type === "percentage"
       ? (totals.total * discount.value) / 100
@@ -106,7 +109,7 @@ export function CheckoutPanel({
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => onClearCart()}
-          disabled={cartItemCount === 0}
+          disabled={cartItemCount === 0 || isProcessing}
           className="flex-1 h-12 bg-gray-100 hover:bg-gray-200 disabled:bg-gray-50 disabled:cursor-not-allowed text-gray-700 disabled:text-gray-400 font-semibold rounded-xl transition-colors"
         >
           Clear Cart
@@ -115,7 +118,7 @@ export function CheckoutPanel({
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => onHoldOrder()}
-          disabled={cartItemCount === 0}
+          disabled={cartItemCount === 0 || isProcessing}
           className="flex-1 h-12 bg-amber-100 hover:bg-amber-200 disabled:bg-amber-50 disabled:cursor-not-allowed text-amber-700 disabled:text-amber-400 font-semibold rounded-xl transition-colors"
         >
           Hold Order
@@ -127,13 +130,17 @@ export function CheckoutPanel({
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
         onClick={() => onCheckout()}
-        disabled={cartItemCount === 0 || isCheckingOut}
+        disabled={cartItemCount === 0 || isProcessing}
         className="w-full h-14 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors shadow-lg flex items-center justify-center gap-2"
       >
-        {isCheckingOut ? (
+        {isProcessing ? (
           <>
             <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            <span>Processing...</span>
+            <span>
+              {processingStatus === "creating_sale"
+                ? "Processing Sale..."
+                : "Generating Receipt..."}
+            </span>
           </>
         ) : (
           <span>Complete Sale (Cash)</span>

@@ -20,7 +20,7 @@ interface CartSidebarProps {
   onHoldOrder: () => void;
   currencySymbol: string;
   taxRate: number;
-  isCheckingOut: boolean;
+  processingStatus: "idle" | "creating_sale" | "generating_receipt";
 }
 
 /**
@@ -40,7 +40,7 @@ export function CartSidebar({
   onHoldOrder,
   currencySymbol,
   taxRate,
-  isCheckingOut,
+  processingStatus,
 }: CartSidebarProps) {
   return (
     <div className="flex w-[440px] flex-col border-l border-gray-200 bg-white">
@@ -88,6 +88,7 @@ export function CartSidebar({
               onUpdateQuantity={onUpdateQuantity}
               onRemoveItem={onRemoveItem}
               currencySymbol={currencySymbol}
+              disabled={processingStatus !== "idle"}
             />
           )}
         </AnimatePresence>
@@ -104,7 +105,7 @@ export function CartSidebar({
         cartItemCount={cart.length}
         currencySymbol={currencySymbol}
         taxRate={taxRate}
-        isCheckingOut={isCheckingOut}
+        processingStatus={processingStatus}
       />
     </div>
   );

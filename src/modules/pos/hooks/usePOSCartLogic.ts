@@ -103,6 +103,12 @@ export function usePOSCartLogic() {
     receipt: Receipt;
   } | null>(null);
 
+  // State for processing sale (loading)
+  // 'idle' | 'creating_sale' | 'generating_receipt'
+  const [processingStatus, setProcessingStatus] = useState<
+    "idle" | "creating_sale" | "generating_receipt"
+  >("idle");
+
   const tenantCustomers = useMemo(() => {
     if (!activeTenantId) return [];
     return customers.filter((c) => c.tenant_id === activeTenantId);
@@ -173,7 +179,11 @@ export function usePOSCartLogic() {
       orderStats,
 
       // Loading states for buttons
-      isCheckingOut: createSaleMutation.isPending,
+      // Loading states for buttons
+      // Loading states for buttons
+      isCheckingOut:
+        processingStatus !== "idle" || createSaleMutation.isPending,
+      processingStatus,
       isHolding: createHeldOrderMutation.isPending,
     }),
     [
@@ -191,6 +201,7 @@ export function usePOSCartLogic() {
       orderStats,
       createSaleMutation.isPending,
       createHeldOrderMutation.isPending,
+      processingStatus,
     ],
   );
 
@@ -254,6 +265,7 @@ export function usePOSCartLogic() {
     }
 
     try {
+      setProcessingStatus("creating_sale");
       const saleInput: CreateSaleInput = {
         customerId: selectedCustomerId || undefined,
         paymentMethod: "cash", // TODO: Support other methods
@@ -269,6 +281,7 @@ export function usePOSCartLogic() {
       const saleData = await createSaleMutation.mutateAsync(saleInput);
 
       // 2. Fetch Receipt
+      setProcessingStatus("generating_receipt");
       const receiptData = await posApi.getReceiptBySale(saleData.id);
 
       // Map API Receipt to Shared Model Receipt
@@ -312,6 +325,8 @@ export function usePOSCartLogic() {
         error instanceof Error ? error.message : "Checkout failed";
       toast.error(message);
       console.error("Checkout failed:", error);
+    } finally {
+      setProcessingStatus("idle");
     }
   }, [
     activeTenantId,

@@ -21,7 +21,7 @@ interface CartModalProps {
   onHoldOrder: () => void;
   currencySymbol: string;
   taxRate: number;
-  isCheckingOut: boolean;
+  processingStatus: "idle" | "creating_sale" | "generating_receipt";
 }
 
 /**
@@ -41,7 +41,7 @@ export function CartModal({
   onHoldOrder,
   currencySymbol,
   taxRate,
-  isCheckingOut,
+  processingStatus,
 }: CartModalProps) {
   return (
     <AnimatePresence>
@@ -88,6 +88,7 @@ export function CartModal({
                   onUpdateQuantity={onUpdateQuantity}
                   onRemoveItem={onRemoveItem}
                   currencySymbol={currencySymbol}
+                  disabled={processingStatus !== "idle"}
                 />
               )}
             </div>
@@ -103,7 +104,7 @@ export function CartModal({
               cartItemCount={cart.length}
               currencySymbol={currencySymbol}
               taxRate={taxRate}
-              isCheckingOut={isCheckingOut}
+              processingStatus={processingStatus}
             />
           </motion.div>
         </>

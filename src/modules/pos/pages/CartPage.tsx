@@ -184,7 +184,6 @@ export default function CartPage() {
 
   const handleCheckout = () => {
     actions.checkout();
-    setShowCart(false);
   };
 
   // Memoize grid props
@@ -347,7 +346,7 @@ export default function CartPage() {
         onHoldOrder={handleHoldOrder}
         currencySymbol={currencySymbol}
         taxRate={taxRate}
-        isCheckingOut={vm.isCheckingOut}
+        processingStatus={vm.processingStatus}
       />
 
       {/* Held Orders Panel */}
