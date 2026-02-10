@@ -6,6 +6,7 @@ import { DetailPageHeader } from "@/shared/components/feedback/DetailPageHeader"
 import { InfoSection, InfoRow } from "@/shared/components/feedback/InfoSection";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
+import { Skeleton } from "@/shared/components/ui/skeleton";
 import {
   ArrowLeft,
   FileText,
@@ -24,6 +25,78 @@ import { formatDateTime } from "@/shared/utils/format";
 import { useTenantCurrency } from "@/modules/tenant";
 import ConfirmModal from "@/shared/components/feedback/ConfirmModal";
 
+function PurchaseDetailsSkeleton() {
+  return (
+    <>
+      <PageBreadcrumb pageTitle="Purchase Order Details" />
+      <div className="space-y-6">
+        {/* Header skeleton */}
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-9 w-40" />
+          <div className="flex gap-2">
+            <Skeleton className="h-9 w-28" />
+            <Skeleton className="h-9 w-28" />
+          </div>
+        </div>
+
+        {/* Main header card */}
+        <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
+          <div className="flex gap-6">
+            <Skeleton className="w-20 h-20 rounded-xl flex-shrink-0" />
+            <div className="flex-1 space-y-3">
+              <Skeleton className="h-7 w-48" />
+              <Skeleton className="h-6 w-24 rounded-full" />
+            </div>
+          </div>
+        </div>
+
+        {/* Content grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Items section */}
+          <div className="lg:col-span-2">
+            <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
+              <Skeleton className="h-6 w-32 mb-4" />
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between p-4 rounded-xl border border-gray-100 dark:border-gray-800"
+                  >
+                    <div className="flex items-center gap-4">
+                      <Skeleton className="w-14 h-14 rounded-lg" />
+                      <div className="space-y-2">
+                        <Skeleton className="h-5 w-36" />
+                        <Skeleton className="h-4 w-24" />
+                      </div>
+                    </div>
+                    <Skeleton className="h-6 w-20" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]"
+              >
+                <Skeleton className="h-6 w-28 mb-4" />
+                <div className="space-y-3">
+                  <Skeleton className="h-5 w-full" />
+                  <Skeleton className="h-5 w-3/4" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 export default function PurchaseDetailsPage() {
   const { status, vm, actions } = usePurchaseDetailsScreen();
   const { formatPrice } = useTenantCurrency();
@@ -31,8 +104,7 @@ export default function PurchaseDetailsPage() {
 
   // Loading state
   if (status === "loading") {
-    // You might want a skeleton here, but for now basic loading is fine or handled by parent
-    return <div>Loading...</div>;
+    return <PurchaseDetailsSkeleton />;
   }
 
   // Error/Not found state
