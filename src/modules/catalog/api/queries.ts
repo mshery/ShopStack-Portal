@@ -13,7 +13,7 @@ export function useCategoriesFetch() {
   return useQuery({
     queryKey: catalogKeys.categories(),
     queryFn: catalogApi.getCategories,
-    staleTime: 60000, // 1 minute stale time
+    staleTime: 5 * 60_000, // 5 minutes — categories rarely change
   });
 }
 
@@ -56,7 +56,7 @@ export function useBrandsFetch() {
   return useQuery({
     queryKey: catalogKeys.brands(),
     queryFn: catalogApi.getBrands,
-    staleTime: 60000,
+    staleTime: 5 * 60_000, // 5 minutes — brands rarely change
   });
 }
 
