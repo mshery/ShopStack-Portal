@@ -158,6 +158,13 @@ export function useAddProductScreen() {
       toast.error("Unit price must be greater than 0");
       return;
     }
+    if (
+      (formData.currentStock ?? 0) > 0 &&
+      (formData.minimumStock ?? 0) > (formData.currentStock ?? 0)
+    ) {
+      toast.error("Minimum stock cannot be greater than current stock");
+      return;
+    }
 
     createMutation.mutate(formData);
   }, [formData, createMutation]);

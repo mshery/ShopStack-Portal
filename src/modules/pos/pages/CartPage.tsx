@@ -21,7 +21,6 @@ import { FloatingCartButton } from "@/modules/pos/components/FloatingCartButton"
 import { CartModal } from "@/modules/pos/components/CartModal";
 import { HoldOrdersPanel } from "@/modules/pos/components/HoldOrdersPanel";
 import { ReceiptModal } from "@/modules/pos/components/ReceiptModal";
-import { useTenantsStore } from "@/modules/tenant";
 import { AnimatePresence } from "motion/react";
 import { usePOSProducts } from "@/modules/pos/hooks/usePOSProducts";
 import {
@@ -34,8 +33,7 @@ import {
  */
 export default function CartPage() {
   const { vm, actions } = usePOSCartLogic();
-  const { activeTenantId } = useAuthStore();
-  const { tenants } = useTenantsStore();
+  const { activeTenantId, currentTenant } = useAuthStore();
 
   // Fetch Products
   const productQuery = usePOSProducts(12);
@@ -140,9 +138,12 @@ export default function CartPage() {
     [filters],
   );
 
-  const tenant = tenants.find((t: { id: string }) => t.id === activeTenantId);
-  const currencySymbol = vm.tenantSettings?.currencySymbol || "Rs";
-  const taxRate = vm.tenantSettings?.taxRate || 0.1;
+  const currencySymbol =
+    ((currentTenant?.settings as Record<string, unknown>)
+      ?.currencySymbol as string) || "Rs";
+  const taxRate =
+    ((currentTenant?.settings as Record<string, unknown>)?.taxRate as number) ||
+    0.1;
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -367,7 +368,7 @@ export default function CartPage() {
         onClose={actions.clearLastCheckout}
         sale={vm.lastCheckout?.sale || null}
         receipt={vm.lastCheckout?.receipt || null}
-        tenantName={tenant?.companyName || "ShopStack POS"}
+        tenantName={currentTenant?.companyName || "ShopStack POS"}
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         cashier={vm.currentUser as any}
       />

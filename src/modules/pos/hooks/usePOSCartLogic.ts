@@ -3,7 +3,6 @@ import toast from "react-hot-toast";
 import { useAuthStore } from "@/modules/auth";
 import { usePOSStore } from "@/modules/pos";
 import { useCustomersStore } from "@/modules/customers";
-import { useTenantsStore } from "@/modules/platform";
 import type {
   AsyncStatus,
   Product,
@@ -29,10 +28,9 @@ import {
  * Handles cart operations, checkout, and inventory management
  */
 export function usePOSCartLogic() {
-  const { activeTenantId, currentUser } = useAuthStore();
+  const { activeTenantId, currentUser, currentTenant } = useAuthStore();
 
   const { customers } = useCustomersStore();
-  const { tenants } = useTenantsStore();
 
   const {
     cart,
@@ -114,12 +112,14 @@ export function usePOSCartLogic() {
     return customers.filter((c) => c.tenant_id === activeTenantId);
   }, [activeTenantId, customers]);
 
-  // Get tenant settings for tax rate
+  // Get tenant settings for tax rate (from login response, not platform store)
   const tenantSettings = useMemo(() => {
-    if (!activeTenantId) return null;
-    const tenant = tenants.find((t) => t.id === activeTenantId);
-    return tenant?.settings || null;
-  }, [activeTenantId, tenants]);
+    if (!currentTenant) return null;
+    return currentTenant.settings as {
+      taxRate?: number;
+      currencySymbol?: string;
+    } | null;
+  }, [currentTenant]);
 
   const cartTotals = useMemo(() => {
     const subtotal = cart.reduce(
