@@ -1,68 +1,42 @@
 /**
- * Token Storage Service
+ * Token Storage Service — IN-MEMORY ONLY.
  *
- * Manages access and refresh tokens in localStorage.
+ * Per security.md rule 3, bearer tokens never live in localStorage (XSS-
+ * readable). The access token now lives in a module-scope variable here;
+ * the refresh token lives in an httpOnly cookie set by the backend on
+ * login (`POST /api/auth/login`) and silently refreshed on app boot.
+ *
+ * The shape (`getAccessToken`, `setTokens`, `clearTokens`, `hasToken`) is
+ * preserved so existing call sites keep working through this migration;
+ * `refreshToken` is now ignored — the cookie is authoritative.
  */
 
-const ACCESS_TOKEN_KEY = "shopstack_access_token";
-const REFRESH_TOKEN_KEY = "shopstack_refresh_token";
+let accessTokenInMemory: string | null = null;
 
-interface TokenData {
+interface TokenInput {
   accessToken: string;
-  refreshToken: string;
+  /** Ignored — the refresh token lives in an httpOnly cookie. Kept in the
+   * shape for backwards compatibility during the migration. */
+  refreshToken?: string;
 }
 
 export const tokenStorage = {
-  /**
-   * Get the current access token
-   */
-  getAccessToken: (): string | null => {
-    try {
-      return localStorage.getItem(ACCESS_TOKEN_KEY);
-    } catch {
-      return null;
-    }
+  getAccessToken: (): string | null => accessTokenInMemory,
+
+  /** Always returns null — refresh token is httpOnly cookie, not visible to JS. */
+  getRefreshToken: (): string | null => null,
+
+  setTokens: (data: TokenInput): void => {
+    accessTokenInMemory = data.accessToken;
   },
 
-  /**
-   * Get the current refresh token
-   */
-  getRefreshToken: (): string | null => {
-    try {
-      return localStorage.getItem(REFRESH_TOKEN_KEY);
-    } catch {
-      return null;
-    }
+  setAccessToken: (token: string | null): void => {
+    accessTokenInMemory = token;
   },
 
-  /**
-   * Save both tokens to storage
-   */
-  setTokens: (data: TokenData): void => {
-    try {
-      localStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken);
-      localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
-    } catch {
-      console.error("Failed to save tokens to localStorage");
-    }
-  },
-
-  /**
-   * Remove all tokens from storage
-   */
   clearTokens: (): void => {
-    try {
-      localStorage.removeItem(ACCESS_TOKEN_KEY);
-      localStorage.removeItem(REFRESH_TOKEN_KEY);
-    } catch {
-      console.error("Failed to clear tokens from localStorage");
-    }
+    accessTokenInMemory = null;
   },
 
-  /**
-   * Check if an access token exists
-   */
-  hasToken: (): boolean => {
-    return !!tokenStorage.getAccessToken();
-  },
+  hasToken: (): boolean => accessTokenInMemory !== null,
 };

@@ -31,11 +31,9 @@ export function useImpersonation() {
         // Call real API to impersonate tenant
         const data = await impersonateMutation.mutateAsync(tenantId);
 
-        // Store impersonation token
-        tokenStorage.setTokens({
-          accessToken: data.token,
-          refreshToken: data.token, // Use same token for refresh
-        });
+        // Store impersonation access token in memory. The backend issues a
+        // fresh refresh cookie for the impersonated session.
+        tokenStorage.setAccessToken(data.token);
 
         // Log the impersonation
         addPlatformLog({

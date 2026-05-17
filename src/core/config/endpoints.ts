@@ -13,6 +13,7 @@ export const endpoints = {
     login: "/auth/login",
     register: "/auth/register",
     refreshToken: "/auth/refresh-token",
+    logout: "/auth/logout",
     me: "/auth/me",
     changePassword: "/auth/me/change-password",
     // User management (context-aware)
