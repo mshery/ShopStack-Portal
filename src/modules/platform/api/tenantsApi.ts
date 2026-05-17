@@ -1,56 +1,92 @@
 /**
- * Tenants API
+ * Platform Tenants API
  *
- * Placeholder API for tenant CRUD operations.
- * Currently uses local data, will connect to real backend in the future.
+ * Real `/api/platform/tenants*` HTTP wrappers. Every response is parsed
+ * with zod before leaving this file so downstream code never sees a
+ * raw axios payload. See `.claude/rules/service-patterns.md`.
  */
 
-import { simulateDelay } from "@/core/api/httpClient";
-import type { Tenant, CreateTenantInput, UpdateTenantInput } from "../types";
+import { httpClient } from "@/core/api/httpClient";
+import { endpoints } from "@/core/config/endpoints";
+import {
+  ImpersonationResponseSchema,
+  TenantListResponseSchema,
+  TenantResponseSchema,
+  type ImpersonationResult,
+  type Tenant,
+  type TenantList,
+} from "../normalizers/tenants.normalizers";
 
-// Mock tenant API functions (for future backend integration)
-export async function fetchTenants(): Promise<Tenant[]> {
-    await simulateDelay(300);
-    console.log("Tenants API: fetchTenants");
-    return [];
+export interface ListTenantsParams {
+  page?: number;
+  limit?: number;
 }
 
-export async function fetchTenantById(id: string): Promise<Tenant | null> {
-    await simulateDelay(300);
-    console.log("Tenants API: fetchTenantById", { id });
-    return null;
+export interface CreateTenantPayload {
+  slug: string;
+  companyName: string;
+  planId: string;
+  ownerEmail: string;
+  ownerName: string;
+  ownerPassword: string;
+}
+
+export type UpdateTenantPayload = Partial<{
+  slug: string;
+  companyName: string;
+  status: Tenant["status"];
+  planId: string;
+}>;
+
+export async function listTenants(
+  params: ListTenantsParams = {},
+): Promise<TenantList> {
+  const res = await httpClient.get<unknown>(endpoints.platform.tenants.list, {
+    params,
+  });
+  return TenantListResponseSchema.parse(res.data).data;
+}
+
+export async function getTenant(id: string): Promise<Tenant> {
+  const res = await httpClient.get<unknown>(
+    endpoints.platform.tenants.byId(encodeURIComponent(id)),
+  );
+  return TenantResponseSchema.parse(res.data).data;
 }
 
 export async function createTenant(
-    data: CreateTenantInput
-): Promise<{ success: boolean; tenant?: Tenant; error?: string }> {
-    await simulateDelay(500);
-    console.log("Tenants API: createTenant", data);
-    return { success: true };
+  data: CreateTenantPayload,
+): Promise<Tenant> {
+  const res = await httpClient.post<unknown>(
+    endpoints.platform.tenants.list,
+    data,
+  );
+  return TenantResponseSchema.parse(res.data).data;
 }
 
 export async function updateTenant(
-    id: string,
-    data: UpdateTenantInput
-): Promise<{ success: boolean; error?: string }> {
-    await simulateDelay(300);
-    console.log("Tenants API: updateTenant", { id, data });
-    return { success: true };
+  id: string,
+  data: UpdateTenantPayload,
+): Promise<Tenant> {
+  const res = await httpClient.put<unknown>(
+    endpoints.platform.tenants.byId(encodeURIComponent(id)),
+    data,
+  );
+  return TenantResponseSchema.parse(res.data).data;
 }
 
-export async function deleteTenant(
-    id: string
-): Promise<{ success: boolean; error?: string }> {
-    await simulateDelay(300);
-    console.log("Tenants API: deleteTenant", { id });
-    return { success: true };
+export async function suspendTenant(id: string): Promise<Tenant> {
+  const res = await httpClient.post<unknown>(
+    endpoints.platform.tenants.suspend(encodeURIComponent(id)),
+  );
+  return TenantResponseSchema.parse(res.data).data;
 }
 
-export async function updateTenantStatus(
-    id: string,
-    status: "active" | "inactive" | "suspended"
-): Promise<{ success: boolean; error?: string }> {
-    await simulateDelay(300);
-    console.log("Tenants API: updateTenantStatus", { id, status });
-    return { success: true };
+export async function impersonateTenant(
+  id: string,
+): Promise<ImpersonationResult> {
+  const res = await httpClient.post<unknown>(
+    endpoints.platform.tenants.impersonate(encodeURIComponent(id)),
+  );
+  return ImpersonationResponseSchema.parse(res.data).data;
 }
