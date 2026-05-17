@@ -111,10 +111,14 @@ export const authApi = {
   },
 
   /**
-   * Get current user profile
+   * Get current user profile + tenant. Returns the same { user, tenant } shape
+   * as the login response so the silent-refresh-on-boot flow (ITS-26) can
+   * fully restore the session without an extra round-trip.
    */
-  getProfile: async (): Promise<AuthUser> => {
-    const res = await httpClient.get<ApiResponse<AuthUser>>(endpoints.auth.me);
+  getProfile: async (): Promise<{ user: AuthUser; tenant: AuthTenant | null }> => {
+    const res = await httpClient.get<ApiResponse<{ user: AuthUser; tenant: AuthTenant | null }>>(
+      endpoints.auth.me,
+    );
     return res.data.data;
   },
 

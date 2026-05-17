@@ -33,7 +33,7 @@ function App() {
         if (!cancelled && token) {
           tokenStorage.setAccessToken(token);
           try {
-            const user = await authApi.getProfile();
+            const { user, tenant } = await authApi.getProfile();
             if (cancelled) return;
             const isPlatform = !user.tenantId;
             useAuthStore.getState().login({
@@ -68,7 +68,7 @@ function App() {
                   },
               userType: isPlatform ? "platform" : "tenant",
               tenantId: user.tenantId ?? null,
-              tenant: null,
+              tenant,
             });
           } catch {
             // Profile fetch failed; fall through to login screen.
