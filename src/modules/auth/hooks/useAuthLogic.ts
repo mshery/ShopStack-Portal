@@ -8,38 +8,24 @@ import type { AsyncStatus } from "@/shared/types/common";
 /**
  * useAuthLogic - Unified authentication logic hook
  *
- * Handles login for both platform and tenant users.
- * Auto-detects user type based on backend response (tenantId presence).
- *
- * After successful login, navigates via window.location.
- * The auth store handles localStorage persistence internally.
+ * Handles login for both platform and tenant users. The backend now sets
+ * the refresh token as an httpOnly cookie, so we only persist the access
+ * token in memory (security.md rule 3 / ITS-26).
  */
 export function useAuthLogic() {
   const { currentUser, userType } = useAuthStore();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Login mutation - unified for both platform and tenant
   const loginMutation = useMutation({
     mutationFn: ({ email, password }: { email: string; password: string }) =>
       authApi.login(email, password),
     onSuccess: (data: LoginResponse) => {
-      console.log("Login API successful", data);
+      tokenStorage.setAccessToken(data.token);
 
-      // Store tokens first
-      tokenStorage.setTokens({
-        accessToken: data.token,
-        refreshToken: data.refreshToken,
-      });
-
-      // Auto-detect user type based on tenantId
       const isPlatformUser = !data.user.tenantId;
-
-      // Call the store's login action directly on the store instance
-      // The store now handles localStorage persistence internally
       const storeState = useAuthStore.getState();
 
       if (isPlatformUser) {
-        // Platform user
         const platformUser = {
           id: data.user.id,
           email: data.user.email,
@@ -56,7 +42,6 @@ export function useAuthLogic() {
           updatedAt: data.user.updatedAt,
         };
 
-        // Atomic login - sets all state and persists to localStorage
         storeState.login({
           user: platformUser,
           userType: "platform",
@@ -64,10 +49,8 @@ export function useAuthLogic() {
           tenant: null,
         });
 
-        console.log("Auth store updated for platform user, navigating...");
         window.location.href = "/platform";
       } else {
-        // Tenant user
         const tenantUser = {
           id: data.user.id,
           tenant_id: data.user.tenantId!,
@@ -86,15 +69,13 @@ export function useAuthLogic() {
           updatedAt: data.user.updatedAt,
         };
 
-        // Atomic login - sets all state and persists to localStorage
         storeState.login({
           user: tenantUser,
           userType: "tenant",
           tenantId: data.user.tenantId,
-          tenant: data.tenant, // Pass tenant from login response
+          tenant: data.tenant,
         });
 
-        console.log("Auth store updated for tenant user, navigating...");
         window.location.href = "/tenant";
       }
     },
@@ -111,7 +92,10 @@ export function useAuthLogic() {
     [loginMutation],
   );
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    // Best-effort: tell the backend to revoke the refresh family and clear
+    // the httpOnly cookie. Then drop the in-memory access token regardless.
+    await authApi.logout();
     tokenStorage.clearTokens();
     useAuthStore.getState().logout();
     window.location.href = "/login";
