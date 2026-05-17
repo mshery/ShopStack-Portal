@@ -1,0 +1,141 @@
+# Comments
+
+A comment is a debt. It can lie, drift, or rot. The best code needs no comments because the code itself reads clearly. But some comments are load-bearing — these rules say which.
+
+## Write a comment when
+
+1. **The "why" isn't obvious from the code.** Code shows what; comments show why.
+   ```ts
+   // Stripe webhook retries failed events with the same idempotency-key for up to 3 days.
+   // We accept duplicates instead of failing fast so retries succeed deterministically.
+   const cache = new LRUCache({ max: 1000, ttl: 3 * 24 * 60 * 60 * 1000 })
+   ```
+
+2. **You're sidestepping a rule on purpose.** Make the violation auditable.
+   ```ts
+   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- third-party type missing; safe wrapper below
+   const raw: any = legacyLib(input)
+   ```
+
+3. **You're referencing an external authority** that future readers must consult.
+   ```ts
+   // WAI-ARIA Authoring Practices: combobox + listbox pattern
+   // https://www.w3.org/WAI/ARIA/apg/patterns/combobox/
+   ```
+
+4. **The code is intentionally a workaround** for a bug or limitation, with a ticket reference.
+   ```ts
+   // Workaround: Radix Dialog focus trap loses focus when nested inside a Popover.
+   // Linear: SHOP-123. Remove once Radix > 1.2 ships.
+   ```
+
+5. **It's a public API (JSDoc).** See below.
+
+## Don't write a comment when
+
+1. **The comment restates the code.**
+   ```ts
+   // ❌ noise
+   // Increment counter by 1
+   counter += 1
+
+   // ❌ noise
+   // Set isOpen to true
+   setIsOpen(true)
+   ```
+
+   If the code is self-evident, deleting the comment loses nothing.
+
+2. **The comment says what the code *should* do.** Rename the function instead.
+   ```ts
+   // ❌ band-aid
+   // Get the current user
+   function gcu() { /* ... */ }
+
+   // ✅ design fix
+   function getCurrentUser() { /* ... */ }
+   ```
+
+3. **The comment hides a bad name or a complex block** that should be extracted into a function.
+   ```ts
+   // ❌ Section header
+   // --- TAX CALCULATION ---
+   const tax = ...
+
+   // ✅ extract
+   const tax = computeTax(items, region)
+   ```
+
+4. **The comment is stale.** "This works because…" followed by code that no longer does that. Either fix or delete.
+
+5. **The comment is commented-out code.** `git` is the archive. Delete it.
+
+## JSDoc — when public, terse, structured
+
+Public exports in `lib/`, `components/`, and any module imported by another feature get a short JSDoc when their behavior isn't already obvious from the signature.
+
+```ts
+/**
+ * Parses a server `Order` payload, filling missing arrays with `[]`
+ * and throwing on a shape mismatch. Always call at the API boundary.
+ *
+ * @throws {z.ZodError} when the payload doesn't match `OrderSchema`
+ */
+export function parseOrder(raw: unknown): Order { /* ... */ }
+```
+
+Rules:
+
+- One-line summary first.
+- Document `@throws` for anything callers must catch (don't document `AppError` from axios — that's universal).
+- Document `@deprecated` with the replacement and a removal date.
+- Don't document parameters and return types when TS already shows them — TS is the contract.
+- Don't write JSDoc for internal helpers (`function asString`).
+
+## TODO / FIXME / HACK
+
+- `// TODO: ` requires a Linear ticket reference in the same line: `// TODO(SHOP-456): paginate`. No ticket → not committed.
+- `// FIXME:` is reserved for known broken behavior with an active investigation; same ticket rule.
+- `// HACK:` is the strongest warning; should be paired with a ticket *and* a comment explaining the cost.
+
+Stale TODOs without active tickets get deleted on sight.
+
+## Section headers / banners
+
+Avoid `// =============================== USERS ===============================` style banners. If a file is large enough to need section headers, split it.
+
+## Don't apologize in comments
+
+```ts
+// ❌
+// I know this is ugly but I couldn't figure out a better way
+
+// ✅
+// Two-pass walk: first pass collects deps, second pass topo-sorts.
+// Single-pass would require backtracking and isn't worth the complexity.
+```
+
+State the reasoning. Skip the apology.
+
+## Inline comments
+
+Inline (`// foo` at end of line) only when the rest of the line truly doesn't tell the story:
+
+```ts
+const timeoutMs = 15_000  // matches gateway 15s limit
+```
+
+Otherwise put the comment on its own line above.
+
+## Multi-line comments
+
+Use `//`, not `/* */`, for ordinary comments. Reserve `/* */` for JSDoc and inline disable comments.
+
+## i18n strings
+
+Strings shown to the user are not comments; they're content. They belong in the i18n layer when we adopt one, not in code comments.
+
+## See also
+
+- `documentation.md` — when to write something longer than a comment
+- `pr-process.md` — what `// TODO`s mean for the diff

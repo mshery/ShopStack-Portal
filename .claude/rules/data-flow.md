@@ -1,0 +1,191 @@
+# Data Flow
+
+Data in ShopStack Portal flows in **exactly one direction**. This file is the contract; `architecture.md` is the geography. Every reverse flow is a bug factory.
+
+## The arrow
+
+```
+API
+  │  (HTTP, raw JSON, untrusted)
+  ▼
+Normalizer  ◄──── zod schema, defaults, coercion
+  │  (parsed, typed, safe)
+  ▼
+Store / Query  ◄──── cache layer (Zustand = client, TanStack = server)
+  │  (canonical app state)
+  ▼
+Screen Hook
+  │  (status + vm + actions)
+  ▼
+Page
+  │  (chosen layout)
+  ▼
+Component
+  │  (rendered DOM)
+  ▼
+User
+```
+
+## Forbidden reverse flows
+
+| Reverse arrow | What goes wrong |
+|---|---|
+| Component → API | Components become unmockable, untestable, untraceable |
+| Page → API | The page now branches on fetch state; the hook is dead |
+| Store → UI side-effect | Stores become god-objects; deletion is impossible |
+| UI → state shape mutation | The store no longer owns its shape; bugs multiply |
+| Component → Store setter | Skips the hook's orchestration; breaks `actions` contract |
+
+If you spot an arrow going up, that's the bug.
+
+## Boundary 1 — API → Normalizer
+
+The API client (`modules/<x>/api/<x>Api.ts`) returns raw JSON. **Never** export raw API responses out of this file.
+
+```ts
+// modules/orders/api/ordersApi.ts
+import { http } from "@/lib/http"
+
+export async function fetchOrderRaw(id: string): Promise<unknown> {
+  const { data } = await http.get(`/orders/${id}`)
+  return data
+}
+```
+
+The normalizer (`modules/<x>/normalizers/<x>.normalizers.ts`, or `modules/<x>/types/index.ts` for small modules) parses with zod, fills defaults, and returns the canonical domain type. **It is the only place that converts `unknown` → `Order`.**
+
+```ts
+// modules/orders/normalizers/orders.normalizers.ts
+import { z } from "zod"
+import { OrderId, UserId } from "@/types/ids"
+
+export const OrderSchema = z.object({
+  id: z.string().transform(OrderId),
+  customerId: z.string().transform(UserId),
+  items: z.array(OrderItemSchema).default([]),
+  totalCents: z.number().int().nonnegative(),
+  status: z.enum(["pending", "paid", "shipped", "refunded"]),
+})
+
+export type Order = z.infer<typeof OrderSchema>
+
+export function parseOrder(raw: unknown): Order {
+  return OrderSchema.parse(raw)
+}
+```
+
+After this point, the rest of the app may **never** ask "is this field null?" for fields the schema declares required.
+
+## Boundary 2 — Normalizer → Store/Query
+
+Server data goes into a TanStack Query. Client data goes into a Zustand store. **Don't cross the streams.**
+
+```ts
+// modules/orders/queries/orders.queries.ts
+import { useQuery } from "@tanstack/react-query"
+import { fetchOrderRaw } from "./orders.api"
+import { parseOrder } from "./orders.normalizers"
+import { orderKeys } from "./orders.keys"
+
+export function useOrderQuery(id: string) {
+  return useQuery({
+    queryKey: orderKeys.detail(id),
+    queryFn: async () => parseOrder(await fetchOrderRaw(id)),
+  })
+}
+```
+
+The normalizer is called inside `queryFn` — the query layer never sees raw data.
+
+## Boundary 3 — Store/Query → Screen Hook
+
+The screen hook reads from queries and stores, derives the `vm`, exposes `actions`. It is the **only place** that joins server + client state.
+
+```ts
+export function useCheckoutScreen() {
+  const orderQuery = useOrderQuery(orderId)
+  const cartItems = useCartStore((s) => s.items)
+
+  const status: AsyncStatus =
+    orderQuery.isLoading ? "loading" :
+    orderQuery.isError   ? "error"   :
+    cartItems.length === 0 ? "empty" :
+    "success"
+
+  const vm = useMemo(() => ({
+    order: orderQuery.data,
+    items: cartItems,
+    totalCents: cartItems.reduce((s, i) => s + i.priceCents * i.qty, 0),
+    canCheckout: cartItems.length > 0 && !orderQuery.isFetching,
+  }), [orderQuery.data, orderQuery.isFetching, cartItems])
+
+  const actions = useMemo(() => ({
+    checkout: () => { /* mutation */ },
+    refresh: () => orderQuery.refetch(),
+  }), [orderQuery])
+
+  return { status, vm, actions }
+}
+```
+
+## Boundary 4 — Screen Hook → Page
+
+The page receives `{ status, vm, actions }` and chooses a layout. (See `architecture.md` for the canonical page shape.)
+
+## Boundary 5 — Page → Component
+
+Components receive **only** the slices of `vm` they need, plus the handlers they call. They never know about queries, stores, or hooks.
+
+```tsx
+// ❌ WRONG — component reaches across boundaries
+function CartTotals() {
+  const items = useCartStore((s) => s.items)
+  // ...
+}
+
+// ✅ CORRECT — component is a prop sink
+type Props = Readonly<{ totalCents: number; canCheckout: boolean; onCheckout: () => void }>
+function CartTotals({ totalCents, canCheckout, onCheckout }: Props) {
+  return /* ... */
+}
+```
+
+## Cache hierarchy
+
+When the same data appears in multiple places, follow this hierarchy of truth:
+
+1. **TanStack Query cache** — the canonical truth for server data
+2. **Zustand store** — the canonical truth for client-only state
+3. **URL** (search params, route params) — the canonical truth for navigation state
+4. **`useState`** — the canonical truth for ephemeral UI state
+
+If a value can live higher in the hierarchy, push it up.
+
+## Optimistic updates
+
+Mutations may optimistically update the query cache. The mutation owns rollback.
+
+```ts
+useMutation({
+  mutationFn: updateOrder,
+  onMutate: async (next) => {
+    await queryClient.cancelQueries({ queryKey: orderKeys.detail(next.id) })
+    const previous = queryClient.getQueryData(orderKeys.detail(next.id))
+    queryClient.setQueryData(orderKeys.detail(next.id), next)
+    return { previous }
+  },
+  onError: (_err, next, ctx) => {
+    if (ctx?.previous) queryClient.setQueryData(orderKeys.detail(next.id), ctx.previous)
+  },
+  onSettled: (_data, _err, next) => {
+    queryClient.invalidateQueries({ queryKey: orderKeys.detail(next.id) })
+  },
+})
+```
+
+## See also
+
+- `architecture.md` — folder structure
+- `service-patterns.md` — query/mutation conventions
+- `zustand-stores.md` — what belongs in a store
+- `error-handling.md` — what happens when a boundary throws

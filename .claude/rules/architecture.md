@@ -1,0 +1,219 @@
+# Architecture
+
+ShopStack Portal is a layered, **domain-modular SPA**. Data flows in exactly one direction. Every file in `src/` belongs to exactly one of four roots — `core/`, `shared/`, `modules/`, `app/` — and a module cannot reach into another module's internals.
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│ COMPONENTS    pure, dumb, props-only (module-private or shared) │
+│   ▲                                                             │
+│ PAGES         route entry, layout, branches on AsyncStatus      │
+│   ▲                                                             │
+│ SCREEN HOOKS  the brain: fetching, derivation, actions, vm      │
+│   ▲                                                             │
+│ STORES        Zustand: state + setters, nothing else            │
+│ QUERIES       TanStack Query: server cache                      │
+│   ▲                                                             │
+│ NORMALIZERS   parse + coerce raw API responses (zod)            │
+│   ▲                                                             │
+│ API CLIENTS   axios instances, request/response only            │
+│   ▲                                                             │
+│ BACKEND                                                          │
+└────────────────────────────────────────────────────────────────┘
+```
+
+A layer **may not** import from a layer above it. A component may not import a store directly — it receives data through the screen hook's `vm`.
+
+## Top-level layout
+
+```
+src/
+├── app/                       # app shell — root component, providers, contexts
+│   ├── App.tsx
+│   └── context/               # ThemeContext, SidebarContext, etc.
+├── core/                      # cross-cutting infrastructure (one of each)
+│   ├── api/
+│   │   ├── httpClient.ts      # the single axios instance + interceptors
+│   │   └── queryClient.ts     # the single TanStack QueryClient
+│   ├── config/                # env, endpoints, feature flags
+│   ├── routing/
+│   │   ├── router.tsx         # root createBrowserRouter
+│   │   ├── guards/            # AuthGuard, TenantStatusGuard, RootRedirect
+│   │   └── layouts/           # AuthLayout, AppLayout, PlatformLayout, TenantLayout
+│   ├── security/              # rbac.config.ts, permissions.ts, storage.ts
+│   └── index.ts               # public API of core
+├── shared/                    # reusable, domain-agnostic primitives
+│   ├── components/            # Button, Input, Modal, DataTable, EmptyState…
+│   ├── hooks/                 # useDebounce, useMediaQuery…
+│   ├── utils/                 # cn, format, normalize…
+│   ├── types/                 # AsyncStatus, Pagination, ApiError…
+│   ├── icons/                 # lucide re-exports + project icons
+│   ├── pages/                 # demo/utility pages not bound to a domain
+│   └── index.ts               # public API of shared
+├── modules/                   # feature modules, one per domain
+│   ├── auth/                  # Authentication
+│   ├── platform/              # Super-admin (tenant mgmt, platform logs)
+│   ├── tenant/                # Tenant core (dashboard, settings, tenant users)
+│   ├── products/              # Products catalog
+│   ├── catalog/               # Categories & brands
+│   ├── customers/             # Customer mgmt
+│   ├── vendors/               # Vendor mgmt
+│   ├── purchases/             # Purchase orders
+│   ├── inventory/             # Stock + adjustments
+│   ├── expenses/              # Expense tracking
+│   ├── pos/                   # Point of Sale (cart, sales, shifts, refunds)
+│   ├── billing/               # Subscription, invoices
+│   ├── reports/               # Analytics
+│   └── index.ts               # re-exports every module's public API
+├── data/                      # seed data + bootstrap loader (initializeStores)
+├── styles/                    # globals.css + Tailwind @theme block
+├── test/                      # Vitest setup, MSW server, render helpers
+├── main.tsx
+└── vite-env.d.ts
+```
+
+**Rule:** if a thing is used in only one module, it lives in that module. Only promote to `shared/` when a second module needs it. **Duplication is cheaper than the wrong abstraction.**
+
+## Module shape (mandatory)
+
+Every folder under `modules/` follows the same shape:
+
+```
+modules/<domain>/
+├── api/                       # axios calls — return raw unknown data
+│   └── <domain>Api.ts         # camelCase file, e.g. productsApi.ts
+├── components/                # module-private dumb components
+│   └── <Domain>{Thing}.tsx    # PascalCase, e.g. ProductCard.tsx
+├── hooks/                     # screen hooks + module-internal hooks
+│   └── use<Domain>Screen.ts   # one per route
+├── pages/                     # route components
+│   └── <Domain>{View}Page.tsx # e.g. ProductsPage.tsx, ProductDetailsPage.tsx
+├── store/                     # Zustand stores
+│   └── <domain>.store.ts      # e.g. products.store.ts
+├── types/                     # TypeScript types + zod schemas
+│   └── index.ts
+└── index.ts                   # PUBLIC API — only thing other modules may import
+```
+
+Some modules add optional folders:
+
+- `normalizers/` — when API responses need shared zod parsing across multiple endpoints (`<x>.normalizers.ts`)
+- `queries/` — when the module owns TanStack Query queries, mutations, and keys (`<x>.queries.ts`, `<x>.mutations.ts`, `<x>.keys.ts`). New code uses this layout; small modules may keep query hooks inside `hooks/`.
+- `utils/` — when a module owns helpers not used elsewhere
+- `logic/` — legacy split between business logic and screen hooks; new code puts logic in `hooks/`
+
+## Module public-API rule (the cross-cutting law)
+
+The **only** legal way to import from one module into another is through its `index.ts`.
+
+```ts
+// ✅ ALLOWED — module public API
+import { useAuthStore, type AuthUser } from "@/modules/auth"
+import { ProductsPage } from "@/modules/products"
+
+// ✅ ALLOWED — within the same module
+import { ProductCard } from "../components/ProductCard"
+import { useProductsScreen } from "../hooks/useProductsScreen"
+
+// ✅ ALLOWED — core or shared (no internal-vs-public distinction)
+import { httpClient } from "@/core/api/httpClient"
+import { Button } from "@/shared/components/ui/Button"
+
+// ❌ FORBIDDEN — reaching into another module's internals
+import { ProductCard } from "@/modules/products/components/ProductCard"
+import { useProductsStore } from "@/modules/products/store/products.store"
+```
+
+The `index.ts` of a module lists every type, store, hook, component, and page exposed to the rest of the app. If something isn't in the `index.ts`, it's private.
+
+An ESLint `no-restricted-imports` rule should enforce this. Until that rule is in place, code review catches it.
+
+## The screen pattern (mandatory for every page)
+
+Every page is exactly three artifacts:
+
+1. **`<Name>Page.tsx`** in `pages/` — selects layout based on `status`. Owns no behavior.
+2. **`use<Name>Screen.ts`** in `hooks/` — the brain. Returns `{ status, vm, actions }`.
+3. **`components/`** — page-private dumb children.
+
+```tsx
+export function ProductsPage() {
+  const { status, vm, actions } = useProductsScreen()
+
+  if (status === "loading") return <ProductsSkeleton />
+  if (status === "error")   return <ErrorState onRetry={actions.refresh} />
+  if (status === "empty")   return <EmptyProducts />
+
+  return <ProductsView vm={vm} actions={actions} />
+}
+```
+
+If your page has more than 30 lines or branches on anything other than `status`, the logic belongs in the hook.
+
+> **Naming note.** Some legacy code uses `use<Name>Logic.ts` instead of `use<Name>Screen.ts`. New code uses `Screen`. Legacy `Logic` files should be renamed when their module is touched; see `project-rules.md` known-debt list.
+
+## Multi-tenant guarding
+
+Every tenant-scoped data path runs through:
+
+1. **`useAuthStore.activeTenantId`** — must be present for any tenant-scoped fetch
+2. **Route guards** — `TenantStatusGuard`, `AuthGuard` in `core/routing/guards/`
+3. **RBAC permissions** — see `core/security/rbac.config.ts` and `permissions.ts`
+
+The hook is the place that injects `activeTenantId` into the query key and the request body. Stores never reach for the active tenant themselves; the hook hands them already-filtered data.
+
+```ts
+// ✅ hook joins server data + tenant context
+export function useProductsScreen() {
+  const activeTenantId = useAuthStore((s) => s.activeTenantId)
+  const productsQuery = useProductsQuery({ tenantId: activeTenantId })
+  // ...
+}
+```
+
+## Where things live (cheat sheet)
+
+| Concern | Lives in |
+|---|---|
+| HTTP request | `modules/<x>/api/<x>Api.ts` |
+| Response parse / zod schema | `modules/<x>/types/index.ts` or `modules/<x>/normalizers/` |
+| Server cache (query/mutation) | `modules/<x>/hooks/use<X>Query.ts` (or `queries.ts`) |
+| Client UI state | `modules/<x>/store/<x>.store.ts` |
+| Route entry | `modules/<x>/pages/<X>Page.tsx` |
+| Fetching + derivation | `modules/<x>/hooks/use<Name>Screen.ts` |
+| Visual primitive (cross-module) | `shared/components/` |
+| App-wide helper | `core/` (infra) or `shared/utils/` (pure helper) |
+| Route guard | `core/routing/guards/` |
+| Permission definition | `core/security/rbac.config.ts` |
+| Env var | `core/config/env.ts` |
+| Layout shell | `core/routing/layouts/` |
+
+## Forbidden imports
+
+- ❌ A component imports from a `*.store.ts`, `*Api.ts`, or `*.queries.ts` directly
+- ❌ A page imports from `*Api.ts` (only the hook talks to the network)
+- ❌ A store imports from `*Api.ts`, `react-query`, or `react`
+- ❌ A module imports from another module's internals (not via `index.ts`)
+- ❌ Anything in `core/` or `shared/` imports from `modules/`
+- ❌ Anything in `shared/components/` imports from `core/` (UI is presentational; infrastructure flows down)
+
+ESLint's `no-restricted-imports` should enforce these where possible. Until configured, this is the reviewer's #1 checklist item.
+
+## Path aliases
+
+The single source of truth is the `@/` alias resolving to `src/`. Use `@/modules/auth`, `@/core/api/httpClient`, `@/shared/components/ui`. Don't add subpath aliases (`@/modules/*`, `@/core/*`) — both `vite.config.ts` and `tsconfig.app.json` must agree, and extra aliases drift apart. See `vite-config.md`.
+
+## The exit rule
+
+Before merging a feature, ask:
+
+> "Can a new developer understand this screen by reading **only** the page file and the screen hook, in under 30 seconds?"
+
+If no — simplify, split, rename, delete. The screen pair is the contract; if it doesn't explain itself, the abstraction is wrong.
+
+## See also
+
+- `data-flow.md` — what flows through these layers
+- `react-patterns.md` — component-level patterns
+- `zustand-stores.md` — store layer rules
+- `service-patterns.md` — API/query/normalizer rules
+- `project-rules.md` — known-debt list (Logic-vs-Screen rename, etc.)

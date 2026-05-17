@@ -1,0 +1,175 @@
+# Vite Config
+
+`vite.config.ts` and `vitest.config.ts` are the build's source of truth. Keep them small and well-commented. Every plugin, alias, and target should justify its existence.
+
+## Required setup
+
+```ts
+// vite.config.ts
+import { defineConfig } from "vite"
+import react from "@vitejs/plugin-react"
+import tailwindcss from "@tailwindcss/vite"
+import svgr from "vite-plugin-svgr"
+import path from "node:path"
+
+export default defineConfig({
+  plugins: [
+    react(),
+    tailwindcss(),
+    svgr({ svgrOptions: { ref: true } }),
+  ],
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "src"),
+    },
+  },
+  server: {
+    port: 5173,
+    strictPort: true,
+  },
+  preview: {
+    port: 4173,
+    strictPort: true,
+  },
+  build: {
+    target: "es2022",
+    sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ["react", "react-dom", "react-router-dom"],
+          query: ["@tanstack/react-query"],
+          radix: [
+            "@radix-ui/react-dialog",
+            "@radix-ui/react-dropdown-menu",
+            "@radix-ui/react-popover",
+            "@radix-ui/react-select",
+            "@radix-ui/react-tabs",
+          ],
+        },
+      },
+    },
+  },
+})
+```
+
+## Aliases
+
+There is one alias: `@/` → `src/`. **Don't add more.** Multiple aliases make the import graph harder to read and `tsconfig.app.json` must mirror every one.
+
+`tsconfig.app.json` must declare:
+
+```jsonc
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": { "@/*": ["src/*"] }
+  }
+}
+```
+
+Always import via `@/` instead of long relative paths once the import would cross three or more folders:
+
+```ts
+// ❌
+import { http } from "../../../lib/http"
+
+// ✅
+import { http } from "@/lib/http"
+```
+
+## Plugins
+
+Currently used:
+
+- **`@vitejs/plugin-react`** — React with Fast Refresh. Don't replace with SWC unless we measure a meaningful build-time win.
+- **`@tailwindcss/vite`** — Tailwind v4's first-party Vite plugin. Single source of truth for Tailwind config; uses CSS-first config (`@theme {}` in `src/styles/globals.css`).
+- **`vite-plugin-svgr`** — Lets `import { ReactComponent as Icon } from "./icon.svg?react"`. See "SVG conventions" below.
+
+Don't add plugins casually. Each adds build time, configuration surface, and a supply-chain dependency.
+
+## SVG conventions
+
+- Static raster-like SVGs that are just images: `import url from "./pic.svg"` → use as `<img src={url} />`.
+- SVGs that need styling, animation, or `currentColor`: `import Icon from "./icon.svg?react"` and render as `<Icon className="size-4 text-zinc-700" />`.
+- Iconography is `lucide-react` (already a dep). Don't ship hand-rolled SVG copies of common icons.
+
+See `docs/SVG_ICONS_GUIDE.md` for the project's icon conventions.
+
+## Build target
+
+`target: "es2022"` — matches our minimum supported browsers (last 2 Chrome/Firefox/Safari/Edge versions). Don't downgrade for ancient browsers unless we make a deliberate decision (and update `caniuse` queries).
+
+## Code-splitting
+
+`manualChunks` groups commonly-used vendor libraries to keep cache-hit rates high. Rules:
+
+- React + Router are one chunk (they're always co-loaded).
+- TanStack Query is its own chunk (loaded on every page).
+- Radix primitives are one chunk (most pages load several).
+- Charts (`recharts`), drag-and-drop, command palette (`cmdk`), animation (`motion`) — **don't** add to `manualChunks`. Let Vite lazy-load them per route.
+
+Verify chunk sizes with:
+
+```bash
+npx vite-bundle-visualizer
+```
+
+Watch for bundles that quietly include `lodash` or a date library you didn't intend.
+
+## Source maps
+
+`sourcemap: true` in build. Uploaded to the error monitor. Verify the deploy doesn't expose them publicly (Vercel deploys put them at predictable paths; if you must hide them, configure the build to emit `hidden-source-map`).
+
+## Vite env-mode files
+
+`.env`, `.env.development`, `.env.production`, `.env.preview`, `.env.local`. See `config.md`.
+
+## `vitest.config.ts`
+
+```ts
+import { defineConfig, mergeConfig } from "vitest/config"
+import viteConfig from "./vite.config"
+
+export default mergeConfig(viteConfig, defineConfig({
+  test: {
+    environment: "jsdom",
+    globals: false,
+    setupFiles: ["./src/test/setup.ts"],
+    css: true,
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "html", "lcov"],
+      include: ["src/**/*.{ts,tsx}"],
+      exclude: ["src/test/**", "src/**/*.test.{ts,tsx}", "src/**/index.ts"],
+    },
+  },
+}))
+```
+
+`mergeConfig` inherits aliases and plugins from `vite.config.ts` so tests resolve `@/` identically to runtime.
+
+## Dev server
+
+- `strictPort: true` — don't silently move to 5174 when 5173 is busy; surface the conflict.
+- `https` not enabled in dev by default. Use `vite preview` over HTTP for everything except issues that require HTTPS (Service Workers, certain Stripe flows).
+
+## Preview vs dev
+
+`vite preview` serves the production build locally. Use it for:
+
+- Manual perf checks (no HMR, real minification)
+- E2E runs (Playwright should hit `preview`, not `dev`)
+
+## Don't
+
+- Don't import from `node_modules/<lib>/dist/...`. Use the package's public exports.
+- Don't add a plugin without justifying it in the PR.
+- Don't loosen `target` to ship to legacy browsers without a discussion.
+- Don't ship dev-only banners (DevTools toasts) past the `import.meta.env.PROD` gate.
+
+## See also
+
+- `config.md` — env-var rules
+- `performance.md` — bundle budgets
+- `security.md` — CSP + source-map hygiene

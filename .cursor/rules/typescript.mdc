@@ -1,0 +1,320 @@
+---
+alwaysApply: true
+---
+
+# TypeScript
+
+TypeScript is not decoration. It's the contract that makes refactoring safe. These rules assume `strict: true` and treat the type system as a load-bearing structure.
+
+## Compiler settings
+
+`tsconfig.app.json` must enable:
+
+```jsonc
+{
+  "compilerOptions": {
+    "strict": true,
+    "noUncheckedIndexedAccess": true,    // arr[0] is T | undefined
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true
+  }
+}
+```
+
+`npm run build` runs `tsc -b` and **must** pass with zero errors. There is no `// @ts-ignore` budget.
+
+## `any` is forbidden
+
+`any` deletes type safety silently. Use `unknown` and narrow.
+
+```ts
+// ❌ WRONG
+function handle(data: any) { return data.user.name }
+
+// ✅ CORRECT
+function handle(data: unknown): string {
+  const parsed = ResponseSchema.parse(data)
+  return parsed.user.name
+}
+```
+
+Allowed `any` exceptions (all require an inline comment justifying the use):
+
+- Third-party type holes where a wrapping function casts on the boundary
+- Test factories where the value is then asserted
+
+`@ts-expect-error` is preferred over `@ts-ignore` (it errors when the underlying problem is fixed). Always include a one-line reason.
+
+## `type` vs `interface`
+
+**Default to `type`.** Use **`interface`** only for declaration merging (rare — extending a third-party `Window`, augmenting an ambient module).
+
+```ts
+// ✅ default
+type User = { id: string; name: string }
+type AsyncStatus = "loading" | "error" | "empty" | "success"
+type Result<T, E = Error> = { ok: true; value: T } | { ok: false; error: E }
+```
+
+Rationale: `type` supports unions/intersections/mapped types/conditional types; `interface` is structurally identical for object shapes but inconsistent across union/intersection edges. The one-rule-for-everything keeps reviews shorter and the codebase consistent.
+
+## Type-only imports
+
+Always use `import type` for type-only imports. With `verbatimModuleSyntax: true`, the build relies on it.
+
+```ts
+import type { User } from "@/modules/tenant"
+import { useTenantUsersScreen } from "@/modules/tenant"
+```
+
+## Narrowing over casting
+
+`as` is a code smell. Reach for type guards.
+
+```ts
+// ❌ WRONG
+const user = data as User
+
+// ✅ CORRECT — runtime + compile-time guard
+function isUser(x: unknown): x is User {
+  return typeof x === "object" && x !== null
+    && "id" in x && typeof (x as User).id === "string"
+}
+
+if (isUser(data)) {
+  // data: User here
+}
+```
+
+For external data, prefer **zod** schemas over hand-written guards (see `validation.md`).
+
+### Assertion functions for invariants
+
+For invariants that must hold or the whole flow is broken, an assertion function gives narrower types throughout the rest of the scope:
+
+```ts
+function assertNonNull<T>(x: T | null | undefined, name: string): asserts x is T {
+  if (x == null) throw new Error(`${name} is required`)
+}
+
+function placeOrder(userId: string | null) {
+  assertNonNull(userId, "userId")
+  // userId: string from here on
+  return httpClient.post("/orders", { userId })
+}
+```
+
+Use assertion functions sparingly — they throw. For recoverable nulls, narrow with a guard or zod.
+
+### The only acceptable `as`
+
+- `as const` (for literal-narrowing) — encouraged
+- `as unknown as T` when bridging two unrelated types in test setup — discouraged
+- DOM event targets where the API forces a cast — annotate why
+
+## `as const` for literals
+
+`as const` freezes the type to the narrowest possible literal. Use it for query keys, route paths, allowlists, and discriminator strings.
+
+```ts
+// Query keys (see service-patterns.md)
+export const productKeys = {
+  all: ["products"] as const,
+  list: (filters: Filters) => [...productKeys.all, "list", filters] as const,
+}
+// productKeys.all has type readonly ["products"], not string[]
+
+// Allowlists
+const PLANS = ["free", "pro", "enterprise"] as const
+type Plan = typeof PLANS[number]            // "free" | "pro" | "enterprise"
+
+// Route paths
+const ROUTES = {
+  tenantHome: "/tenant",
+  pos: "/tenant/pos/sell",
+} as const
+type AppPath = typeof ROUTES[keyof typeof ROUTES]
+```
+
+Without `as const`, the inferred type widens to `string`, which loses the literal union and breaks exhaustiveness checks.
+
+## Discriminated unions for state
+
+Async state, form state, and result types must use discriminated unions, not optional fields. The compiler then forces every branch to be handled.
+
+```ts
+// ❌ WRONG
+type ScreenState = { loading: boolean; error?: Error; data?: User[] }
+
+// ✅ CORRECT
+type ScreenState =
+  | { status: "loading" }
+  | { status: "error"; error: Error }
+  | { status: "empty" }
+  | { status: "success"; users: User[] }
+
+function render(state: ScreenState) {
+  switch (state.status) {
+    case "loading": return <Spinner />
+    case "error":   return <Err msg={state.error.message} />  // narrowed
+    case "empty":   return <Empty />
+    case "success": return <List users={state.users} />       // narrowed
+  }
+}
+```
+
+Pick **one** discriminator per union (`status`, `kind`, or `type`) and stay consistent across the codebase.
+
+## `Readonly` and `readonly`
+
+Mark API response types and props as `Readonly` when the consumer must not mutate:
+
+```ts
+type Props = Readonly<{ user: User; onSave: (u: User) => void }>
+type ApiUser = Readonly<{ id: string; name: string }>
+```
+
+Use `readonly T[]` for arrays you don't intend to mutate. Pick one style (`readonly T[]` over `ReadonlyArray<T>`) and stay consistent.
+
+## Generic constraints
+
+Always constrain generics — unconstrained generics are usually a sign of an incorrect abstraction.
+
+```ts
+// ❌ WRONG
+function pick<T, K>(obj: T, key: K): T[K]  // K not constrained to keyof T
+
+// ✅ CORRECT
+function pick<T, K extends keyof T>(obj: T, key: K): T[K]
+```
+
+Useful generic constraints:
+
+- `<T extends object>` — only objects
+- `<T extends { id: string }>` — has an id
+- `<T extends Record<string, unknown>>` — string-keyed
+- `<T extends (...args: never[]) => unknown>` — any callable
+
+## Branded types for IDs
+
+A `string` for a user id and a `string` for an order id should not be interchangeable.
+
+```ts
+type Brand<T, B> = T & { readonly __brand: B }
+export type UserId = Brand<string, "UserId">
+export type OrderId = Brand<string, "OrderId">
+
+export const UserId = (s: string): UserId => s as UserId
+```
+
+Use branded types for any id that crosses a layer boundary.
+
+## Utility types
+
+Reach for built-ins before writing your own: `Partial`, `Required`, `Readonly`, `Pick`, `Omit`, `Record`, `NonNullable`, `Awaited`, `ReturnType`, `Parameters`. Compose them; don't reimplement them.
+
+```ts
+type UpdateUserPayload = Partial<Pick<User, "name" | "email">>
+type UserSummary = Pick<User, "id" | "name">
+type CreateUser = Omit<User, "id" | "createdAt">
+```
+
+Useful custom utilities (write once in `shared/types/utility.ts`):
+
+```ts
+// Make specific keys optional
+export type PartialBy<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>
+
+// Make specific keys required
+export type RequiredBy<T, K extends keyof T> = Omit<T, K> & Required<Pick<T, K>>
+
+// Drop the readonly modifier (rarely useful, but exists)
+export type Mutable<T> = { -readonly [K in keyof T]: T[K] }
+
+// Strip nullability from all fields
+export type NonNullableFields<T> = { [K in keyof T]: NonNullable<T[K]> }
+```
+
+## Enums
+
+**Don't use `enum`.** Use string-literal unions or `as const` objects.
+
+```ts
+// ❌ WRONG
+enum Role { Admin = "admin", User = "user" }
+
+// ✅ CORRECT
+type Role = "admin" | "cashier" | "owner"
+const ROLES = ["admin", "cashier", "owner"] as const
+type Role2 = typeof ROLES[number]
+```
+
+Rationale: `enum` emits runtime code, breaks tree-shaking, and behaves inconsistently between numeric and string forms.
+
+## Function signatures
+
+Prefer explicit return types on exported functions. Inferred return types on local helpers are fine.
+
+```ts
+// ✅ exported — explicit
+export function toUserMessage(error: unknown): string { /* ... */ }
+export async function fetchProduct(id: ProductId): Promise<Product> { /* ... */ }
+
+// ✅ local — inferred
+const items = users.map(u => u.name)
+```
+
+For hooks, the inferred return type is usually richer than what you'd write by hand — let TS infer unless the shape needs to be a named export (e.g. a reusable `UseToggleReturn`).
+
+## Don't reach for `Function` or `Object`
+
+`Function` and `Object` are too loose to mean anything. Use `(...args: never[]) => unknown` for callables and `Record<string, unknown>` for plain objects.
+
+## Don't use `!` (non-null assertion)
+
+`!` lies to the compiler. The runtime can still be `null`.
+
+```ts
+// ❌ WRONG
+const name = user!.name
+
+// ✅ CORRECT — narrow first
+if (!user) throw new Error("user required")
+const name = user.name
+
+// ✅ CORRECT — assertion function (see "Narrowing")
+assertNonNull(user, "user")
+const name = user.name
+```
+
+The only place `!` is tolerable is `document.getElementById("root")!` at app boot — and even there, an explicit error message is better.
+
+## Type-safe environment
+
+`import.meta.env.VITE_*` should be typed once in `vite-env.d.ts` and parsed through zod in `core/config/env.ts`:
+
+```ts
+// vite-env.d.ts
+interface ImportMetaEnv {
+  readonly VITE_API_BASE_URL: string
+  readonly VITE_FEATURE_NEW_CHECKOUT: string
+}
+
+// core/config/env.ts
+export const env = EnvSchema.parse(import.meta.env)
+```
+
+Don't sprinkle `import.meta.env` reads across the codebase. See `config.md`.
+
+## See also
+
+- `validation.md` — zod schemas at API boundaries
+- `service-patterns.md` — query and mutation typing
+- `react-patterns.md` — typing components, hooks, refs
+- `naming.md` — type naming conventions

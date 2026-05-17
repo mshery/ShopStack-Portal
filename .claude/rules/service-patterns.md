@@ -1,0 +1,526 @@
+# Service Patterns
+
+How HTTP, server cache, and validation work together. This is the only layer that talks to the network. Three tools: **axios** for transport, **TanStack Query v5** for cache, **zod** for parsing.
+
+For deep Zod patterns (coercion, refine, discriminated unions, react-hook-form integration), see `validation.md`.
+
+## The axios instance
+
+There is exactly one axios instance, configured in `core/api/httpClient.ts`:
+
+```ts
+// core/api/httpClient.ts
+import axios from "axios"
+import { useAuthStore } from "@/modules/auth"
+
+export const httpClient = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL,
+  timeout: 15_000,
+  headers: { "Content-Type": "application/json" },
+})
+
+// Request — attach auth
+httpClient.interceptors.request.use((config) => {
+  const token = useAuthStore.getState().token
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
+})
+
+// Response — normalize errors
+httpClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      useAuthStore.getState().clear()
+    }
+    return Promise.reject(toApiError(error))
+  }
+)
+```
+
+Never `new`-up another axios client in a module file. If a module needs different defaults, create a *typed wrapper* in `core/api/` that delegates to `httpClient`.
+
+### Token refresh
+
+For bearer-token flows, the response interceptor handles 401 → refresh → retry. The current implementation is in `core/api/httpClient.ts`. Rules:
+
+- The refresh request must **not** go through the same interceptor (use a bare `axios.post`).
+- Mark the retried request with a header (`X-Retry: true`) so a second 401 doesn't loop.
+- On refresh failure: clear tokens, redirect to `/login`. Don't try to recover.
+
+> **Note.** ShopStack currently keeps tokens in `localStorage` — this violates `security.md` rule 3 (XSS-readable). See `project-rules.md` known-debt list. Until fixed: keep new flows from depending on persisted-token semantics.
+
+## API files (`<x>Api.ts`)
+
+Each module owns a thin API file that returns **raw** `unknown` data. **No** parsing here, **no** business logic, **no** error handling beyond letting the interceptor throw.
+
+```ts
+// modules/products/api/productsApi.ts
+import { httpClient } from "@/core/api/httpClient"
+
+export async function listProductsRaw(params: { q?: string; cursor?: string }): Promise<unknown> {
+  const { data } = await httpClient.get("/products", { params })
+  return data
+}
+
+export async function fetchProductRaw(id: string): Promise<unknown> {
+  const { data } = await httpClient.get(`/products/${encodeURIComponent(id)}`)
+  return data
+}
+```
+
+Function names end in `Raw` to signal "untrusted, not yet parsed". Every dynamic path segment goes through `encodeURIComponent` (see `security.md`).
+
+## Normalizers (`<x>.normalizers.ts`)
+
+zod schemas live next to the module. The schema is the type. Use `z.infer` — don't write the type twice.
+
+```ts
+// modules/products/normalizers/products.normalizers.ts
+import { z } from "zod"
+
+export const ProductSchema = z.object({
+  id: z.string(),
+  sku: z.string(),
+  name: z.string(),
+  priceCents: z.number().int().nonnegative(),
+  stockOnHand: z.number().int().default(0),
+  imageUrl: z.url().optional(),
+})
+
+export type Product = z.infer<typeof ProductSchema>
+
+export const ProductListSchema = z.object({
+  items: z.array(ProductSchema).default([]),
+  nextCursor: z.string().nullable().default(null),
+})
+
+export type ProductList = z.infer<typeof ProductListSchema>
+
+export function parseProductList(raw: unknown): ProductList {
+  return ProductListSchema.parse(raw)
+}
+```
+
+Rules for schemas:
+
+- **Defaults for missing/null fields.** Arrays default to `[]`. Optional scalars get a sensible default or are explicitly `.optional()`.
+- **Coerce only where the API forces it** (date strings, number-as-string ids). Don't coerce silently elsewhere — see `validation.md`.
+- **One schema per resource**, not one per endpoint. Endpoints reuse schemas.
+- The schema file exports both the schema and the inferred type.
+
+## Query keys
+
+Every module owns a key factory in `<x>.keys.ts` (under `queries/`):
+
+```ts
+// modules/products/queries/products.keys.ts
+export const productKeys = {
+  all: ["products"] as const,
+  lists: () => [...productKeys.all, "list"] as const,
+  list: (filters: ListFilters) => [...productKeys.lists(), filters] as const,
+  details: () => [...productKeys.all, "detail"] as const,
+  detail: (id: string) => [...productKeys.details(), id] as const,
+}
+```
+
+This is the canonical pattern from the TanStack Query docs. **Always** invalidate by the most specific key you can. Never invalidate `["products"]` if you can invalidate `productKeys.detail(id)`.
+
+**Critical rule:** the key must contain **every variable used by the queryFn**. Treat keys as dependency arrays. Type consistency matters — `['products', '1']` and `['products', 1]` are different keys.
+
+## `queryOptions` for shared type safety
+
+The modern v5 pattern. Define options once, reuse with `useQuery`, `prefetchQuery`, `setQueryData`, `getQueryData` — all fully typed.
+
+```ts
+import { queryOptions } from "@tanstack/react-query"
+
+export function productListOptions(filters: ListFilters) {
+  return queryOptions({
+    queryKey: productKeys.list(filters),
+    queryFn: async () => parseProductList(await listProductsRaw(filters)),
+    staleTime: 30_000,
+  })
+}
+
+// In a hook
+export function useProductList(filters: ListFilters) {
+  return useQuery(productListOptions(filters))
+}
+
+// Imperatively (still typed)
+queryClient.prefetchQuery(productListOptions({ q: "shoe" }))
+queryClient.setQueryData(productListOptions(filters).queryKey, next)
+const cached = queryClient.getQueryData(productListOptions(filters).queryKey)
+```
+
+Prefer `queryOptions(...)` over inline `useQuery` config when the same options are used in more than one place.
+
+## Queries (`<x>.queries.ts`)
+
+```ts
+// modules/products/queries/products.queries.ts
+import { useQuery, queryOptions } from "@tanstack/react-query"
+import { listProductsRaw, fetchProductRaw } from "../api/productsApi"
+import { parseProductList, ProductSchema } from "../normalizers/products.normalizers"
+import { productKeys } from "./products.keys"
+
+export function productListQuery(filters: ListFilters) {
+  return queryOptions({
+    queryKey: productKeys.list(filters),
+    queryFn: async () => parseProductList(await listProductsRaw(filters)),
+    staleTime: 30_000,
+  })
+}
+
+export function useProductList(filters: ListFilters) {
+  return useQuery(productListQuery(filters))
+}
+
+export function useProduct(id: string) {
+  return useQuery({
+    queryKey: productKeys.detail(id),
+    queryFn: async () => ProductSchema.parse(await fetchProductRaw(id)),
+    enabled: Boolean(id),
+  })
+}
+```
+
+Conventions:
+
+- `staleTime` is **always** set explicitly (default 0 is rarely right). See cache-timing table below.
+- `enabled` is set whenever a query depends on a value that may be undefined.
+- `queryOptions(...)` lets the same options be shared with `prefetchQuery` / `useSuspenseQuery`.
+
+## `select` for partial subscriptions (performance)
+
+`select` transforms cached data **and** scopes the component's re-render trigger to the transformed slice. Use it when the consumer only needs part of the response.
+
+```ts
+// Re-renders only when the count changes, not when individual products do
+export function useProductCount(filters: ListFilters) {
+  return useQuery({
+    ...productListQuery(filters),
+    select: (data) => data.items.length,
+  })
+}
+
+// Re-renders only when the active filter result changes
+export function useActiveProducts(filters: ListFilters) {
+  return useQuery({
+    ...productListQuery(filters),
+    select: selectActiveProducts,
+  })
+}
+```
+
+**Memoize the select function** at module scope or with `useCallback`. A new function identity on every render re-runs select unnecessarily and breaks the structural-sharing optimization:
+
+```ts
+// ❌ wrong — new function every render
+useQuery({ ...opts, select: (d) => expensiveTransform(d) })
+
+// ✅ correct — stable reference
+const transformActive = (data: ProductList) => data.items.filter((p) => p.active)
+useQuery({ ...opts, select: transformActive })
+```
+
+## Suspense queries — opt-in only
+
+`useSuspenseQuery` exists and works, but **the default in ShopStack is `useQuery`**. Screen hooks already model `loading` / `error` / `empty` / `success` explicitly via `AsyncStatus`; the page chooses the layout. Suspense + ErrorBoundary is a parallel mechanism that competes with our screen pattern.
+
+Use `useSuspenseQuery` only when:
+
+- A route is preloaded by a router loader and the page should never render without data.
+- You're building a small, self-contained widget that fits Suspense's "block until ready" model and has its own boundary nearby.
+
+Even then, the screen pattern (`status` / `vm` / `actions`) still applies — Suspense replaces the `loading` branch, not the hook contract.
+
+## Mutations
+
+```ts
+// modules/cart/queries/cart.mutations.ts
+import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { httpClient } from "@/core/api/httpClient"
+import { cartKeys } from "./cart.keys"
+import { CartSchema } from "../normalizers/cart.normalizers"
+
+export function useCheckoutMutation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: CheckoutPayload) => {
+      const { data } = await httpClient.post("/cart/checkout", payload)
+      return CartSchema.parse(data)
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: cartKeys.all })
+    },
+  })
+}
+```
+
+Mutations always:
+
+- Parse the response with zod (same rule as queries).
+- Invalidate the narrowest cache that could be affected.
+- Don't catch errors — the screen hook does (`toUserMessage`).
+
+### Optimistic updates with rollback
+
+For perceived-latency wins, use `onMutate` + `onError` rollback. Always cancel in-flight queries first; always invalidate in `onSettled` to reconcile.
+
+```ts
+useMutation({
+  mutationFn: updateOrder,
+  onMutate: async (next) => {
+    await qc.cancelQueries({ queryKey: orderKeys.detail(next.id) })
+    const previous = qc.getQueryData(orderKeys.detail(next.id))
+    qc.setQueryData(orderKeys.detail(next.id), next)
+    return { previous }       // becomes ctx in onError
+  },
+  onError: (_err, next, ctx) => {
+    if (ctx?.previous) qc.setQueryData(orderKeys.detail(next.id), ctx.previous)
+  },
+  onSettled: (_data, _err, next) => {
+    qc.invalidateQueries({ queryKey: orderKeys.detail(next.id) })
+  },
+})
+```
+
+Never mutate cached data directly — always use immutable updates inside `setQueryData`.
+
+### Inline optimistic with `variables`
+
+For a quick optimistic insert that doesn't require rollback, the v5 pattern of reading `mutation.variables` while `isPending` is clean:
+
+```ts
+const { mutate, isPending, variables } = useAddItemMutation()
+
+return (
+  <ul>
+    {items.map((item) => <Row key={item.id} item={item} />)}
+    {isPending && <Row item={{ id: "temp", ...variables }} style={{ opacity: 0.5 }} />}
+  </ul>
+)
+```
+
+## Pagination
+
+For cursor-based pagination, use `useInfiniteQuery` (v5 requires `initialPageParam`):
+
+```ts
+useInfiniteQuery({
+  queryKey: productKeys.list(filters),
+  queryFn: async ({ pageParam }) =>
+    parseProductList(await listProductsRaw({ ...filters, cursor: pageParam })),
+  initialPageParam: undefined as string | undefined,
+  getNextPageParam: (last) => last.nextCursor ?? undefined,
+})
+```
+
+For offset-based pagination with prev/next buttons, use `placeholderData: keepPreviousData` so the old page renders while the next loads:
+
+```ts
+import { keepPreviousData } from "@tanstack/react-query"
+
+useQuery({
+  queryKey: productKeys.list({ page }),
+  queryFn: () => fetchPage(page),
+  placeholderData: keepPreviousData,
+})
+```
+
+## Dependent queries
+
+For sequential dependencies, gate with `enabled`. Don't await inside a `queryFn` to chain.
+
+```ts
+const { data: user } = useUserQuery(userId)
+const { data: orders } = useQuery({
+  queryKey: orderKeys.byUser(user?.id),
+  queryFn: () => fetchOrdersByUser(user!.id),
+  enabled: Boolean(user?.id),
+})
+```
+
+Truly independent queries fire in parallel automatically — don't await one before declaring the next, that creates a waterfall.
+
+## Prefetching
+
+For predictable navigations (hover/focus a link → prefetch the next route's data):
+
+```ts
+function ProductRow({ id }: { id: string }) {
+  const qc = useQueryClient()
+  const prefetch = () => qc.prefetchQuery(productDetailOptions(id))
+  return <Link to={`/products/${id}`} onMouseEnter={prefetch} onFocus={prefetch}>...</Link>
+}
+```
+
+For routed prefetches, the router loader is the cleaner place — let the loader call `queryClient.prefetchQuery` and the screen render with cached data.
+
+## Query client config
+
+`core/api/queryClient.ts` is the single source for defaults:
+
+```ts
+export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: (failureCount, error) => {
+        if (isApiError(error) && error.status >= 400 && error.status < 500) return false
+        return failureCount < 2
+      },
+      refetchOnWindowFocus: false,
+      staleTime: 0,            // force every query to declare its own
+    },
+    mutations: { retry: false },
+  },
+})
+```
+
+Rationale: refetching on focus surprises users; `staleTime: 0` defaults force intention; 4xx errors don't recover from retries.
+
+### Global error handling via `QueryCache`
+
+Toast on background-refetch errors (when data already existed) — surface the connection issue without overwriting a working UI.
+
+```ts
+import { QueryCache } from "@tanstack/react-query"
+import toast from "react-hot-toast"
+import { toUserMessage } from "@/core/api/errors"
+
+export const queryClient = new QueryClient({
+  defaultOptions: { /* ... */ },
+  queryCache: new QueryCache({
+    onError: (error, query) => {
+      // Only toast on background errors — foreground errors are the screen hook's job
+      if (query.state.data !== undefined) {
+        toast.error(toUserMessage(error))
+      }
+    },
+  }),
+})
+```
+
+Foreground (first-fetch) errors stay with the screen hook so the UI's `error` branch can render properly.
+
+## Cache timing guidelines
+
+`staleTime` is your primary control. Pick by data volatility:
+
+| Data type | `staleTime` | Notes |
+|---|---|---|
+| Real-time data (notifications, presence) | `0` | Default — refetch on mount/focus |
+| User-generated content (cart, posts) | `30_000` (30s) | Stale-but-cached renders instantly |
+| Profile / account data | `120_000` (2 min) | Rare changes |
+| Reference data (currencies, taxonomies) | `600_000` (10 min) | Mostly static |
+| Truly static (build-time constants delivered via API) | `Infinity` | Never refetch |
+
+`gcTime` (formerly `cacheTime`) controls when **unused** entries are dropped from memory. Default `5 * 60_000` (5 min) is fine for most cases; raise to `Infinity` if you want a query persisted with the `persistQueryClient` plugin.
+
+## Auth and queries
+
+For tenant-scoped data, gate with `enabled` and put the tenant id into the key:
+
+```ts
+export function useProductsQuery() {
+  const activeTenantId = useAuthStore((s) => s.activeTenantId)
+  return useQuery({
+    queryKey: productKeys.list({ tenantId: activeTenantId }),
+    queryFn: () => parseProductList(/* ... */),
+    enabled: Boolean(activeTenantId),
+  })
+}
+```
+
+On logout, clear **all** caches with `queryClient.clear()` — not `invalidateQueries()`, which triggers refetches:
+
+```ts
+function useLogout() {
+  const qc = useQueryClient()
+  const clearAuth = useAuthStore((s) => s.clear)
+  return useCallback(() => {
+    clearAuth()
+    qc.clear()
+    navigate("/login")
+  }, [clearAuth, qc])
+}
+```
+
+## Testing
+
+Test the query layer through MSW handlers + a fresh `QueryClient` per test (`retry: false`, `gcTime: Infinity`). See `testing.md`.
+
+## What never lives here
+
+- ❌ Toast notifications — that's the screen hook's job (via `actions`)
+- ❌ Route navigation — same
+- ❌ Auth side effects beyond clearing the token on 401 — same
+- ❌ React imports outside hook files (`<x>.queries.ts` may import React, `<x>Api.ts` may not)
+
+## Anti-patterns to avoid
+
+### ❌ Don't store query data in Zustand or `useState`
+
+```ts
+// ❌ wrong — duplicates the cache, loses background updates and invalidation
+const { data } = useQuery({ queryKey: productKeys.list({}), queryFn: ... })
+const [products, setProducts] = useState(data)
+
+// ✅ correct — read the query directly
+const { data: products } = useQuery(productListOptions({}))
+```
+
+### ❌ Don't call `refetch()` with different parameters
+
+```ts
+// ❌ wrong — refetch ignores the new value; the cache is keyed by the original
+const { data, refetch } = useQuery({
+  queryKey: ["products"],
+  queryFn: () => fetchProducts(filters),
+})
+// later: filters changed — refetch() runs the same fetch, not the new one
+
+// ✅ correct — put the parameter in the key; query auto-refetches when it changes
+const { data } = useQuery({
+  queryKey: productKeys.list(filters),
+  queryFn: () => fetchProducts(filters),
+})
+```
+
+### ❌ Don't create `QueryClient` inside a component
+
+```ts
+// ❌ wrong — new cache every render
+function App() {
+  const qc = new QueryClient()
+  return <QueryClientProvider client={qc}>...</QueryClientProvider>
+}
+
+// ✅ correct — module-scope singleton
+export const queryClient = new QueryClient({ /* ... */ })
+function App() {
+  return <QueryClientProvider client={queryClient}>...</QueryClientProvider>
+}
+```
+
+### ❌ Don't use queries for client-only state
+
+Use `useState` or a Zustand store. Query cache expects refetchable data.
+
+### ❌ Don't ignore `enabled`
+
+A query that runs with an undefined required input either crashes the queryFn or fetches garbage. `enabled: Boolean(requiredInput)`.
+
+### ❌ Don't mismatch key types
+
+`productKeys.detail("1")` and `productKeys.detail(1)` are different keys. Coerce at the boundary and stay consistent.
+
+## See also
+
+- `data-flow.md` — where this layer sits
+- `validation.md` — Zod schemas in depth
+- `error-handling.md` — `toApiError`, `toUserMessage`
+- `typescript.md` — zod + `z.infer` is the typing pattern
+- `security.md` — token handling, auth interceptor, `encodeURIComponent`

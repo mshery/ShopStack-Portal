@@ -1,0 +1,309 @@
+---
+globs:
+  - "**/normalizers/**/*.ts"
+  - "**/*.schema.ts"
+  - "**/types/**/*.ts"
+  - "**/hooks/use*Form*.ts"
+---
+
+# Validation (Zod)
+
+Zod is the **single validation layer** for the frontend. Every untrusted input — API responses, form data, env vars, search params, `location.state`, persisted store hydration — is parsed before it reaches the rest of the app.
+
+This rule covers Zod v4 patterns. For *where* schemas live (`modules/<x>/normalizers/` and how they connect to TanStack Query), see `service-patterns.md`. For form integration, see `react-patterns.md`.
+
+## The contract
+
+**After a zod parse, the rest of the code never asks "is this null?" for fields the schema declared required.** Defenses live in the schema, not in the UI.
+
+```ts
+import { z } from "zod"
+
+const UserSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  email: z.email(),                   // Zod 4 — no longer needs .string().email()
+  avatarUrl: z.url().optional(),      // truly optional
+  loginCount: z.number().int().nonnegative().default(0),
+})
+
+export type User = z.infer<typeof UserSchema>
+```
+
+The schema is the type — never write a TS type alongside the schema; always `z.infer`.
+
+## `parse` vs `safeParse`
+
+- `parse(raw)` — throws `ZodError` on failure. Use **inside `queryFn`** and other layers where the error boundary catches throws.
+- `safeParse(raw)` — returns `{ success, data | error }`. Use **for recoverable flows** (form-level recovery, optimistic local state, search-params with sane defaults).
+
+```ts
+// ✅ inside queryFn — throw is caught and toUserMessage'd
+queryFn: async () => UserSchema.parse(await fetchUserRaw(id))
+
+// ✅ around router state — degrade gracefully
+const result = NavStateSchema.safeParse(location.state)
+const state = result.success ? result.data : { returnTo: "/" }
+```
+
+Don't `try / catch / parse / discard` — if you would discard, you're parsing the wrong thing or your default needs to be in the schema.
+
+## Modern Zod v4 primitives
+
+Zod 4 hoists common formats out of `z.string()` — use the top-level helpers and the `error` option for custom messages.
+
+```ts
+z.uuid({ error: "Invalid id" })
+z.email({ error: "Invalid email" })
+z.url({ error: "Invalid URL" })
+z.iso.datetime()                      // ISO 8601 timestamp
+z.iso.date()                          // YYYY-MM-DD
+z.cuid2()                              // collision-resistant id
+```
+
+For object-level errors (the whole shape is wrong), pass `error` to `z.object`:
+
+```ts
+const PayloadSchema = z.object(
+  { id: z.uuid(), email: z.email() },
+  { error: "Invalid payload shape" }
+)
+```
+
+## Coercion at boundaries
+
+Use `z.coerce.*` when the input type is uncertain (search params, env vars, form values that arrive as strings). Don't coerce silently elsewhere — it hides upstream bugs.
+
+```ts
+const PaginationQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+  includeArchived: z.coerce.boolean().default(false),
+})
+
+// "page=2&pageSize=50" → { page: 2, pageSize: 50, includeArchived: false }
+PaginationQuerySchema.parse(Object.fromEntries(new URLSearchParams(window.location.search)))
+```
+
+**Booleans are tricky:** `z.coerce.boolean()` follows JS truthiness (`"false"` → `true`). For env-var flag strings, use an enum + transform:
+
+```ts
+const Bool = z.enum(["true", "false"]).transform((v) => v === "true")
+```
+
+## `preprocess` and `transform`
+
+- `preprocess` runs **before** validation — use to coerce ambiguous shapes into something validateable.
+- `transform` runs **after** validation — use to reshape the parsed value.
+
+```ts
+// preprocess: accept Date or string; coerce to Date
+const DateInputSchema = z.preprocess(
+  (v) => (typeof v === "string" || v instanceof Date ? v : undefined),
+  z.coerce.date({ error: "Invalid date" })
+)
+
+// transform: normalize emails to lowercase
+const NormalizedEmailSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .pipe(z.email({ error: "Invalid email" }))
+```
+
+When a transform changes the runtime shape, the input and output types diverge — see "Input vs output types" below.
+
+## Optional, nullable, nullish, default
+
+These are not synonyms.
+
+```ts
+z.string()              // required string; undefined fails
+z.string().optional()   // string | undefined
+z.string().nullable()   // string | null
+z.string().nullish()    // string | null | undefined
+z.string().default("")  // missing → "", null still fails
+
+// Default after nullable:
+z.string().nullable().default(null)
+// Default that transforms:
+z.array(z.string()).default([])
+```
+
+API responses: prefer `.default([])` for arrays and `.default(0)` / `.default("")` for scalars over `.optional()`, so downstream code never branches on missing.
+
+## Composing schemas
+
+```ts
+const TagSchema = z.string().trim().min(1).max(40)
+
+const ProductSchema = z.object({
+  sku: z.string().min(3).max(24),
+  tags: z.array(TagSchema).max(15).default([]),
+  attributes: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+  dimensions: z.tuple([
+    z.number().positive(),
+    z.number().positive(),
+    z.number().positive(),
+  ]),
+})
+```
+
+`z.record(K, V)`, `z.array(T)`, `z.tuple([T1, T2])`, `z.union([A, B])` cover most compound shapes. Don't reach for runtime libraries when zod expresses it.
+
+## Discriminated unions
+
+For tagged unions, `z.discriminatedUnion` is dramatically faster than `z.union` (single-key dispatch, not exhaustive backtracking) and emits better errors.
+
+```ts
+const PaymentMethodSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("card"),   last4: z.string().regex(/^\d{4}$/) }),
+  z.object({ type: z.literal("paypal"), email: z.email() }),
+  z.object({ type: z.literal("wire"),   iban: z.string().min(10) }),
+])
+
+type PaymentMethod = z.infer<typeof PaymentMethodSchema>
+// { type: "card"; last4: string } | { type: "paypal"; email: string } | ...
+```
+
+Every variant must include the same discriminator key with a literal value. Mirror the discriminator name with the rule from `typescript.md` (`status`, `kind`, or `type` — one per union).
+
+## `refine` and `superRefine`
+
+For cross-field or domain-rule validation, use `refine` (single field/issue) or `superRefine` (multi-field, multi-issue).
+
+```ts
+const PasswordSchema = z
+  .string()
+  .min(12, { error: "Use at least 12 characters" })
+  .refine((v) => /[A-Z]/.test(v), { error: "Add an uppercase letter" })
+  .refine((v) => /\d/.test(v), { error: "Add a number" })
+
+const RegisterSchema = z.object({
+  email: z.email(),
+  password: PasswordSchema,
+  confirmPassword: z.string(),
+}).superRefine((data, ctx) => {
+  if (data.password !== data.confirmPassword) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["confirmPassword"],
+      message: "Passwords do not match",
+    })
+  }
+})
+```
+
+Always include `path` in `addIssue` so the form maps the error to the right field.
+
+## Input vs output types
+
+When a schema coerces or transforms, the **input** type (what you can pass to `parse`) and the **output** type (what `parse` returns) differ.
+
+```ts
+const AgeSchema = z.coerce.number().int().min(18)
+type AgeInput  = z.input<typeof AgeSchema>   // unknown — string, number, etc.
+type AgeOutput = z.output<typeof AgeSchema>  // number
+
+// In react-hook-form, register the input type, consume the output type
+useForm<z.input<typeof Schema>, unknown, z.output<typeof Schema>>({ /* ... */ })
+```
+
+`z.infer<typeof S>` is an alias for `z.output<typeof S>`. Use `z.input` when registering a form, `z.output` when consuming the parsed value.
+
+## react-hook-form integration
+
+The form layer of choice. Pair with `@hookform/resolvers/zod`.
+
+```tsx
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
+
+const ProfileSchema = z.object({
+  name: z.string().min(2, { error: "Name is too short" }),
+  email: z.email({ error: "Invalid email" }),
+  age: z.coerce.number().int().min(18, { error: "Must be 18 or older" }),
+})
+
+type ProfileInput  = z.input<typeof ProfileSchema>
+type ProfileOutput = z.output<typeof ProfileSchema>
+
+function ProfileForm() {
+  const form = useForm<ProfileInput, unknown, ProfileOutput>({
+    resolver: zodResolver(ProfileSchema),
+    criteriaMode: "all",
+  })
+
+  const onSubmit = form.handleSubmit((values) => {
+    // values: ProfileOutput — fully parsed
+    return saveProfile(values)
+  })
+
+  return <form onSubmit={onSubmit}>{/* ... */}</form>
+}
+```
+
+Rules (also in `react-patterns.md`):
+
+- One schema per form. Live next to the form file as `<name>.schema.ts` or inline if small.
+- The submit handler receives the **validated** value — no manual validation.
+- Disable submit on `formState.isSubmitting`.
+- Field errors are connected with `aria-invalid` and `aria-describedby` (`accessibility.md`).
+
+## Shared schema utilities
+
+Put reusable primitives in `shared/types/schemas.ts` to enforce consistency:
+
+```ts
+// shared/types/schemas.ts
+import { z } from "zod"
+
+export const IdSchema       = z.string().min(1)
+export const SlugSchema     = z.string().regex(/^[a-z0-9-]+$/i)
+export const EmailSchema    = z.string().trim().toLowerCase().pipe(z.email())
+export const UrlSchema      = z.url()
+export const PaginationSchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+})
+```
+
+Module schemas import these instead of redefining.
+
+## Where parsing happens
+
+| Boundary | Where the parse runs |
+|---|---|
+| API response (queries) | `queryFn` calls `Schema.parse(raw)` (see `service-patterns.md`) |
+| API response (mutations) | inside `mutationFn`, same pattern |
+| Form submission | `zodResolver(Schema)` on the form |
+| URL search params | parse at the screen hook entry |
+| `location.state` | parse at the screen hook entry (`security.md`) |
+| Env vars | `core/config/env.ts` parses `import.meta.env` once at module load |
+| Persisted store hydration | inside `persist`'s `migrate` callback when shape changes |
+
+Don't parse in components or pages. They consume parsed data only.
+
+## Performance notes
+
+- Parsing a 10 KB response is microseconds — don't optimize prematurely.
+- For very hot paths (rendering 10,000 rows from a stream), parse the **shape** of each row up front and trust the subsequent renders. Don't re-parse inside `render`.
+- `safeParse` is the same cost as `parse` — the difference is whether it throws.
+
+## Don't
+
+- ❌ Don't write a TS type alongside the schema (`type User = { ... }` + `UserSchema = z.object(...)`) — drift is guaranteed. Use `z.infer`.
+- ❌ Don't `.optional()` an array. Use `.default([])`. UI never needs to ask "is this list null?".
+- ❌ Don't `.catch()` a parse and substitute `null`. Either default in the schema or fix the source.
+- ❌ Don't reuse a `safeParse(...)` result without checking `success` — TypeScript narrows, but only inside the guard.
+- ❌ Don't put a schema inside a component or hook body (recreated every render). Define at module scope.
+- ❌ Don't compose dozens of `.refine()` calls when a single `.superRefine` is clearer.
+
+## See also
+
+- `service-patterns.md` — where schemas live and how queries use them
+- `react-patterns.md` — form integration shape
+- `security.md` — validating router state and URL inputs
+- `typescript.md` — `z.infer` is the typing pattern
+- `naming.md` — schema files end in `.normalizers.ts` or `.schema.ts`

@@ -1,0 +1,164 @@
+# Config
+
+Configuration is the line between *the code* and *the environment*. Cross it deliberately, never accidentally.
+
+## The two kinds of config
+
+1. **Build-time config** — baked into the bundle by Vite. Anything prefixed `VITE_*` from `.env*` files. Public.
+2. **Runtime config** — fetched at app start (e.g. `GET /config` from the backend). Allows changes without a redeploy. Used sparingly.
+
+Most config in ShopStack Portal is build-time. Reach for runtime config only when a value must change without a deploy.
+
+## `VITE_*` is public
+
+Anything in `import.meta.env.VITE_*` is **shipped to the browser**. Open DevTools, view the source — there it is.
+
+> **A `VITE_*` env var is not secret. Cannot be made secret. Will never be secret.**
+
+Rules:
+
+- ❌ Never put an API key, signing secret, or token into a `VITE_*` var.
+- ✅ Public API base URLs, feature flags, public analytics IDs (GA4, Mixpanel project token where the SDK treats it as public) are fine.
+
+If a value must stay secret, it lives on the backend. The frontend asks the backend.
+
+## `.env` file layout
+
+```
+.env                 # checked-in defaults (placeholders only, no secrets)
+.env.local           # local overrides — gitignored
+.env.development     # dev defaults
+.env.production      # prod build-time defaults (still public)
+.env.preview         # preview/staging build-time defaults
+```
+
+`.env.local` is in `.gitignore`. Always. If a contributor accidentally commits one, rotate every value.
+
+## `.env` example template
+
+Commit a `.env.example` with **placeholders** so a new contributor knows what to fill:
+
+```
+# Public API
+VITE_API_BASE_URL=https://api.dev.shopstack.example
+
+# Public feature flags
+VITE_FEATURE_NEW_CHECKOUT=false
+
+# Public analytics
+VITE_ANALYTICS_KEY=pub_xxxxxxxxxxxxxxxxxxxx
+
+# E2E test creds (local only — set in .env.local)
+# E2E_USER_EMAIL=
+# E2E_USER_PASSWORD=
+```
+
+When a new env var is added, the PR updates `.env.example` in the same commit. Otherwise CI deploys break in a hurry.
+
+## Reading env at runtime
+
+Centralize env access in `lib/env.ts`:
+
+```ts
+// lib/env.ts
+import { z } from "zod"
+
+const EnvSchema = z.object({
+  VITE_API_BASE_URL: z.string().url(),
+  VITE_FEATURE_NEW_CHECKOUT: z.enum(["true", "false"]).default("false").transform(v => v === "true"),
+  VITE_ANALYTICS_KEY: z.string().min(1).optional(),
+})
+
+export const env = EnvSchema.parse(import.meta.env)
+```
+
+This:
+
+- Fails the build (with a useful zod error) when a required var is missing.
+- Centralizes coercion (string → boolean for flags).
+- Gives the rest of the code typed access.
+
+Don't read `import.meta.env.VITE_*` anywhere except `lib/env.ts`.
+
+## Feature flags
+
+Three flag layers, in order of preference:
+
+1. **Compile-time** (`VITE_FEATURE_*`) — flip in `.env.production`, ship by rebuild.
+2. **Runtime, server-driven** — backend returns flags in `GET /config` or in the auth response. Used when ops needs to toggle without a deploy.
+3. **Per-user** — A/B testing infrastructure. Owned by the analytics layer.
+
+Flags must be **temporary**. Every flag has a Linear ticket to remove it. A flag older than its ticket is debt.
+
+## Runtime config
+
+When a value must change without a rebuild (e.g. CDN URL, support email), fetch it at app start:
+
+```ts
+// app/runtimeConfig.ts
+const RuntimeConfigSchema = z.object({
+  supportEmail: z.string().email(),
+  cdnBaseUrl: z.string().url(),
+})
+
+export async function loadRuntimeConfig() {
+  const { data } = await http.get("/config")
+  return RuntimeConfigSchema.parse(data)
+}
+```
+
+Block app render on the first load (show splash) or render with sensible defaults and reconcile.
+
+## Build vs preview vs prod
+
+- `npm run dev` — `.env` + `.env.development` + `.env.local`
+- `npm run build` — `.env` + `.env.production` + `.env.local`
+- Vercel previews use `.env.preview` if your deploy pipeline maps it; otherwise `.env.production`.
+
+Vercel env-var settings (set per environment) override file values for that environment. Document them in the team's secret-store (1Password / Doppler / etc.), never in the repo.
+
+## Secrets handling
+
+Frontend code does not handle secrets. Repeat: frontend code does not handle secrets. If you find yourself wanting to, ask:
+
+- Can the backend do this and return a result?
+- Can the backend issue a short-lived signed URL/token the frontend uses?
+- If neither — escalate; the design is wrong.
+
+## Booleans in env vars
+
+Env vars are strings. Coerce explicitly in `lib/env.ts`:
+
+```ts
+VITE_FEATURE_NEW_CHECKOUT: z.enum(["true", "false"]).transform(v => v === "true")
+```
+
+Don't `Boolean(import.meta.env.X)` — `"false"` is truthy.
+
+## Numbers in env vars
+
+Same — strings need coercion:
+
+```ts
+VITE_MAX_UPLOAD_MB: z.string().regex(/^\d+$/).transform(Number).default("10")
+```
+
+## Don't
+
+- Don't commit `.env.local` (gitignore it; verify in PR review).
+- Don't read `process.env.*` — that's Node. Use `import.meta.env.*`.
+- Don't ship `VITE_DEBUG_*` flags to prod set to `true`.
+- Don't keep environment branches in code (`if (env === "prod")`). Use flags or runtime config.
+
+## Pre-merge checklist
+
+- [ ] No new env var without a matching entry in `.env.example`
+- [ ] No `VITE_*` var holds a secret
+- [ ] Validation added to `lib/env.ts` (zod parses everything)
+- [ ] Feature flags have a Linear ticket for removal
+
+## See also
+
+- `security.md` — frontend never holds secrets
+- `vite-config.md` — how env files map to the Vite build
+- `service-patterns.md` — the axios `baseURL` comes from here

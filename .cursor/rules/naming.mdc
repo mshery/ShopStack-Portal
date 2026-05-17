@@ -1,0 +1,122 @@
+---
+alwaysApply: true
+---
+
+# Naming
+
+Names are interfaces. Most of a reader's effort is spent translating a name into intent. Good names eliminate that work.
+
+## The one rule
+
+**If a name is hard, the design is wrong.** Don't reach for `data2`, `handlerHelper`, or `useMyHookV2`. Step back, rename the *thing*, and the name follows.
+
+## Files
+
+| What | Convention | Example |
+|---|---|---|
+| React component | `PascalCase.tsx` | `OrderRow.tsx`, `CheckoutPage.tsx` |
+| Hook | `camelCase.ts`, prefixed `use` | `useCheckoutScreen.ts`, `useDebounce.ts` |
+| Store | `<feature>.store.ts` | `cart.store.ts`, `auth.store.ts` |
+| Query module | `<feature>.queries.ts` | `products.queries.ts` |
+| Mutation module | `<feature>.mutations.ts` | `cart.mutations.ts` |
+| API module | `<feature>.api.ts` | `products.api.ts` |
+| Normalizer | `<feature>.normalizers.ts` | `orders.normalizers.ts` |
+| Key factory | `<feature>.keys.ts` | `products.keys.ts` |
+| Types | `<feature>.types.ts` | `orders.types.ts` |
+| Helpers (no React) | `kebab-case.ts` | `format-currency.ts`, `as-string.ts` |
+| Tests | mirror source + `.test.ts(x)` | `OrderRow.test.tsx` |
+| Playwright | `*.spec.ts` (in `e2e/`) | `pos-checkout.spec.ts` |
+
+One default export per component file. Hooks export by name. Utilities export by name; no default exports for utilities.
+
+## Folders
+
+`kebab-case` for folders: `modules/cart/`, `modules/order-detail/pages/`, `shared/components/data-table/`. Folder name matches the file inside when the folder holds a single thing. Module domain folders use a single noun (`products/`, not `product/`).
+
+## Variables and functions
+
+- `camelCase` for variables and functions.
+- Verbs for functions (`fetchOrder`, `parseProductList`, `toUserMessage`).
+- Nouns for values (`order`, `productList`, `userMessage`).
+- Booleans: prefix with `is`, `has`, `can`, `should` (`isLoading`, `hasError`, `canCheckout`).
+- Event handlers (props): `on<Event>` (`onClick`, `onValueChange`).
+- Internal handlers: `handle<Event>` (`handleClick`, `handleSubmit`).
+- Async functions: read like a sentence (`await fetchOrder(id)`, not `await orderFetch(id)`).
+
+## Types
+
+- `PascalCase` for types and interfaces (`Order`, `CheckoutPayload`).
+- Don't suffix types with `Type` (`User`, not `UserType`).
+- Schemas: suffix `Schema` (`OrderSchema`, `CheckoutPayloadSchema`).
+- Inferred types share the schema's base name: `type Order = z.infer<typeof OrderSchema>`.
+- Branded ids: `<Entity>Id` (`UserId`, `OrderId`).
+- Discriminator field: `status`, `kind`, or `type` — pick one per union and stay consistent.
+- Don't prefix interfaces with `I` (`IUser`). It's Hungarian notation for the modern age.
+
+## Constants
+
+`SCREAMING_SNAKE_CASE` for true module-level constants:
+
+```ts
+const MAX_RETRY = 3
+const DEFAULT_PAGE_SIZE = 25
+```
+
+Tailwind class strings, query keys, and config objects are not "constants" in this sense — they stay `camelCase`.
+
+## React components
+
+- `PascalCase` for the component name and the file.
+- The default export of a `<Name>Page.tsx` is `<Name>Page`.
+- Compound components use dot-notation: `<Modal>` with `<Modal.Header>`, `<Modal.Body>`, `<Modal.Footer>`.
+
+## Hooks
+
+- Always `use<Something>`.
+- Screen hooks: `use<Name>Screen` and return `{ status, vm, actions }`.
+- Generic hooks: `useDebounce`, `useMediaQuery`, `useLocalStorage`.
+
+## Stores
+
+The Zustand hook starts with `use` and ends with `Store`: `useCartStore`, `useAuthStore`. Inside, prefer setters named for the change (`addItem`, `removeItem`, `clear`), not generic mutators (`setItem`, `setItem2`).
+
+## TanStack Query keys
+
+A key factory exposes `all`, `lists`/`list(filters)`, `details`/`detail(id)`. (See `service-patterns.md` for the full pattern.) Always reference the factory; never inline `["products", id]`.
+
+## Component props
+
+- `Readonly<{}>` props object.
+- Destructure in the parameter list. Don't `props.foo`.
+- For boolean-flag props, prefer the affirmative (`isOpen`, not `closed`).
+- Children are `children: React.ReactNode`. Don't rename.
+- Refs: `ref` (React 19) — see `react-patterns.md`.
+
+## CSS / Tailwind
+
+- Use the `cn(...)` helper (`clsx` + `tailwind-merge`) for combining class strings.
+- Use `class-variance-authority` for variant systems on UI primitives. Variant names are `kebab-case` (`size: "sm" | "md" | "lg"`, `intent: "primary" | "ghost"`).
+
+## Tests
+
+- `describe` blocks describe the **subject** ("CheckoutPage", "parseOrder").
+- `test`/`it` describes the **behavior** in present-tense (`"renders the empty state when cart is empty"`, `"parses missing items as []"`).
+- Avoid `should` — it adds words without meaning.
+
+## Avoid
+
+- `data`, `info`, `result`, `temp`, `value` — meaningless. Be specific.
+- `utils.ts`, `helpers.ts`, `misc.ts` — junk drawers. Name the actual concern.
+- `Manager`, `Helper`, `Service`, `Handler` — verbose; a `UserService` is just `users`.
+- Abbreviations (`usr`, `prod`, `qty` is borderline OK only for cart line items).
+- Type suffixes on functions (`getUserAsync` — async is in the return type, not the name).
+
+## Trade-offs
+
+Long, accurate name > short, vague name. `useCheckoutScreen` beats `useCheckout`. `parseProductList` beats `parse`. You'll read it a hundred times more than you'll type it.
+
+## See also
+
+- `architecture.md` — folder organization
+- `typescript.md` — branded ids, discriminated unions
+- `react-patterns.md` — event handler conventions

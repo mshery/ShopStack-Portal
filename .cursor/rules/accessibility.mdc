@@ -1,0 +1,167 @@
+---
+globs:
+  - "**/*.tsx"
+  - "**/components/**/*.ts"
+---
+
+# Accessibility
+
+Accessibility is not a feature; it's the floor. We target **WCAG 2.2 AA** and follow the WAI-ARIA Authoring Practices for interaction patterns. ShopStack Portal is a productivity tool — most users live in it for hours, and many depend on keyboard or assistive tech. Get this right and everyone benefits.
+
+## 1. Use the right HTML element
+
+A `<button>` is a `<button>`. A `<div>` with `onClick` is bait. Native elements come with focus, keyboard, role, and screen-reader semantics for free.
+
+```tsx
+// ❌ WRONG
+<div className="btn" onClick={save}>Save</div>
+
+// ✅ CORRECT
+<button type="button" onClick={save}>Save</button>
+```
+
+If a button is inside a `<form>`, set `type="button"` unless it's the submit button — otherwise Enter inside any input triggers it.
+
+## 2. Lean on Radix UI
+
+We use Radix primitives (Dialog, Popover, Tabs, Select, Toast, Dropdown, etc.). They implement the WAI-ARIA pattern correctly — focus trapping, ESC handling, roving tabindex, ARIA labels. **Wrap Radix; don't replace it.**
+
+When wrapping a Radix primitive with `cva`:
+
+- Don't remove `aria-*` or `role` attributes Radix sets.
+- Forward `ref` so consumers can manage focus.
+- Spread `...rest` last so consumers can override classes.
+
+## 3. Keyboard
+
+Every interactive element must be reachable, operable, and visible via the keyboard.
+
+- **Tab** moves between focusable elements in DOM order.
+- **Enter** activates buttons, links, submits forms.
+- **Space** activates buttons, toggles checkboxes.
+- **Esc** closes modals, popovers, command palettes.
+- **Arrow keys** move within a composite widget (menu, tabs, listbox, combobox) — Radix handles this.
+
+Custom widgets must follow the matching WAI-ARIA Authoring Practices pattern; cite the pattern in a comment when implementing.
+
+## 4. Focus management
+
+- Never `outline: none` without a replacement. Use `:focus-visible` rings (Tailwind `focus-visible:ring-2`).
+- When a modal opens, focus moves into it. When it closes, focus returns to the trigger. (Radix Dialog does this for you.)
+- After a route change, move focus to the page's `<h1>` or a `role="main"` landmark.
+- Hidden elements (`hidden`, `display:none`, `aria-hidden="true"`) must not be focusable. Don't use `tabIndex={-1}` to "fix" something; fix the underlying issue.
+
+## 5. Labels
+
+Every form control has an accessible name.
+
+```tsx
+// ✅ explicit
+<label htmlFor="email">Email</label>
+<input id="email" type="email" />
+
+// ✅ via Radix Label
+<Label.Root htmlFor="email">Email</Label.Root>
+<input id="email" />
+
+// ✅ aria-label when visual label is impractical (e.g. icon-only)
+<button aria-label="Close" onClick={onClose}><X /></button>
+```
+
+Placeholder text is **not** a label. Floating labels must remain visible while the field has content.
+
+## 6. Errors
+
+Field errors are connected to the input with `aria-describedby` and announced with `role="alert"` (or `aria-live="polite"` for non-blocking warnings).
+
+```tsx
+<input id="email" aria-invalid={Boolean(errors.email)} aria-describedby="email-error" />
+{errors.email && <p id="email-error" role="alert">{errors.email.message}</p>}
+```
+
+Errors must be visible (not solely indicated by color — also include icon or text).
+
+## 7. Color and contrast
+
+- Body text contrast ratio ≥ 4.5:1 against background (WCAG 2.2 AA).
+- Large text (≥18pt or 14pt bold) ≥ 3:1.
+- UI components and focus indicators ≥ 3:1.
+- Never use color alone to convey state. Pair with text, icon, or pattern.
+
+Tailwind tokens that pass: configure them in `tailwind.config` or the `@theme` block and reference by name. Don't hand-pick colors per component.
+
+## 8. Motion
+
+- Respect `prefers-reduced-motion`. Wrap non-essential animations:
+
+  ```css
+  @media (prefers-reduced-motion: reduce) {
+    .animate-slide { animation: none; }
+  }
+  ```
+
+- For `motion` (framer-motion successor), use `useReducedMotion()` and short-circuit animations.
+- Avoid auto-playing media. If unavoidable, give users a control.
+
+## 9. Images
+
+- Every `<img>` has an `alt`. Decorative images get `alt=""`.
+- Functional images (icon-only links/buttons) get the label on the parent control, not the image (and `alt=""`).
+- SVG icons from `lucide-react` are `aria-hidden` by default; the surrounding control names the action.
+
+## 10. Live regions
+
+For non-blocking status updates (toasts, "Saved", search-result counts), use `aria-live="polite"`. `react-hot-toast` configures this. Don't roll your own.
+
+`aria-live="assertive"` interrupts the user — reserve for true urgency (e.g. "Connection lost").
+
+## 11. Headings
+
+- Each page has exactly one `<h1>`.
+- Heading levels don't skip (`h1` → `h3` is wrong). Use CSS to size, not heading level.
+- Landmarks (`<main>`, `<nav>`, `<header>`, `<aside>`, `<footer>`) appear once at the top level. Multiple `<nav>` need `aria-label`.
+
+## 12. Tables (`@tanstack/react-table`)
+
+- Use `<table>`, `<thead>`, `<tbody>`, `<th scope="col">`. Don't `<div>`-table unless you also implement the full `role="grid"` pattern.
+- Sortable column headers expose `aria-sort="ascending" | "descending" | "none"`.
+- Empty state has accessible text, not just an illustration.
+
+## 13. Forms
+
+- Group related inputs in `<fieldset>` with `<legend>`.
+- `autocomplete` attributes set correctly (`email`, `new-password`, `current-password`, `street-address`, etc.) — improves both accessibility and security UX.
+- Don't disable paste on password fields. It blocks password managers.
+
+## 14. Modals and dialogs
+
+- Use Radix Dialog (`role="dialog"`, `aria-modal="true"`, focus trap built in).
+- Trigger element receives focus on close.
+- Esc closes (Radix default — don't override).
+- Background content gets `aria-hidden="true"` while modal is open (Radix default).
+
+## 15. Skip link
+
+The app shell renders a "Skip to main content" link as the first focusable element. It's visually hidden until focused. Target the `<main>` element by id.
+
+## 16. Testing
+
+- **Vitest** runs `@axe-core/react` on rendered components for key flows.
+- **Playwright** runs `@axe-core/playwright` on every e2e test target page.
+- New components must have at least one Testing Library test that finds them via `getByRole` / `getByLabelText`. If you can't, the component is inaccessible.
+
+## Pre-merge checklist
+
+- [ ] Every interactive element is reachable by Tab and operable by Enter/Space
+- [ ] Visible focus indicator on every focusable element
+- [ ] Every `<img>`, icon-only control, and form input has an accessible name
+- [ ] Color contrast checked (use the DevTools Accessibility Inspector)
+- [ ] No `outline: none` without a `:focus-visible` replacement
+- [ ] `axe` clean on the changed pages
+
+## See also
+
+- `react-patterns.md` — controlled inputs, refs
+- `testing.md` — axe in Vitest, query priority
+- `e2e-playwright.md` — axe in Playwright
+- WAI-ARIA Authoring Practices 1.2 — interaction patterns reference

@@ -1,0 +1,177 @@
+# Design Principles
+
+ShopStack Portal is a productivity tool that people live in for hours. The visual surface earns trust, reduces errors, and keeps long sessions tolerable. This rule is about how to make that surface *good*, not generic.
+
+Mechanics (Tailwind v4 tokens, Radix wrappers, `cva` variants, `cn()`) live in the codebase. This file is about the **choices** that turn those mechanics into a coherent product.
+
+## Before any UI work — commit to a direction
+
+Before reaching for `<div>`, answer:
+
+- **Purpose.** What problem does this surface solve? Who uses it (owner, cashier, super-admin) and in what context (warehouse, counter, desk)?
+- **Tone.** ShopStack Portal's tone is **calm, dense, dependable**. Cashier surfaces lean toward *fast, large targets, high contrast*. Platform-admin surfaces lean toward *information-dense, neutral chrome, careful hierarchy*. Don't blur the two.
+- **Differentiation.** What's the one thing a returning user will remember? Make that the strongest signal on the page.
+
+A page without a stated direction defaults to "AI slop" — generic gradient, generic spacing, generic shadow.
+
+## The look ShopStack is not
+
+Avoid the AI-generated default aesthetic:
+
+- ❌ Purple/pink gradients on white
+- ❌ "Space Grotesk" + "Inter" + emoji icon
+- ❌ Cards with `shadow-xl rounded-2xl` for everything
+- ❌ "Get started" hero with two centered buttons
+- ❌ Light grey on slightly-lighter grey (low contrast → fails WCAG)
+- ❌ Default Tailwind palette named colors (`bg-blue-600`, `text-gray-700`) used directly. Use design tokens (`bg-primary`, `text-foreground`).
+
+These aren't sins of taste — they're sins of intention. They mean no one *decided* what the page should feel like.
+
+## Tokens, not raw colors
+
+Design tokens live in `src/styles/globals.css` under Tailwind v4's `@theme` block. Reference them by name; never hand-pick a hue per component.
+
+```tsx
+// ❌ wrong
+<div className="bg-blue-600 text-gray-100">
+
+// ✅ correct
+<div className="bg-primary text-primary-foreground">
+```
+
+If a token doesn't exist for the color you want, **add the token** instead of inlining the hex. The token is reviewable in one place; inline hex is invisible across the codebase.
+
+## Typography
+
+- Body and chrome: a single legible sans-serif loaded with `font-display: swap`. Don't change it per surface.
+- Headings: the same family at a larger size, **or** a single designated display face if the brand calls for it. Pair, don't proliferate.
+- Numbers in data tables: `font-variant-numeric: tabular-nums` so columns align.
+- Avoid more than two type families on one page.
+- **Sizes** come from a token scale (`text-xs / sm / base / lg / xl / 2xl / 3xl`). Custom pixel sizes need a comment justifying them.
+
+## Color
+
+- Commit to a primary, an accent, and a neutral scale. Three-color discipline beats eight-color anarchy.
+- Use dominant color + sharp accent over evenly-weighted palettes. A button is the only red on the page; a status pill is the only green.
+- States (hover, active, disabled, focus) are systematic shifts (`hover:bg-primary/90`), not new colors.
+- Contrast: body ≥ 4.5:1, large text ≥ 3:1, UI/focus ≥ 3:1 (see `accessibility.md`).
+
+## Motion
+
+Motion serves comprehension. Two rules:
+
+1. **Animate state changes that matter** — a row appearing, a panel sliding in, a destructive confirmation building up. Don't animate things the user already understands (instant clicks, mouseover background shifts).
+2. **Respect `prefers-reduced-motion`.** Wrap with `useReducedMotion()` from `motion`/`framer-motion` or media-query the keyframes off.
+
+Defaults:
+
+- Durations: 150 ms for micro-interactions, 250 ms for transitions, 400 ms for page-level reveals. Never longer without a reason.
+- Easing: `ease-out` for entrances, `ease-in` for exits. Linear is for progress bars.
+- One concerted moment per screen (e.g. table rows stagger-fade-in on load) beats five scattered micro-animations.
+
+## Spacing and rhythm
+
+Use the token scale (`p-1 / 2 / 3 / 4 / 6 / 8 / 12`). Don't `p-[13px]`. The scale is non-negotiable so that a section padded `p-6` lines up with a card padded `p-6` three components away.
+
+Vertical rhythm: pick a baseline (e.g. 4px) and let `gap-*` enforce it. Don't sprinkle `mt-*` to fix individual elements.
+
+## Density
+
+ShopStack is a workspace. Default to **higher density** than a marketing page. Cashiers need to see 8 line items at a glance; a list view of products should fit 15 rows above the fold on a standard laptop.
+
+Roomy ≠ professional. Tightness with breathing room around grouped data is the goal.
+
+## Hierarchy
+
+Within a screen:
+
+- **One primary action** (filled, primary color). Never two.
+- **One or two secondary actions** (outline or ghost).
+- **One destructive action** (red, separated from the others).
+
+Within a list:
+
+- The row clicks. The actions on the row don't compete with the row click.
+- Status (success / warning / error) is encoded in **at least two channels** — color *and* an icon, color *and* a word. Never color alone.
+
+## Composition
+
+- Asymmetry is allowed when it serves data hierarchy (a primary column at 60% and a sidebar at 40%, not 50/50).
+- Empty states are designed (illustration optional; specific copy and a clear next action mandatory). "No results" is not enough.
+- Loading states match the eventual content's layout (skeletons sized like the rows they replace) — see `react-patterns.md` and `performance.md`.
+
+## Components — built on Radix, themed by tokens
+
+The component layer is:
+
+1. **Radix primitives** for behavior (Dialog, Popover, Tabs, Select, Toast, Dropdown, Combobox).
+2. **`class-variance-authority` (cva)** for variant systems on top of Radix.
+3. **`cn()` helper** (`clsx` + `tailwind-merge`) for combining + de-duping classes.
+
+```tsx
+// shared/components/ui/Button.tsx
+import { cva, type VariantProps } from "class-variance-authority"
+import { cn } from "@/shared/utils/cn"
+
+const button = cva(
+  "inline-flex items-center justify-center font-medium transition-colors " +
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring " +
+  "disabled:opacity-50 disabled:pointer-events-none",
+  {
+    variants: {
+      intent: {
+        primary:    "bg-primary text-primary-foreground hover:bg-primary/90",
+        secondary:  "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        ghost:      "hover:bg-accent hover:text-accent-foreground",
+        destructive:"bg-destructive text-destructive-foreground hover:bg-destructive/90",
+      },
+      size: {
+        sm: "h-8 px-3 text-sm rounded-md",
+        md: "h-10 px-4 text-base rounded-md",
+        lg: "h-12 px-6 text-lg rounded-lg",
+      },
+    },
+    defaultVariants: { intent: "primary", size: "md" },
+  }
+)
+
+type Props = Readonly<
+  React.ButtonHTMLAttributes<HTMLButtonElement> & VariantProps<typeof button>
+>
+
+export function Button({ className, intent, size, ...rest }: Props) {
+  return <button className={cn(button({ intent, size }), className)} {...rest} />
+}
+```
+
+Variant names are kebab-case literals. Don't add a `variant: "magic"` for a one-off — extend the existing variants or compose with `className`.
+
+## What "production-grade" means here
+
+A surface is production-grade when:
+
+1. **A returning user knows what to do without thinking.** Layout consistent with sibling pages. Primary action where it always is.
+2. **Every state has a layout.** Loading, empty, error, success — all designed, none accidental.
+3. **It survives the worst data.** Long names truncate or wrap deliberately. Empty arrays show empty states, not bare borders. Numbers right-align, dates tabular-num.
+4. **It scales from a 13" laptop to an external 32" display** without losing hierarchy. Tested at both.
+5. **Keyboard-only operation works.** Tab order is linear, focus is visible, Esc closes. Radix gives you 90% of this — don't unwire what Radix sets up.
+6. **An axe scan is clean.** Contrast, labels, roles, alt text.
+
+If a screen ships missing any of those, it shipped early.
+
+## Don't (the anti-pattern roundup)
+
+- Don't reach for a new color, font, or radius for a single component.
+- Don't ship a hero with two centered buttons unless the page is genuinely marketing.
+- Don't use `shadow-2xl` on everything — shadows are for hovering one element above another, not decoration.
+- Don't break the Radix focus management to "make it look nicer".
+- Don't animate every state change. Pick the moments that *deserve* motion.
+- Don't render uploaded user images without dimensions reserved (CLS budget — see `performance.md`).
+- Don't compose six gradients to suggest depth — use one carefully-chosen shadow.
+
+## See also
+
+- `accessibility.md` — focus rings, keyboard, contrast, labels
+- `react-patterns.md` — composition (`Modal.Header`/`Modal.Body`), event handlers, conditional rendering
+- `performance.md` — CLS budget, font loading, motion budget
+- `naming.md` — `cva` variant naming, `cn()` usage

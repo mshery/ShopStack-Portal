@@ -1,0 +1,184 @@
+---
+alwaysApply: true
+---
+
+# Coding
+
+These are non-negotiable mental laws for ShopStack Portal. They exist to prevent fragile UI, prevent over-engineering, keep velocity high as the app grows, make code easy to delete, and make the UI impossible to crash. If a decision is unclear, **default to these rules**.
+
+## 0. The prime directive
+
+**Code must be easier to DELETE than to WRITE.**
+
+If removing a feature requires touching many files, understanding hidden behavior, or breaks unrelated screens — the design is already wrong.
+
+## 1. UI is not allowed to think
+
+UI renders. UI does not decide.
+
+UI **may** do: layout, rendering, styling, trivial presentation branching.
+UI **may not** do: business logic, side effects, API calls, retries, data fetching, non-trivial derivation.
+
+```tsx
+// ❌ WRONG
+if (user.isPremium) {
+  await upgradeUser()
+}
+
+// ✅ CORRECT
+<Button disabled={!vm.canUpgrade} onClick={actions.upgrade} />
+```
+
+If a component contains a behavior-changing `if/else`, it is not UI.
+
+## 2. Data flows in one direction only
+
+```
+API → Normalizer → Store/Query → Screen Hook → Page → Component
+```
+
+Never reverse. (See `data-flow.md` for the full version.)
+
+## 3. All external data is hostile
+
+If it can be null, it **will** be null. APIs lie. Backends change. Fields disappear.
+
+Normalize **once** at the boundary (in `*.normalizers.ts`, with zod). After normalization, downstream code does not need defensive checks.
+
+## 4. Null-safety
+
+Optional chaining `?.` is a *last line of defense*, not a strategy.
+
+```tsx
+// ❌ WRONG — leaks backend instability into UI
+<Text>{user?.name}</Text>
+
+// ✅ CORRECT — normalize early
+const user = UserSchema.parse(raw) // zod fills defaults, throws on missing
+<Text>{user.name}</Text>
+```
+
+`?.` is **allowed** only for truly optional relationships where absence is a valid domain state (`user.avatarUrl && <Avatar src={user.avatarUrl} />`, `settings?.theme`).
+`?.` is **forbidden** for conceptually-required fields (`user?.name`, `order?.id`).
+
+## 5. Arrays are never optional
+
+A list is **always** an array.
+
+```ts
+// ❌ WRONG
+items?: Item[]
+
+// ✅ CORRECT
+items: Item[]   // missing → [], failed → [], null response → []
+```
+
+If `.map()` can crash, the design is wrong.
+
+## 6. Stores are boring on purpose
+
+Zustand stores hold state and expose setters. **That's it.** No async, no API calls, no derivation, no business rules. (See `zustand-stores.md`.)
+
+## 7. Side effects have hard boundaries
+
+Async logic must be **contained** or it spreads.
+
+- **Allowed:** API modules, screen hooks, TanStack Query queries/mutations
+- **Forbidden:** components, pages, Zustand stores
+
+## 8. Every screen has exactly one logic hook
+
+Hooks own behavior. Pages own layout. One screen → one `use<Name>Screen.ts`.
+
+## 9. Every async screen has exactly four states
+
+`loading | error | empty | success`. No exceptions, no shortcuts.
+
+```ts
+type AsyncStatus = "loading" | "error" | "empty" | "success"
+```
+
+## 10. Screen hook is the brain
+
+The screen hook returns exactly three things:
+
+- `status: AsyncStatus`
+- `vm` — derived, UI-ready data (the view-model contract)
+- `actions` — stable callbacks
+
+## 11. View model (vm) — the UI contract
+
+`vm` is the **only** data shape the UI reasons about. It contains derived, UI-ready data. **No functions, no raw API objects, no side effects.** Keep it small and intentional.
+
+```ts
+// ❌ WRONG — leaks every intermediate state
+vm: { users, rawUsers, filteredUsers, sortedUsers, hasUsers, isEmpty }
+
+// ✅ CORRECT
+vm: { users, canRefresh }
+```
+
+## 12. Memoization is about stability, not micro-optimization
+
+- `vm` **must** be `useMemo`'d
+- `actions` **must** be `useCallback`'d
+- **Do not** memoize trivial values (`users.length === 0`)
+
+Memoize only when (a) values are passed to memoized children, (b) values are non-trivially derived, or (c) identity stability is required for an effect dependency.
+
+## 13. Pages do not fetch data
+
+Pages branch on `status` and render. Nothing else.
+
+## 14. Components are pure and dumb
+
+Components render props. They do not fetch, do not derive meaning, do not mutate state. They may have local UI state (open/closed, hover) but never domain state.
+
+## 15. Fail fast in dev, fail safe in UI
+
+Developers see crashes. Users see messages.
+
+- API layer throws real errors with context
+- Screen hooks convert errors to user-safe strings via `toUserMessage(e)`
+- UI never throws
+
+## 16. Duplication > wrong abstraction
+
+A bad abstraction is harder to delete than three duplicates. Wait for the third occurrence before extracting.
+
+## 17. Naming is a design decision
+
+If a name is hard, the design is wrong. (See `naming.md`.)
+
+## 18. Optimize for reading, not writing
+
+Explicit > clever. Predictable > elegant. A junior should be able to read a screen pair top-to-bottom and understand it.
+
+## 19. No dead code
+
+Delete commented-out code. Delete unused exports. Delete `TODO: remove this` from six months ago. `git` is the archive.
+
+## 20. The exit rule
+
+Before merging:
+
+> "Can another developer understand this screen by reading only the hook and page in under 30 seconds?"
+
+If not — simplify, split, rename, delete.
+
+## Lint, format, build are sacred
+
+After **any** change:
+
+```bash
+npm install     # if deps changed
+npm run lint    # --max-warnings 0
+npm run build   # tsc -b + vite build
+npm test        # vitest
+```
+
+Zero warnings. Zero failures. No `--no-verify`.
+
+## Final rule
+
+**The best code is code that does not exist.** Delete aggressively. Normalize early. Memoize intentionally. Protect the UI at all costs.
