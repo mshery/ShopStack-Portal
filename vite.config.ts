@@ -25,4 +25,10 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    // "hidden" emits source maps for the error monitor to upload but does not
+    // reference them from the bundle, so they are not fetched publicly. See
+    // .claude/rules/security.md rule 16.
+    sourcemap: 'hidden',
+  },
 })
