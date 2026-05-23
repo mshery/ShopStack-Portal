@@ -8,7 +8,7 @@ import {
   useDeletePaymentMethod,
   useSetDefaultPaymentMethod,
 } from "@/modules/tenant";
-import { usePOSStore } from "@/modules/pos";
+import { usePOSStore, useSalesFetch } from "@/modules/pos";
 import type {
   AsyncStatus,
   BillingAddress,
@@ -84,15 +84,27 @@ export function useBillingScreen() {
     };
   }, [currentTenant]);
 
-  // Orders Used (metrics)
+  // Orders Used (metrics) — read the live count off the API. The Zustand
+  // `sales` store is seed-only and never reflects checkouts completed via
+  // the live API, so this counter used to be stuck at 0 for every tenant
+  // that wasn't pre-seeded with sales. We page through the API only as
+  // far as the monthly window: any sale older than `startOfMonth` is
+  // outside the meter and doesn't need to be counted.
+  const { data: salesData } = useSalesFetch({ page: 1, limit: 100 });
   const ordersUsed = useMemo(() => {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const apiSales = salesData?.items ?? [];
+    if (apiSales.length > 0) {
+      return apiSales.filter((s) => new Date(s.createdAt) >= startOfMonth)
+        .length;
+    }
+    // Legacy fallback for paths that pre-seed the Zustand store.
     return sales.filter(
       (s) =>
         s.tenant_id === activeTenantId && new Date(s.createdAt) >= startOfMonth,
     ).length;
-  }, [sales, activeTenantId]);
+  }, [salesData, sales, activeTenantId]);
 
   const currentPlan = billing?.plan;
   const ordersLimit = currentPlan?.limits.maxOrders ?? 100;
