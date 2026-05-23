@@ -166,7 +166,18 @@ export function useAddProductScreen() {
       return;
     }
 
-    createMutation.mutate(formData);
+    // Backend's product schema validates imageUrl with `z.string().url().optional()` —
+    // an empty string fails .url(). Strip blank/whitespace values before sending so
+    // products can be created without an image. Same applies to description.
+    const payload: CreateProductInput = { ...formData };
+    if (!payload.imageUrl || !payload.imageUrl.trim()) {
+      delete payload.imageUrl;
+    }
+    if (payload.description && !payload.description.trim()) {
+      delete payload.description;
+    }
+
+    createMutation.mutate(payload);
   }, [formData, createMutation]);
 
   const goBack = useCallback(() => {
