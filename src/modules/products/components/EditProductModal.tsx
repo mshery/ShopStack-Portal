@@ -121,6 +121,14 @@ export default function EditProductModal({
     // Prepare unified update data
     const updateData: UpdateProductInput = { ...formData };
 
+    // Backend's product schema validates imageUrl with `.url().optional()` —
+    // empty string fails .url() and null fails .string(). If the user cleared
+    // the image (or never had one), drop the field so the backend doesn't
+    // reject the entire update.
+    if (!updateData.imageUrl) {
+      delete updateData.imageUrl;
+    }
+
     // Handle stock adjustment logic if needed
     if (isOwner && stockAction) {
       const previousStock = product.currentStock;
