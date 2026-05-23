@@ -9,13 +9,6 @@ export interface LoginCredentials {
     password: string;
 }
 
-export interface SignUpData {
-    companyName: string;
-    email: string;
-    password: string;
-    ownerName: string;
-}
-
 export interface ResetPasswordData {
     token: string;
     newPassword: string;
