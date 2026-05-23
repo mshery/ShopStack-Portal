@@ -44,7 +44,8 @@ export interface LoginResponse {
   user: AuthUser;
   tenant: AuthTenant | null; // null for platform users
   token: string;
-  refreshToken: string;
+  // refreshToken is now delivered as an httpOnly cookie (ITS-26) and is
+  // intentionally absent from the JSON body.
 }
 
 export interface RegisterInput {
@@ -97,22 +98,27 @@ export const authApi = {
   },
 
   /**
-   * Refresh access token
+   * Silent refresh — the refresh token travels as an httpOnly cookie, so
+   * we just POST with `withCredentials: true` (configured on the httpClient)
+   * and read the new access token from the body.
    */
-  refreshToken: async (
-    refreshToken: string,
-  ): Promise<{ token: string; refreshToken: string }> => {
-    const res = await httpClient.post<
-      ApiResponse<{ token: string; refreshToken: string }>
-    >(endpoints.auth.refreshToken, { refreshToken });
+  refreshToken: async (): Promise<{ token: string }> => {
+    const res = await httpClient.post<ApiResponse<{ token: string }>>(
+      endpoints.auth.refreshToken,
+      {},
+    );
     return res.data.data;
   },
 
   /**
-   * Get current user profile
+   * Get current user profile + tenant. Returns the same { user, tenant } shape
+   * as the login response so the silent-refresh-on-boot flow (ITS-26) can
+   * fully restore the session without an extra round-trip.
    */
-  getProfile: async (): Promise<AuthUser> => {
-    const res = await httpClient.get<ApiResponse<AuthUser>>(endpoints.auth.me);
+  getProfile: async (): Promise<{ user: AuthUser; tenant: AuthTenant | null }> => {
+    const res = await httpClient.get<ApiResponse<{ user: AuthUser; tenant: AuthTenant | null }>>(
+      endpoints.auth.me,
+    );
     return res.data.data;
   },
 
@@ -135,11 +141,16 @@ export const authApi = {
   },
 
   /**
-   * Logout - clears tokens (handled client-side, no API call needed)
+   * Logout — tells the backend to revoke the refresh family and clear the
+   * httpOnly cookie. Best-effort: a failure here still results in the
+   * client clearing its in-memory token.
    */
   logout: async (): Promise<void> => {
-    // No API call needed, just return
-    return Promise.resolve();
+    try {
+      await httpClient.post(endpoints.auth.logout, {});
+    } catch {
+      // Network/4xx — proceed with the client-side clear in the caller.
+    }
   },
 };
 

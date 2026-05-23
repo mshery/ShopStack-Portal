@@ -17,7 +17,8 @@ export function useProfileScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Fetch latest profile
+  // Fetch latest profile. `getProfile()` returns { user, tenant } since the
+  // backend extended /auth/me; this hook only needs the user.
   const {
     data: userProfile,
     isLoading,
@@ -25,7 +26,7 @@ export function useProfileScreen() {
     refetch,
   } = useQuery({
     queryKey: ["auth", "profile"],
-    queryFn: () => authApi.getProfile(),
+    queryFn: async () => (await authApi.getProfile()).user,
     initialData: currentUser as unknown as AuthUser | undefined,
   });
 

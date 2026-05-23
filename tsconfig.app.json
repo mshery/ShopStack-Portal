@@ -28,20 +28,11 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
-    /* Path aliases */
+    /* Path aliases — must mirror vite.config.ts (single `@/` → src) */
     "baseUrl": ".",
     "paths": {
       "@/*": [
         "./src/*"
-      ],
-      "@/core/*": [
-        "./src/core/*"
-      ],
-      "@/shared/*": [
-        "./src/shared/*"
-      ],
-      "@/modules/*": [
-        "./src/modules/*"
       ]
     }
   },
