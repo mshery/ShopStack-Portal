@@ -69,11 +69,16 @@ import { ReportsPage } from "@/modules/reports";
 // Demo pages
 import IconDemoPage from "@/shared/pages/IconDemoPage";
 
+// App-wide fallbacks
+import AppErrorPage from "@/shared/pages/AppErrorPage";
+import NotFoundPage from "@/shared/pages/NotFoundPage";
+
 export const router = createBrowserRouter(
   [
     {
       path: "/",
       element: <RootRedirect />,
+      errorElement: <AppErrorPage />,
     },
     {
       path: "/login",
@@ -338,6 +343,15 @@ export const router = createBrowserRouter(
           ),
         },
       ],
+    },
+    // Top-level catch-all — any unknown URL (typo, stale bookmark,
+    // deleted route) renders the friendly 404 instead of React Router's
+    // default "Hey developer 👋" panel. See AppErrorPage.tsx +
+    // NotFoundPage.tsx. error-handling.md: users see messages,
+    // developers see crashes.
+    {
+      path: "*",
+      element: <NotFoundPage />,
     },
   ],
   {
