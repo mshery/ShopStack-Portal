@@ -1,3 +1,4 @@
+import toast from "react-hot-toast";
 import { useSalesHistoryLogic } from "@/modules/pos";
 import {
   Card,
@@ -50,6 +51,17 @@ export default function SalesHistoryPage() {
   const confirmRefund = async () => {
     if (!refundConfirm) return;
 
+    // The backend's CreateRefundSchema requires `paymentId` to link the refund
+    // to the original payment record. Without it, the API returns 400. If the
+    // sale has no payment recorded (legacy / draft sales), refunding via this
+    // confirm modal isn't supported — guard and surface a toast instead of
+    // sending a guaranteed-400 request.
+    if (!refundConfirm.payment) {
+      toast.error("Cannot refund: this sale has no recorded payment.");
+      setRefundConfirm(null);
+      return;
+    }
+
     setIsProcessing(refundConfirm.id);
     const refundItems = refundConfirm.lineItems.map((item) => ({
       productId: item.productId,
@@ -58,7 +70,12 @@ export default function SalesHistoryPage() {
       refundAmount: item.subtotal,
     }));
 
-    await actions.refund(refundConfirm.id, refundItems, "Customer Return");
+    await actions.refund(
+      refundConfirm.id,
+      refundConfirm.payment.id,
+      refundItems,
+      "Customer Return",
+    );
     setIsProcessing(null);
     setRefundConfirm(null);
   };

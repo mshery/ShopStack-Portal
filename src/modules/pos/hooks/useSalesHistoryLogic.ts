@@ -73,6 +73,10 @@ export function useSalesHistoryLogic() {
         discount: s.discount
           ? { ...s.discount, reason: s.discount.reason || "" }
           : null,
+        // Carry only `payment.id` — the refund flow uses it to populate
+        // CreateRefundSchema.paymentId. Full Payment shape (with string
+        // money fields) lives in the ApiSale layer.
+        payment: s.payment ? { id: s.payment.id } : null,
         lineItems: (s.items || []).map((i) => ({
           ...i,
           unitPriceSnapshot: Number(i.unitPriceSnapshot),
@@ -162,12 +166,18 @@ export function useSalesHistoryLogic() {
   );
 
   const handleRefund = useCallback(
-    async (saleId: string, items: RefundLineItem[], reason: string) => {
+    async (
+      saleId: string,
+      paymentId: string,
+      items: RefundLineItem[],
+      reason: string,
+    ) => {
       if (!activeTenantId || !currentUser) return;
 
       try {
         const refund = await processRefundMutation.mutateAsync({
           originalSaleId: saleId,
+          paymentId,
           items: items.map((item) => ({
             productId: item.productId,
             productName: item.productName,
