@@ -163,6 +163,9 @@ export interface CreateSaleInput {
 
 export interface CreateRefundInput {
   originalSaleId: string;
+  // The backend's createRefundSchema requires this — it links the refund to
+  // the original Payment row. Sourced from `Sale.payment.id`.
+  paymentId: string;
   items: RefundItem[];
   reason: string;
 }

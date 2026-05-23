@@ -296,6 +296,10 @@ export interface Sale {
   grandTotal: number;
   discount: Discount | null;
   paymentMethod: PaymentMethod;
+  // Refund flow needs `payment.id` to populate CreateRefundSchema.paymentId.
+  // Only `id` is carried here on purpose — the full Payment shape with
+  // money fields belongs in the ApiSale layer where decimals are strings.
+  payment: { id: string } | null;
   createdAt: string;
   updatedAt: string;
 }

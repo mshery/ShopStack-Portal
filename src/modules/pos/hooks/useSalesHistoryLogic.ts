@@ -73,6 +73,10 @@ export function useSalesHistoryLogic() {
         discount: s.discount
           ? { ...s.discount, reason: s.discount.reason || "" }
           : null,
+        // Carry only `payment.id` — the refund flow uses it to populate
+        // CreateRefundSchema.paymentId. Full Payment shape (with string
+        // money fields) lives in the ApiSale layer.
+        payment: s.payment ? { id: s.payment.id } : null,
         lineItems: (s.items || []).map((i) => ({
           ...i,
           unitPriceSnapshot: Number(i.unitPriceSnapshot),
