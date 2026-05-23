@@ -162,12 +162,18 @@ export function useSalesHistoryLogic() {
   );
 
   const handleRefund = useCallback(
-    async (saleId: string, items: RefundLineItem[], reason: string) => {
+    async (
+      saleId: string,
+      paymentId: string,
+      items: RefundLineItem[],
+      reason: string,
+    ) => {
       if (!activeTenantId || !currentUser) return;
 
       try {
         const refund = await processRefundMutation.mutateAsync({
           originalSaleId: saleId,
+          paymentId,
           items: items.map((item) => ({
             productId: item.productId,
             productName: item.productName,
