@@ -135,9 +135,12 @@ export default function PurchaseDetailsPage() {
   // Safely access properties after check
   const { purchase, vendor, items } = vm;
 
-  // Calculate totals if not present (though backend should provide)
+  // Calculate totals if not present (though backend should provide).
+  // The Prisma `Decimal`-serialised quantity arrives as a string, so coerce
+  // every line item to a number before summing — `0 + "20"` produces the
+  // string `"020"`, which is what the Cost Summary card was rendering.
   const totalUnits = items.reduce(
-    (sum: number, item) => sum + item.quantity,
+    (sum: number, item) => sum + Number(item.quantity || 0),
     0,
   );
 

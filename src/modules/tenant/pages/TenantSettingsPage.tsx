@@ -85,7 +85,9 @@ export default function TenantSettingsPage() {
                       Categories
                     </p>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {tenantCategories.length} categories configured
+                      {tenantCategories.length}{" "}
+                      {tenantCategories.length === 1 ? "category" : "categories"}{" "}
+                      configured
                     </p>
                   </div>
                 </div>
@@ -105,7 +107,9 @@ export default function TenantSettingsPage() {
                       Brands
                     </p>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {tenantBrands.length} brands configured
+                      {tenantBrands.length}{" "}
+                      {tenantBrands.length === 1 ? "brand" : "brands"}{" "}
+                      configured
                     </p>
                   </div>
                 </div>

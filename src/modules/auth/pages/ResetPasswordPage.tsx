@@ -1,39 +1,20 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import {
-  ChevronLeftIcon,
-  EyeCloseSvgIcon,
-  EyeSvgIcon,
-  CheckCircleIcon,
-} from "@/shared/icons";
-import Label from "@/shared/components/form/Label";
-import InputField from "@/shared/components/form/InputField";
+import { Link } from "react-router-dom";
+import { ChevronLeftIcon } from "@/shared/icons";
 
+/**
+ * ResetPasswordPage — informational only.
+ *
+ * Like `ForgotPasswordPage`, this route used to render a stub form
+ * that pretended to reset the password and redirected to `/login`
+ * without actually changing anything. Until the backend `/auth/reset-password`
+ * endpoint and email-delivered reset tokens land (see auth.routes.ts),
+ * the page shows a clear explanation instead.
+ *
+ * If a real reset-token URL eventually points here, this page should
+ * be replaced with a form that posts the token + new password to the
+ * backend.
+ */
 export default function ResetPasswordPage() {
-  const navigate = useNavigate();
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const [formData, setFormData] = useState({
-    password: "",
-    confirmPassword: "",
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (formData.password !== formData.confirmPassword) {
-      alert("Passwords don't match!");
-      return;
-    }
-
-    // For demo, show success and redirect
-    setIsSubmitted(true);
-    setTimeout(() => {
-      navigate("/login");
-    }, 2000);
-  };
-
   return (
     <div className="flex flex-col flex-1">
       <div className="w-full max-w-md pt-10 mx-auto">
@@ -49,105 +30,21 @@ export default function ResetPasswordPage() {
         <div>
           <div className="mb-5 sm:mb-8">
             <h1 className="mb-2 font-semibold text-gray-800 text-title-sm dark:text-white/90 sm:text-title-md">
-              Set New Password
+              Reset password
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Your new password must be different from previously used
-              passwords.
+              Self-serve password reset isn&apos;t available yet.
             </p>
           </div>
 
-          {isSubmitted ? (
-            <div className="p-6 border border-green-200 rounded-lg bg-green-50 dark:bg-green-900/20 dark:border-green-800">
-              <div className="flex items-start gap-4">
-                <div className="flex items-center justify-center flex-shrink-0 w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/40">
-                  <CheckCircleIcon className="w-5 h-5 text-green-600 dark:text-green-400" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="mb-1 text-sm font-semibold text-green-800 dark:text-green-300">
-                    Password reset successful!
-                  </h3>
-                  <p className="text-sm text-green-700 dark:text-green-400">
-                    Your password has been successfully reset. Redirecting to
-                    sign in...
-                  </p>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit}>
-              <div className="space-y-6">
-                <div>
-                  <Label>
-                    New Password <span className="text-error-500">*</span>
-                  </Label>
-                  <div className="relative">
-                    <InputField
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Enter new password"
-                      value={formData.password}
-                      onChange={(e) =>
-                        setFormData({ ...formData, password: e.target.value })
-                      }
-                    />
-                    <span
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute z-30 -translate-y-1/2 cursor-pointer right-4 top-1/2"
-                    >
-                      {showPassword ? (
-                        <EyeSvgIcon className="fill-gray-500 dark:fill-gray-400 size-5" />
-                      ) : (
-                        <EyeCloseSvgIcon className="fill-gray-500 dark:fill-gray-400 size-5" />
-                      )}
-                    </span>
-                  </div>
-                  <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                    Must be at least 8 characters
-                  </p>
-                </div>
-
-                <div>
-                  <Label>
-                    Confirm Password <span className="text-error-500">*</span>
-                  </Label>
-                  <div className="relative">
-                    <InputField
-                      type={showConfirmPassword ? "text" : "password"}
-                      placeholder="Confirm new password"
-                      value={formData.confirmPassword}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          confirmPassword: e.target.value,
-                        })
-                      }
-                    />
-                    <span
-                      onClick={() =>
-                        setShowConfirmPassword(!showConfirmPassword)
-                      }
-                      className="absolute z-30 -translate-y-1/2 cursor-pointer right-4 top-1/2"
-                    >
-                      {showConfirmPassword ? (
-                        <EyeSvgIcon className="fill-gray-500 dark:fill-gray-400 size-5" />
-                      ) : (
-                        <EyeCloseSvgIcon className="fill-gray-500 dark:fill-gray-400 size-5" />
-                      )}
-                    </span>
-                  </div>
-                </div>
-
-                <div>
-                  <button
-                    type="submit"
-                    className="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600"
-                  >
-                    Reset Password
-                  </button>
-                </div>
-              </div>
-            </form>
-          )}
+          <div className="rounded-xl border border-gray-200 bg-gray-50 p-5 dark:border-gray-800 dark:bg-white/5">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              If you arrived here from a password-reset email, that
+              link is no longer valid. Please contact your workspace
+              owner (or platform support if you are the owner) to
+              have your password reset.
+            </p>
+          </div>
 
           <div className="mt-6">
             <Link

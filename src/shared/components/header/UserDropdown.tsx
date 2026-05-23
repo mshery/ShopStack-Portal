@@ -4,6 +4,32 @@ import { Dropdown } from "../ui/dropdown/Dropdown";
 import { useAuthStore } from "@/modules/auth";
 import { User, LogOut } from "lucide-react";
 
+/**
+ * Resolve the user's role to a human-readable label for the header
+ * dropdown. Mirrors the labels used by `RoleBadge` so the chrome
+ * stays consistent. Owners and cashiers used to render as the
+ * generic "Tenant Member" — that's misleading when the page-level
+ * Profile clearly shows "owner".
+ */
+function roleLabel(role: string | undefined | null): string {
+  switch (role) {
+    case "super_admin":
+      return "Super Admin";
+    case "owner":
+      return "Owner";
+    case "admin":
+      return "Admin";
+    case "manager":
+      return "Manager";
+    case "cashier":
+      return "Cashier";
+    case "user":
+      return "User";
+    default:
+      return "Member";
+  }
+}
+
 export default function UserDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const { currentUser, logout } = useAuthStore();
@@ -42,9 +68,7 @@ export default function UserDropdown() {
             {currentUser?.name || "User"}
           </span>
           <span className="block text-xs text-gray-500 dark:text-gray-400">
-            {currentUser?.role === "super_admin"
-              ? "Super Admin"
-              : "Tenant Member"}
+            {roleLabel(currentUser?.role)}
           </span>
         </div>
 

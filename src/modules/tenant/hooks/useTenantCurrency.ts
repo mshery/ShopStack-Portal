@@ -20,8 +20,18 @@ export function useTenantCurrency() {
   const currencySymbol = tenant?.settings?.currencySymbol || "Rs";
 
   const formatPrice = useMemo(
-    () => (amount: number | undefined | null) => {
-      const value = typeof amount === "number" ? amount : 0;
+    () => (amount: number | string | undefined | null) => {
+      // The backend serialises Prisma `Decimal` as strings (e.g. `"1.8"`),
+      // so accept string|number and coerce. `Number("")` is `0`, which is
+      // intentional — empty money falls back to the zero formatting rather
+      // than rendering `NaN`.
+      const raw =
+        typeof amount === "number"
+          ? amount
+          : typeof amount === "string"
+            ? Number(amount)
+            : 0;
+      const value = Number.isFinite(raw) ? raw : 0;
       return `${currencySymbol} ${value.toLocaleString("en-US", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
