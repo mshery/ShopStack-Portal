@@ -18,7 +18,6 @@ export { ProtectedRoute } from "./components/ProtectedRoute";
 export type {
   AuthUserType,
   LoginCredentials,
-  SignUpData,
   ResetPasswordData,
 } from "./types";
 

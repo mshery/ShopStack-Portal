@@ -1,27 +1,16 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { EyeCloseSvgIcon, EyeSvgIcon } from "@/shared/icons";
-import Label from "@/shared/components/form/Label";
-import InputField from "@/shared/components/form/InputField";
-import Checkbox from "@/shared/components/form/Checkbox";
+import { Link } from "react-router-dom";
 
+/**
+ * SignUpPage — informational only.
+ *
+ * ShopStack is a B2B multi-tenant SaaS: new organizations are provisioned
+ * by a platform super-admin via the Create Tenant flow, and individual
+ * users are added by the tenant owner from inside the workspace. There is
+ * no public self-signup path. This page exists so any stale bookmark,
+ * email link, or "Sign up" CTA shows a friendly explanation instead of a
+ * 404 or a dead stub form.
+ */
 export default function SignUpPage() {
-  const navigate = useNavigate();
-  const [showPassword, setShowPassword] = useState(false);
-  const [isChecked, setIsChecked] = useState(false);
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    password: "",
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // For demo, just redirect to login
-    navigate("/login");
-  };
-
   return (
     <div className="flex flex-col flex-1 w-full overflow-y-auto lg:w-1/2 no-scrollbar">
       <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
@@ -31,123 +20,40 @@ export default function SignUpPage() {
               Sign Up
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Enter your email and password to sign up!
+              ShopStack accounts are created by your organization
+              administrator — not through self-signup.
             </p>
           </div>
-          <div>
-            <form onSubmit={handleSubmit}>
-              <div className="space-y-5">
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                  <div className="sm:col-span-1">
-                    <Label>
-                      First Name<span className="text-error-500">*</span>
-                    </Label>
-                    <InputField
-                      type="text"
-                      id="fname"
-                      name="fname"
-                      placeholder="Enter your first name"
-                      value={formData.firstName}
-                      onChange={(e) =>
-                        setFormData({ ...formData, firstName: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="sm:col-span-1">
-                    <Label>
-                      Last Name<span className="text-error-500">*</span>
-                    </Label>
-                    <InputField
-                      type="text"
-                      id="lname"
-                      name="lname"
-                      placeholder="Enter your last name"
-                      value={formData.lastName}
-                      onChange={(e) =>
-                        setFormData({ ...formData, lastName: e.target.value })
-                      }
-                    />
-                  </div>
-                </div>
-                <div>
-                  <Label>
-                    Email<span className="text-error-500">*</span>
-                  </Label>
-                  <InputField
-                    type="email"
-                    id="email"
-                    name="email"
-                    placeholder="Enter your email"
-                    value={formData.email}
-                    onChange={(e) =>
-                      setFormData({ ...formData, email: e.target.value })
-                    }
-                  />
-                </div>
-                <div>
-                  <Label>
-                    Password<span className="text-error-500">*</span>
-                  </Label>
-                  <div className="relative">
-                    <InputField
-                      placeholder="Enter your password"
-                      type={showPassword ? "text" : "password"}
-                      value={formData.password}
-                      onChange={(e) =>
-                        setFormData({ ...formData, password: e.target.value })
-                      }
-                    />
-                    <span
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute z-30 -translate-y-1/2 cursor-pointer right-4 top-1/2"
-                    >
-                      {showPassword ? (
-                        <EyeSvgIcon className="fill-gray-500 dark:fill-gray-400 size-5" />
-                      ) : (
-                        <EyeCloseSvgIcon className="fill-gray-500 dark:fill-gray-400 size-5" />
-                      )}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Checkbox
-                    className="w-5 h-5"
-                    checked={isChecked}
-                    onChange={setIsChecked}
-                  />
-                  <p className="inline-block font-normal text-gray-500 dark:text-gray-400">
-                    By creating an account means you agree to the{" "}
-                    <span className="text-gray-800 dark:text-white/90">
-                      Terms and Conditions,
-                    </span>{" "}
-                    and our{" "}
-                    <span className="text-gray-800 dark:text-white">
-                      Privacy Policy
-                    </span>
-                  </p>
-                </div>
-                <div>
-                  <button
-                    type="submit"
-                    className="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600"
-                  >
-                    Sign Up
-                  </button>
-                </div>
-              </div>
-            </form>
 
-            <div className="mt-5">
-              <p className="text-sm font-normal text-center text-gray-700 dark:text-gray-400 sm:text-start">
-                Already have an account?{" "}
-                <Link
-                  to="/login"
-                  className="text-brand-500 hover:text-brand-600 dark:text-brand-400"
-                >
-                  Sign In
-                </Link>
-              </p>
-            </div>
+          <div className="rounded-xl border border-gray-200 bg-gray-50 p-5 dark:border-gray-800 dark:bg-white/5">
+            <h2 className="mb-2 text-sm font-semibold text-gray-800 dark:text-white/90">
+              How do I get access?
+            </h2>
+            <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+              <li>
+                <span className="font-medium text-gray-700 dark:text-gray-300">
+                  New to ShopStack?
+                </span>{" "}
+                Contact our sales team to provision a workspace for your
+                organization.
+              </li>
+              <li>
+                <span className="font-medium text-gray-700 dark:text-gray-300">
+                  Joining an existing workspace?
+                </span>{" "}
+                Ask your organization owner to invite you from the Users
+                page inside ShopStack.
+              </li>
+            </ul>
+          </div>
+
+          <div className="mt-6">
+            <Link
+              to="/login"
+              className="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600"
+            >
+              Back to sign in
+            </Link>
           </div>
         </div>
       </div>
