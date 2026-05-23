@@ -241,19 +241,28 @@ export default function BillingPage() {
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Renewal Date
+                      {billing.status === "trial"
+                        ? "Trial ends"
+                        : "Renewal Date"}
                     </p>
                     <p className="font-semibold text-gray-900 dark:text-white">
-                      {billing.nextBillingDate
-                        ? new Date(billing.nextBillingDate).toLocaleDateString(
-                            "en-US",
-                            {
+                      {(() => {
+                        // Trial tenants don't have a nextBillingDate yet —
+                        // the trial-end is the more meaningful signal. Fall
+                        // back to next billing for paid plans, then to N/A
+                        // for the genuinely unset case.
+                        const dateString =
+                          billing.status === "trial"
+                            ? billing.trialEndsAt
+                            : billing.nextBillingDate;
+                        return dateString
+                          ? new Date(dateString).toLocaleDateString("en-US", {
                               month: "short",
                               day: "numeric",
                               year: "numeric",
-                            },
-                          )
-                        : "N/A"}
+                            })
+                          : "N/A";
+                      })()}
                     </p>
                   </div>
                 </div>
