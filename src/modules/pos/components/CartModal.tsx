@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "motion/react";
-import { X } from "lucide-react";
+import { User, X } from "lucide-react";
 import { CartItems } from "./CartItems";
 import { CheckoutPanel } from "./CheckoutPanel";
 import type { CartItem, Customer, Discount } from "@/shared/types/models";
@@ -31,6 +31,9 @@ export function CartModal({
   isOpen,
   onClose,
   cart,
+  customers,
+  selectedCustomerId,
+  onCustomerChange,
   totals,
   discount,
   onDiscountChange,
@@ -74,6 +77,39 @@ export function CartModal({
               >
                 <X className="h-5 w-5 text-gray-500" />
               </button>
+            </div>
+
+            {/* Customer selector — let the cashier attach the sale to a
+                known customer instead of defaulting to walk-in. The
+                CartModal already received customers + onCustomerChange
+                via props; this just renders the missing UI. */}
+            <div className="px-4 pt-4 pb-2 bg-gray-50 border-b border-gray-100">
+              <label
+                htmlFor="cart-customer"
+                className="flex items-center gap-2 mb-1 text-xs font-semibold text-gray-600"
+              >
+                <User className="h-3.5 w-3.5" />
+                Customer
+              </label>
+              <select
+                id="cart-customer"
+                value={selectedCustomerId ?? ""}
+                onChange={(e) =>
+                  onCustomerChange(e.target.value === "" ? null : e.target.value)
+                }
+                disabled={processingStatus !== "idle"}
+                className="w-full h-10 px-3 rounded-lg border border-gray-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 disabled:bg-gray-50 disabled:text-gray-400"
+              >
+                <option value="">Walk-in customer</option>
+                {customers
+                  .filter((c) => !c.isDefault)
+                  .map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                      {c.email ? ` — ${c.email}` : ""}
+                    </option>
+                  ))}
+              </select>
             </div>
 
             {/* Cart Items */}

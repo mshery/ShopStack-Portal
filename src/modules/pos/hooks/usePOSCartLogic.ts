@@ -2,7 +2,7 @@ import { useMemo, useCallback, useState } from "react";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/modules/auth";
 import { usePOSStore } from "@/modules/pos";
-import { useCustomersStore } from "@/modules/customers";
+import { useCustomersStore, useCustomersFetch } from "@/modules/customers";
 import type {
   AsyncStatus,
   Product,
@@ -30,7 +30,14 @@ import {
 export function usePOSCartLogic() {
   const { activeTenantId, currentUser, currentTenant } = useAuthStore();
 
-  const { customers } = useCustomersStore();
+  // Live customer list from the API. The Zustand store (kept around for
+  // legacy callers) is seed-only and never reflects customers added via
+  // the live API — so the POS cart was previously rendering an empty
+  // customer dropdown for fresh tenants. Falling back to the store keeps
+  // older behaviour for any test path that pre-seeds the store.
+  const { data: customersData } = useCustomersFetch({ limit: 100 });
+  const { customers: storeCustomers } = useCustomersStore();
+  const customers = customersData?.items ?? storeCustomers;
 
   const {
     cart,
@@ -109,7 +116,16 @@ export function usePOSCartLogic() {
 
   const tenantCustomers = useMemo(() => {
     if (!activeTenantId) return [];
-    return customers.filter((c) => c.tenant_id === activeTenantId);
+    // The API serialises the relation as camelCase `tenantId`; the legacy
+    // store keeps snake_case `tenant_id`. Accept either shape so a
+    // mid-migration store doesn't lock out customers that were fetched
+    // from the live endpoint.
+    return customers.filter((c) => {
+      const tid =
+        (c as { tenant_id?: string; tenantId?: string }).tenant_id ??
+        (c as { tenant_id?: string; tenantId?: string }).tenantId;
+      return tid === activeTenantId;
+    });
   }, [activeTenantId, customers]);
 
   // Get tenant settings for tax rate (from login response, not platform store)
