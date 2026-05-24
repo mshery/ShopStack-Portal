@@ -1,6 +1,6 @@
 import { memo, useMemo, useRef, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Package, Plus, ShoppingBag } from "lucide-react";
+import { Package, Plus, Check, ShoppingBag } from "lucide-react";
 import { formatCurrency } from "@/shared/utils/format";
 import type { Product, CartItem } from "@/shared/types/models";
 import { Skeleton } from "@/shared/components/ui/skeleton";
@@ -19,20 +19,7 @@ interface ProductGridProps {
 }
 
 /**
- * ProductGrid - professional POS tiles.
- *
- * Design intent: this surface is the cashier's workspace, not a marketing
- * card grid. Tiles are uniform, dense, and serious. No coloured letter
- * avatars or pastel placeholders — those read as a school project, not a
- * point-of-sale.
- *
- * Visual hierarchy per tile:
- *   1. Product name (the thing they're looking for)
- *   2. Price (the second thing)
- *   3. Stock + cart state (peripheral; quick scan only)
- *
- * Selected state is decisive — a solid brand background with white text
- * — rather than a thin border the eye has to hunt for.
+ * ProductGrid - Premium product cards with modern design
  */
 export const ProductGrid = memo(function ProductGrid({
   products,
@@ -79,61 +66,100 @@ export const ProductGrid = memo(function ProductGrid({
     return item?.quantity ?? 0;
   };
 
-  type StockTone = "out" | "low" | "ok";
-  const getStockTone = (stock: number): StockTone => {
-    if (stock === 0) return "out";
-    if (stock <= 5) return "low";
-    return "ok";
+  const getStockStatus = (stock: number) => {
+    if (stock === 0)
+      return {
+        label: "Out of Stock",
+        bg: "bg-red-50 dark:bg-red-900/20",
+        text: "text-red-600 dark:text-red-400",
+        dot: "bg-red-500",
+      };
+    if (stock <= 5)
+      return {
+        label: `Only ${stock} left`,
+        bg: "bg-amber-50 dark:bg-amber-900/20",
+        text: "text-amber-600 dark:text-amber-400",
+        dot: "bg-amber-500",
+      };
+    return {
+      label: `${stock} in stock`,
+      bg: "bg-emerald-50 dark:bg-emerald-900/20",
+      text: "text-emerald-600 dark:text-emerald-400",
+      dot: "bg-emerald-500",
+    };
   };
 
-  const stockDotClass = (tone: StockTone) =>
-    tone === "out"
-      ? "bg-red-500"
-      : tone === "low"
-        ? "bg-amber-500"
-        : "bg-emerald-500";
-
-  // Loading skeleton — matches the actual tile silhouette so the swap
-  // doesn't reflow the grid.
+  // Loading skeleton - Premium shimmer effect
   if (isLoading) {
     return (
-      <div className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-950 no-scrollbar">
+      <div className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 no-scrollbar">
         <div className="p-4 md:p-6">
+          {/* Results count skeleton */}
           <div className="mb-5">
             <Skeleton className="h-4 w-32" />
           </div>
 
           <div
-            className={`grid gap-2 ${
+            className={`grid gap-3 md:gap-5 ${
               viewMode === "grid"
-                ? "grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-4 2xl:grid-cols-5"
+                ? "grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
                 : "grid-cols-1"
             }`}
           >
             {Array.from({ length: 12 }).map((_, i) =>
               viewMode === "grid" ? (
+                // Grid view skeleton - matches product card exactly
                 <div
                   key={i}
-                  className="rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-gray-900"
+                  className="rounded-2xl bg-white dark:bg-gray-800 overflow-hidden border border-gray-100 dark:border-gray-700"
                 >
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="mt-2 h-3 w-1/2" />
-                  <div className="mt-6 flex items-center justify-between">
-                    <Skeleton className="h-5 w-16" />
-                    <Skeleton className="h-5 w-5 rounded" />
+                  {/* Image placeholder */}
+                  <Skeleton className="aspect-square w-full rounded-none" />
+
+                  {/* Content */}
+                  <div className="p-4 space-y-3">
+                    {/* Stock badge */}
+                    <Skeleton className="h-6 w-20 rounded-full" />
+
+                    {/* Title */}
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-4 w-3/4" />
+                    </div>
+
+                    {/* SKU */}
+                    <Skeleton className="h-3 w-16" />
+
+                    {/* Price */}
+                    <Skeleton className="h-6 w-24" />
+
+                    {/* Add to cart button */}
+                    <Skeleton className="h-12 w-full rounded-xl" />
                   </div>
                 </div>
               ) : (
+                // List view skeleton
                 <div
                   key={i}
-                  className="flex items-center gap-4 rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900"
+                  className="flex items-center gap-4 p-4 rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700"
                 >
-                  <Skeleton className="h-16 w-16 shrink-0 rounded-md" />
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-4 w-48" />
-                    <Skeleton className="h-3 w-20" />
+                  {/* Image */}
+                  <Skeleton className="w-20 h-20 rounded-xl shrink-0" />
+
+                  {/* Content */}
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <Skeleton className="h-5 w-48" />
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-3 w-20" />
+                      <Skeleton className="h-5 w-16 rounded-full" />
+                    </div>
                   </div>
+
+                  {/* Price */}
                   <Skeleton className="h-6 w-20 shrink-0" />
+
+                  {/* Button */}
+                  <Skeleton className="h-12 w-24 rounded-xl shrink-0" />
                 </div>
               ),
             )}
@@ -146,20 +172,20 @@ export const ProductGrid = memo(function ProductGrid({
   // Empty state
   if (products.length === 0) {
     return (
-      <div className="flex-1 overflow-y-auto p-6 bg-gray-50 dark:bg-gray-950 no-scrollbar">
+      <div className="flex-1 overflow-y-auto p-6 bg-gray-50 dark:bg-gray-900 no-scrollbar">
         <div className="flex flex-col items-center justify-center h-64 text-center">
-          <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800">
-            <ShoppingBag className="h-7 w-7 text-gray-400" />
+          <div className="w-20 h-20 rounded-3xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-5">
+            <ShoppingBag className="h-10 w-10 text-gray-300 dark:text-gray-600" />
           </div>
-          <p className="text-base font-semibold text-gray-900 dark:text-white">
+          <p className="text-gray-700 dark:text-gray-200 font-semibold text-lg">
             No products found
           </p>
-          <p className="mt-1 max-w-xs text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-gray-400 dark:text-gray-500 text-sm mt-1.5 max-w-xs">
             {selectedCategory
-              ? "Try selecting a different category."
+              ? `Try selecting a different category`
               : search
-                ? `No results for "${search}".`
-                : "Add products to get started."}
+                ? `No results for "${search}"`
+                : "Add products to get started"}
           </p>
         </div>
       </div>
@@ -172,26 +198,26 @@ export const ProductGrid = memo(function ProductGrid({
     <>
       <div
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-950 no-scrollbar scroll-smooth"
+        className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 no-scrollbar scroll-smooth"
       >
         <div className="p-4 md:p-6">
           {/* Results count */}
-          <div className="mb-4 flex items-center justify-between">
-            <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
-              <span className="text-gray-900 dark:text-gray-100">
+          <div className="mb-5">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              <span className="font-semibold text-gray-800 dark:text-gray-100">
                 {displayCount.toLocaleString()}
               </span>{" "}
-              {displayCount === 1 ? "product" : "products"}
+              products
               {selectedCategory && (
                 <span className="text-gray-400 dark:text-gray-500">
                   {" "}
-                  · {selectedCategory}
+                  in {selectedCategory}
                 </span>
               )}
             </p>
           </div>
 
-          {/* Grid View — professional, dense, text-forward tiles. */}
+          {/* Grid View */}
           {viewMode === "grid" && (
             <AnimatePresence mode="wait">
               <motion.div
@@ -199,120 +225,112 @@ export const ProductGrid = memo(function ProductGrid({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.12 }}
-                className="grid grid-cols-2 xs:grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-4 2xl:grid-cols-5 pb-20 md:pb-0"
+                transition={{ duration: 0.15 }}
+                className="grid grid-cols-1 xs:grid-cols-2 gap-3 md:gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 pb-20 md:pb-0"
               >
                 {products.map((product) => {
                   const inCart = cartProductIds.has(product.id);
                   const cartQuantity = getCartQuantity(product.id);
-                  const stockTone = getStockTone(product.currentStock);
-                  const isOutOfStock = stockTone === "out";
+                  const stockStatus = getStockStatus(product.currentStock);
+                  const isOutOfStock = product.currentStock === 0;
 
                   return (
-                    <motion.button
+                    <motion.div
                       key={product.id}
-                      type="button"
                       layout
-                      whileTap={isOutOfStock ? undefined : { scale: 0.985 }}
-                      onClick={() => handleProductClick(product)}
-                      disabled={isOutOfStock}
-                      aria-label={`Add ${product.name} to cart`}
-                      aria-pressed={inCart}
-                      className={`group relative flex h-full flex-col rounded-lg border text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-950 ${
-                        isOutOfStock
-                          ? "cursor-not-allowed border-gray-200 bg-white opacity-50 dark:border-gray-800 dark:bg-gray-900"
-                          : inCart
-                            ? "border-brand-600 bg-brand-600 text-white shadow-sm dark:border-brand-500 dark:bg-brand-600"
-                            : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:hover:border-gray-700 dark:hover:bg-gray-850"
+                      className={`group relative flex flex-col bg-white dark:bg-gray-800 rounded-2xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:shadow-gray-200/60 dark:shadow-gray-950/50 dark:hover:shadow-gray-950/80 border border-gray-100 dark:border-gray-700 ${
+                        isOutOfStock ? "opacity-60" : ""
                       }`}
                     >
-                      {/* Cart quantity — top-right, sits inside the tile
-                          when selected (solid brand bg) or as a small chip
-                          when not. */}
+                      {/* Cart Badge */}
                       {inCart && (
-                        <span className="absolute right-2 top-2 inline-flex h-5 min-w-[20px] items-center justify-center rounded bg-white/20 px-1 text-[11px] font-bold tabular-nums text-white">
-                          ×{cartQuantity}
-                        </span>
+                        <div className="absolute top-3 right-3 z-10">
+                          <div className="w-8 h-8 rounded-full bg-brand-500 text-white flex items-center justify-center shadow-lg shadow-brand-500/40 ring-2 ring-white dark:ring-gray-800">
+                            <span className="text-xs font-bold">
+                              {cartQuantity}
+                            </span>
+                          </div>
+                        </div>
                       )}
 
-                      <div className="flex flex-1 flex-col p-3">
-                        {/* Name — the dominant element */}
-                        <h3
-                          className={`line-clamp-2 text-sm font-semibold leading-snug ${
-                            inCart
-                              ? "text-white"
-                              : "text-gray-900 dark:text-white"
-                          }`}
-                        >
-                          {product.name}
-                        </h3>
-
-                        {/* SKU — quiet, monospace, only when not selected */}
-                        {product.sku && !inCart && (
-                          <p className="mt-0.5 text-[11px] font-mono text-gray-400 dark:text-gray-500">
-                            {product.sku}
-                          </p>
-                        )}
-
-                        {/* Spacer pushes the price row to the bottom */}
-                        <div className="flex-1" />
-
-                        {/* Stock — tiny dot + count, top of bottom row */}
-                        <div className="mt-3 flex items-center gap-1.5">
-                          <span
-                            className={`h-1.5 w-1.5 rounded-full ${
-                              inCart ? "bg-white/70" : stockDotClass(stockTone)
-                            }`}
-                            aria-hidden
+                      {/* Product Image */}
+                      <div className="relative aspect-square bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-850 overflow-hidden">
+                        {product.imageUrl ? (
+                          <img
+                            src={product.imageUrl}
+                            alt={product.name}
+                            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                           />
+                        ) : (
+                          <div className="h-full w-full flex items-center justify-center">
+                            <Package className="h-16 w-16 text-gray-200 dark:text-gray-700" />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Product Info */}
+                      <div className="flex flex-col flex-1 p-4">
+                        {/* Stock Badge */}
+                        <div className="mb-2.5">
                           <span
-                            className={`text-[11px] font-medium tabular-nums ${
-                              inCart
-                                ? "text-white/80"
-                                : stockTone === "out"
-                                  ? "text-red-600 dark:text-red-400"
-                                  : stockTone === "low"
-                                    ? "text-amber-700 dark:text-amber-400"
-                                    : "text-gray-500 dark:text-gray-400"
-                            }`}
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${stockStatus.bg} ${stockStatus.text}`}
                           >
-                            {isOutOfStock
-                              ? "Out of stock"
-                              : `${product.currentStock} in stock`}
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${stockStatus.dot}`}
+                            />
+                            {stockStatus.label}
                           </span>
                         </div>
 
-                        {/* Price + add affordance */}
-                        <div className="mt-1.5 flex items-baseline justify-between gap-2">
-                          <span
-                            className={`text-base font-bold tabular-nums ${
-                              inCart
-                                ? "text-white"
-                                : "text-gray-900 dark:text-white"
-                            }`}
-                          >
+                        <div className="flex-1 mb-3">
+                          <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-2 text-sm leading-snug">
+                            {product.name}
+                          </h3>
+                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 font-mono">
+                            {product.sku}
+                          </p>
+                        </div>
+
+                        {/* Price */}
+                        <div className="mb-4">
+                          <span className="text-xl font-bold text-gray-900 dark:text-white">
                             {formatCurrency(product.unitPrice)}
                             {product.productType === "weighted" && (
-                              <span
-                                className={`ml-0.5 text-[10px] font-normal ${
-                                  inCart
-                                    ? "text-white/70"
-                                    : "text-gray-400 dark:text-gray-500"
-                                }`}
-                              >
+                              <span className="text-sm font-normal text-gray-500 ml-1">
                                 /kg
                               </span>
                             )}
                           </span>
-                          {!inCart && !isOutOfStock && (
-                            <Plus
-                              className="h-4 w-4 text-gray-400 transition-colors group-hover:text-brand-600 dark:text-gray-500 dark:group-hover:text-brand-400"
-                              aria-hidden
-                            />
-                          )}
                         </div>
+
+                        {/* Add to Cart Button */}
+                        <button
+                          onClick={() => handleProductClick(product)}
+                          disabled={isOutOfStock}
+                          className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all ${
+                            inCart
+                              ? "bg-brand-500 text-white hover:bg-brand-600 active:scale-[0.98] shadow-lg shadow-brand-500/25"
+                              : isOutOfStock
+                                ? "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed"
+                                : "bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 active:scale-[0.98]"
+                          }`}
+                        >
+                          {inCart ? (
+                            <>
+                              <Check className="w-4 h-4" />
+                              Add More
+                            </>
+                          ) : isOutOfStock ? (
+                            "Out"
+                          ) : (
+                            <>
+                              <Plus className="w-4 h-4" />
+                              Add
+                            </>
+                          )}
+                        </button>
                       </div>
-                    </motion.button>
+                    </motion.div>
                   );
                 })}
               </motion.div>
@@ -327,125 +345,97 @@ export const ProductGrid = memo(function ProductGrid({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.12 }}
-                className="space-y-2"
+                transition={{ duration: 0.15 }}
+                className="space-y-3"
               >
                 {products.map((product) => {
                   const inCart = cartProductIds.has(product.id);
                   const cartQuantity = getCartQuantity(product.id);
-                  const stockTone = getStockTone(product.currentStock);
-                  const isOutOfStock = stockTone === "out";
+                  const stockStatus = getStockStatus(product.currentStock);
+                  const isOutOfStock = product.currentStock === 0;
 
                   return (
-                    <button
+                    <div
                       key={product.id}
-                      type="button"
-                      onClick={() => handleProductClick(product)}
-                      disabled={isOutOfStock}
-                      aria-label={`Add ${product.name} to cart`}
-                      aria-pressed={inCart}
-                      className={`group flex w-full items-center gap-4 rounded-lg border p-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-950 ${
-                        isOutOfStock
-                          ? "cursor-not-allowed border-gray-200 bg-white opacity-50 dark:border-gray-800 dark:bg-gray-900"
-                          : inCart
-                            ? "border-brand-600 bg-brand-600 text-white dark:border-brand-500"
-                            : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:hover:border-gray-700 dark:hover:bg-gray-850"
+                      className={`group flex items-center gap-3 md:gap-4 p-3 md:p-4 rounded-2xl bg-white dark:bg-gray-800 hover:shadow-lg hover:shadow-gray-200/50 dark:shadow-gray-950/50 dark:hover:shadow-gray-950/80 border border-gray-100 dark:border-gray-700 transition-all ${
+                        isOutOfStock ? "opacity-60" : ""
                       }`}
                     >
-                      {/* Image (optional) */}
-                      {product.imageUrl ? (
-                        <img
-                          src={product.imageUrl}
-                          alt=""
-                          className="h-12 w-12 shrink-0 rounded-md object-cover"
-                        />
-                      ) : (
-                        <div
-                          className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-md ${
-                            inCart
-                              ? "bg-white/15"
-                              : "bg-gray-100 dark:bg-gray-800"
-                          }`}
-                        >
-                          <Package
-                            className={`h-5 w-5 ${
-                              inCart
-                                ? "text-white/70"
-                                : "text-gray-400 dark:text-gray-600"
-                            }`}
-                            aria-hidden
+                      {/* Product Image */}
+                      <div className="relative w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-850 flex-shrink-0">
+                        {product.imageUrl ? (
+                          <img
+                            src={product.imageUrl}
+                            alt={product.name}
+                            className="h-full w-full object-cover"
                           />
-                        </div>
-                      )}
-
-                      {/* Content */}
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <h3
-                            className={`truncate text-sm font-semibold ${
-                              inCart
-                                ? "text-white"
-                                : "text-gray-900 dark:text-white"
-                            }`}
-                          >
-                            {product.name}
-                          </h3>
-                          {inCart && (
-                            <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded bg-white/20 px-1 text-[11px] font-bold tabular-nums text-white">
-                              ×{cartQuantity}
-                            </span>
-                          )}
-                        </div>
-                        <div
-                          className={`mt-0.5 flex items-center gap-3 text-[11px] ${
-                            inCart
-                              ? "text-white/70"
-                              : "text-gray-500 dark:text-gray-400"
-                          }`}
-                        >
-                          {product.sku && (
-                            <span className="font-mono">{product.sku}</span>
-                          )}
-                          <span className="flex items-center gap-1">
-                            <span
-                              className={`h-1.5 w-1.5 rounded-full ${
-                                inCart
-                                  ? "bg-white/70"
-                                  : stockDotClass(stockTone)
-                              }`}
-                              aria-hidden
-                            />
-                            {isOutOfStock
-                              ? "Out of stock"
-                              : `${product.currentStock} in stock`}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Price */}
-                      <div className="shrink-0 text-right">
-                        <div
-                          className={`text-base font-bold tabular-nums ${
-                            inCart
-                              ? "text-white"
-                              : "text-gray-900 dark:text-white"
-                          }`}
-                        >
-                          {formatCurrency(product.unitPrice)}
-                        </div>
-                        {product.productType === "weighted" && (
-                          <div
-                            className={`text-[10px] ${
-                              inCart
-                                ? "text-white/70"
-                                : "text-gray-400 dark:text-gray-500"
-                            }`}
-                          >
-                            per kg
+                        ) : (
+                          <div className="h-full w-full flex items-center justify-center">
+                            <Package className="h-6 w-6 md:h-8 md:w-8 text-gray-200 dark:text-gray-700" />
                           </div>
                         )}
                       </div>
-                    </button>
+
+                      {/* Product Details */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-gray-900 dark:text-white truncate">
+                              {product.name}
+                            </h3>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-xs text-gray-400 font-mono">
+                                {product.sku}
+                              </span>
+                              <span
+                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${stockStatus.bg} ${stockStatus.text}`}
+                              >
+                                <span
+                                  className={`w-1 h-1 rounded-full ${stockStatus.dot}`}
+                                />
+                                {stockStatus.label}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Price */}
+                          <div className="text-right flex-shrink-0">
+                            <span className="text-xl font-bold text-gray-900 dark:text-white">
+                              {formatCurrency(product.unitPrice)}
+                            </span>
+                            {product.productType === "weighted" && (
+                              <div className="text-xs text-gray-500">
+                                per kg
+                              </div>
+                            )}
+                            {inCart && (
+                              <div className="text-xs font-medium text-brand-600 dark:text-brand-400 mt-0.5">
+                                {cartQuantity}× in cart
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Add to Cart Button */}
+                      <button
+                        onClick={() => handleProductClick(product)}
+                        disabled={isOutOfStock}
+                        className={`flex-shrink-0 flex items-center justify-center gap-2 px-3 py-2 md:px-5 md:py-3 rounded-xl text-sm font-semibold transition-all ${
+                          inCart
+                            ? "bg-brand-500 text-white hover:bg-brand-600 active:scale-[0.98]"
+                            : isOutOfStock
+                              ? "bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed"
+                              : "bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 active:scale-[0.98]"
+                        }`}
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span className="hidden md:inline">
+                          {inCart ? "Add" : isOutOfStock ? "N/A" : "Add"}
+                        </span>
+                        <span className="md:hidden">Add</span>
+                      </button>
+                    </div>
                   );
                 })}
               </motion.div>
@@ -454,7 +444,7 @@ export const ProductGrid = memo(function ProductGrid({
         </div>
       </div>
 
-      {/* Weight Input Modal */}
+      {/* Weight Input Modal - Conditionally rendered to reset state on open */}
       {isWeightModalOpen && selectedWeightedProduct && (
         <WeightInputModal
           isOpen={true}
