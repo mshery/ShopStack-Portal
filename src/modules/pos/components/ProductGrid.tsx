@@ -6,6 +6,47 @@ import type { Product, CartItem } from "@/shared/types/models";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { WeightInputModal } from "./WeightInputModal";
 
+/**
+ * Pastel tile tones for products that don't have an image yet. The
+ * choice is deterministic on the product id, so the same product
+ * always shows the same colour between renders / sessions and the
+ * grid feels stable rather than flickery.
+ */
+const TILE_TONES = [
+  {
+    bg: "bg-brand-50 dark:bg-brand-900/40",
+    text: "text-brand-600 dark:text-brand-300",
+  },
+  {
+    bg: "bg-amber-50 dark:bg-amber-900/30",
+    text: "text-amber-700 dark:text-amber-300",
+  },
+  {
+    bg: "bg-emerald-50 dark:bg-emerald-900/30",
+    text: "text-emerald-700 dark:text-emerald-300",
+  },
+  {
+    bg: "bg-sky-50 dark:bg-sky-900/30",
+    text: "text-sky-700 dark:text-sky-300",
+  },
+  {
+    bg: "bg-violet-50 dark:bg-violet-900/30",
+    text: "text-violet-700 dark:text-violet-300",
+  },
+  {
+    bg: "bg-rose-50 dark:bg-rose-900/30",
+    text: "text-rose-700 dark:text-rose-300",
+  },
+] as const;
+
+function productTileTone(productId: string) {
+  let hash = 0;
+  for (let i = 0; i < productId.length; i++) {
+    hash = (hash * 31 + productId.charCodeAt(i)) | 0;
+  }
+  return TILE_TONES[Math.abs(hash) % TILE_TONES.length] ?? TILE_TONES[0];
+}
+
 interface ProductGridProps {
   products: Product[];
   cart: CartItem[];
@@ -100,41 +141,26 @@ export const ProductGrid = memo(function ProductGrid({
           </div>
 
           <div
-            className={`grid gap-3 md:gap-5 ${
+            className={`grid gap-2.5 ${
               viewMode === "grid"
-                ? "grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+                ? "grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-4 2xl:grid-cols-5"
                 : "grid-cols-1"
             }`}
           >
             {Array.from({ length: 12 }).map((_, i) =>
               viewMode === "grid" ? (
-                // Grid view skeleton - matches product card exactly
+                // Grid view skeleton — matches the new tile shape.
                 <div
                   key={i}
-                  className="rounded-2xl bg-white dark:bg-gray-800 overflow-hidden border border-gray-100 dark:border-gray-700"
+                  className="rounded-xl overflow-hidden border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900"
                 >
-                  {/* Image placeholder */}
-                  <Skeleton className="aspect-square w-full rounded-none" />
-
-                  {/* Content */}
-                  <div className="p-4 space-y-3">
-                    {/* Stock badge */}
-                    <Skeleton className="h-6 w-20 rounded-full" />
-
-                    {/* Title */}
-                    <div className="space-y-2">
-                      <Skeleton className="h-4 w-full" />
-                      <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-28 w-full rounded-none" />
+                  <div className="space-y-2 px-3 py-2.5">
+                    <Skeleton className="h-4 w-3/4" />
+                    <div className="flex items-center justify-between">
+                      <Skeleton className="h-5 w-16" />
+                      <Skeleton className="h-6 w-6 rounded-full" />
                     </div>
-
-                    {/* SKU */}
-                    <Skeleton className="h-3 w-16" />
-
-                    {/* Price */}
-                    <Skeleton className="h-6 w-24" />
-
-                    {/* Add to cart button */}
-                    <Skeleton className="h-12 w-full rounded-xl" />
                   </div>
                 </div>
               ) : (
@@ -217,7 +243,10 @@ export const ProductGrid = memo(function ProductGrid({
             </p>
           </div>
 
-          {/* Grid View */}
+          {/* Grid View — POS tiles. Entire tile is the click target;
+              the cashier should never have to aim at a small button.
+              Cards stay compact whether or not the product has an
+              image so the grid never feels sparse. */}
           {viewMode === "grid" && (
             <AnimatePresence mode="wait">
               <motion.div
@@ -226,111 +255,99 @@ export const ProductGrid = memo(function ProductGrid({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.15 }}
-                className="grid grid-cols-1 xs:grid-cols-2 gap-3 md:gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 pb-20 md:pb-0"
+                className="grid grid-cols-2 xs:grid-cols-3 gap-2.5 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-4 2xl:grid-cols-5 pb-20 md:pb-0"
               >
                 {products.map((product) => {
                   const inCart = cartProductIds.has(product.id);
                   const cartQuantity = getCartQuantity(product.id);
                   const stockStatus = getStockStatus(product.currentStock);
                   const isOutOfStock = product.currentStock === 0;
+                  const tileTone = productTileTone(product.id);
 
                   return (
-                    <motion.div
+                    <motion.button
                       key={product.id}
+                      type="button"
                       layout
-                      className={`group relative flex flex-col bg-white dark:bg-gray-800 rounded-2xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:shadow-gray-200/60 dark:shadow-gray-950/50 dark:hover:shadow-gray-950/80 border border-gray-100 dark:border-gray-700 ${
-                        isOutOfStock ? "opacity-60" : ""
+                      whileTap={isOutOfStock ? undefined : { scale: 0.97 }}
+                      onClick={() => handleProductClick(product)}
+                      disabled={isOutOfStock}
+                      aria-label={`Add ${product.name} to cart`}
+                      className={`group relative flex flex-col text-left rounded-xl overflow-hidden border bg-white dark:bg-gray-900 transition-all focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:ring-offset-2 dark:focus:ring-offset-gray-950 ${
+                        isOutOfStock
+                          ? "cursor-not-allowed opacity-50 border-gray-100 dark:border-gray-800"
+                          : inCart
+                            ? "border-brand-500 dark:border-brand-400 shadow-md shadow-brand-500/15"
+                            : "border-gray-200 dark:border-gray-800 hover:border-brand-300 dark:hover:border-brand-700 hover:shadow-md"
                       }`}
                     >
-                      {/* Cart Badge */}
+                      {/* Stock chip — top-left, compact */}
+                      <span
+                        className={`absolute top-2 left-2 z-10 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold backdrop-blur-sm ${stockStatus.bg} ${stockStatus.text}`}
+                      >
+                        <span
+                          className={`h-1 w-1 rounded-full ${stockStatus.dot}`}
+                        />
+                        {stockStatus.label}
+                      </span>
+
+                      {/* Cart-quantity badge — top-right */}
                       {inCart && (
-                        <div className="absolute top-3 right-3 z-10">
-                          <div className="w-8 h-8 rounded-full bg-brand-500 text-white flex items-center justify-center shadow-lg shadow-brand-500/40 ring-2 ring-white dark:ring-gray-800">
-                            <span className="text-xs font-bold">
-                              {cartQuantity}
-                            </span>
-                          </div>
+                        <div className="absolute top-2 right-2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-brand-600 text-xs font-bold text-white ring-2 ring-white shadow-sm dark:ring-gray-900">
+                          {cartQuantity}
                         </div>
                       )}
 
-                      {/* Product Image */}
-                      <div className="relative aspect-square bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-850 overflow-hidden">
+                      {/* Visual top — image if present, otherwise a
+                          coloured pastel band with a single letter so
+                          the grid stays vibrant even with no photos. */}
+                      <div className="relative h-28 w-full overflow-hidden">
                         {product.imageUrl ? (
                           <img
                             src={product.imageUrl}
-                            alt={product.name}
-                            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                            alt=""
+                            className="h-full w-full object-cover"
                           />
                         ) : (
-                          <div className="h-full w-full flex items-center justify-center">
-                            <Package className="h-16 w-16 text-gray-200 dark:text-gray-700" />
+                          <div
+                            className={`flex h-full w-full items-center justify-center ${tileTone.bg}`}
+                          >
+                            <span
+                              className={`text-3xl font-bold ${tileTone.text}`}
+                            >
+                              {product.name.charAt(0).toUpperCase()}
+                            </span>
                           </div>
                         )}
                       </div>
 
-                      {/* Product Info */}
-                      <div className="flex flex-col flex-1 p-4">
-                        {/* Stock Badge */}
-                        <div className="mb-2.5">
-                          <span
-                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${stockStatus.bg} ${stockStatus.text}`}
-                          >
-                            <span
-                              className={`w-1.5 h-1.5 rounded-full ${stockStatus.dot}`}
-                            />
-                            {stockStatus.label}
-                          </span>
-                        </div>
-
-                        <div className="flex-1 mb-3">
-                          <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-2 text-sm leading-snug">
-                            {product.name}
-                          </h3>
-                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 font-mono">
-                            {product.sku}
-                          </p>
-                        </div>
-
-                        {/* Price */}
-                        <div className="mb-4">
-                          <span className="text-xl font-bold text-gray-900 dark:text-white">
+                      {/* Body — name + price. Compact. */}
+                      <div className="flex flex-1 flex-col justify-between gap-1.5 px-3 py-2.5">
+                        <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-gray-900 dark:text-white">
+                          {product.name}
+                        </h3>
+                        <div className="flex items-baseline justify-between gap-2">
+                          <span className="text-base font-bold tabular-nums text-brand-600 dark:text-brand-400">
                             {formatCurrency(product.unitPrice)}
                             {product.productType === "weighted" && (
-                              <span className="text-sm font-normal text-gray-500 ml-1">
+                              <span className="ml-0.5 text-[11px] font-normal text-gray-500 dark:text-gray-400">
                                 /kg
                               </span>
                             )}
                           </span>
-                        </div>
-
-                        {/* Add to Cart Button */}
-                        <button
-                          onClick={() => handleProductClick(product)}
-                          disabled={isOutOfStock}
-                          className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all ${
-                            inCart
-                              ? "bg-brand-500 text-white hover:bg-brand-600 active:scale-[0.98] shadow-lg shadow-brand-500/25"
-                              : isOutOfStock
-                                ? "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed"
-                                : "bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 active:scale-[0.98]"
-                          }`}
-                        >
                           {inCart ? (
-                            <>
-                              <Check className="w-4 h-4" />
-                              Add More
-                            </>
-                          ) : isOutOfStock ? (
-                            "Out"
-                          ) : (
-                            <>
-                              <Plus className="w-4 h-4" />
-                              Add
-                            </>
-                          )}
-                        </button>
+                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-600 dark:text-brand-400">
+                              <Check className="h-3 w-3" />
+                              Added
+                            </span>
+                          ) : !isOutOfStock ? (
+                            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 text-gray-600 group-hover:bg-brand-600 group-hover:text-white transition-colors dark:bg-gray-800 dark:text-gray-300">
+                              <Plus className="h-3.5 w-3.5" />
+                            </span>
+                          ) : null}
+                        </div>
                       </div>
-                    </motion.div>
+                    </motion.button>
                   );
                 })}
               </motion.div>
