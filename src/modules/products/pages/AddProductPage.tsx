@@ -185,6 +185,36 @@ export default function AddProductPage() {
 
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Supplier{" "}
+                    <span className="text-gray-400 dark:text-gray-500 font-normal">
+                      (optional)
+                    </span>
+                  </Label>
+                  <div className="relative">
+                    <select
+                      className="w-full h-11 px-4 pr-10 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 appearance-none focus:outline-none focus:ring-2 focus:ring-brand-500"
+                      value={vm.formData.vendorId ?? ""}
+                      onChange={(e) =>
+                        actions.updateField("vendorId", e.target.value)
+                      }
+                    >
+                      <option value="">In-house / No supplier</option>
+                      {vm.vendors.map((vendor: { id: string; name: string }) => (
+                        <option key={vendor.id} value={vendor.id}>
+                          {vendor.name}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-gray-400 pointer-events-none" />
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Picked here, used to pre-fill the vendor on new
+                    purchase orders for this product.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     Description
                   </Label>
                   <Textarea
@@ -342,6 +372,48 @@ export default function AddProductPage() {
                     />
                   </div>
                 </div>
+
+                {/* Opening Inventory expense — show only when there's
+                    actual stock + cost to book. Otherwise the toggle is
+                    irrelevant (no expense gets booked anyway). */}
+                {(vm.formData.currentStock ?? 0) > 0 &&
+                  (vm.formData.costPrice ?? 0) > 0 && (
+                    <div className="rounded-xl border border-brand-200 bg-brand-50/50 p-4 dark:border-brand-800 dark:bg-brand-900/10">
+                      <label className="flex items-start gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={
+                            vm.formData.recordOpeningInventory ?? true
+                          }
+                          onChange={(e) =>
+                            actions.updateField(
+                              "recordOpeningInventory",
+                              e.target.checked,
+                            )
+                          }
+                          className="mt-0.5 size-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                        />
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">
+                            Record opening inventory as an expense
+                          </p>
+                          <p className="text-xs text-gray-600 dark:text-gray-400">
+                            Books{" "}
+                            <span className="font-semibold">
+                              {(
+                                (vm.formData.currentStock ?? 0) *
+                                (vm.formData.costPrice ?? 0)
+                              ).toFixed(2)}
+                            </span>{" "}
+                            as an &quot;Opening Inventory&quot; expense
+                            against the selected supplier, so the books
+                            reflect the cost of stock you already own.
+                            Uncheck for services or in-house production.
+                          </p>
+                        </div>
+                      </label>
+                    </div>
+                  )}
 
                 {/* Min Sale Weight for Weighted Products */}
                 {vm.formData.productType === "weighted" && (

@@ -45,6 +45,11 @@ export interface CreateProductInput {
   minSaleWeight?: number;
   weightIncrement?: number;
   unitOfMeasureId?: string;
+  // When true (default) and currentStock > 0, the backend auto-books an
+  // Opening Inventory expense for (currentStock * costPrice) tied to the
+  // supplier. Owner can uncheck for services / in-house production /
+  // count-only entries to skip the auto-booking.
+  recordOpeningInventory?: boolean;
 }
 
 export interface UpdateProductInput {

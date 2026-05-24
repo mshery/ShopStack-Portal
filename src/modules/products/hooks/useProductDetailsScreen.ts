@@ -11,7 +11,8 @@ import {
   useCategoriesFetch,
   useBrandsFetch,
 } from "@/modules/catalog/api/queries";
-import { useVendorsStore } from "@/modules/vendors";
+import { useVendorsStore, useVendorsFetch } from "@/modules/vendors";
+import type { Vendor } from "@/shared/types/models";
 import { refetchProductListPage } from "../utils/productQueriesUtils";
 import toast from "react-hot-toast";
 
@@ -22,7 +23,12 @@ export function useProductDetailsScreen() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
-  const { vendors } = useVendorsStore();
+  // Prefer live vendor list off the API; fall back to the seed-only
+  // Zustand store for legacy paths. Same data-source widening pattern
+  // used by the POS cart customer selector.
+  const { data: vendorsData } = useVendorsFetch();
+  const { vendors: storeVendors } = useVendorsStore();
+  const vendors: Vendor[] = vendorsData ?? storeVendors;
 
   // Get pagination params for list refetch
   const pageFromParams = Number(searchParams.get("page") ?? 1);
