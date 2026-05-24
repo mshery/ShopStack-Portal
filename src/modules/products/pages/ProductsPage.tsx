@@ -1,5 +1,5 @@
-import { Link } from "react-router-dom";
-import { useState, useMemo } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useState, useMemo, useCallback } from "react";
 import PageBreadcrumb from "@/shared/components/feedback/PageBreadcrumb";
 import {
   Table,
@@ -22,10 +22,29 @@ import { useTenantCurrency } from "@/modules/tenant";
 import Pagination from "@/shared/components/feedback/Pagination";
 
 export default function ProductsPage() {
+  const navigate = useNavigate();
   const { status, vm, actions } = useProductsScreen();
   const { formatPrice } = useTenantCurrency();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+
+  // Whole-row navigation: clicking anywhere on a row that isn't an
+  // interactive child (Edit / Delete button) opens the product
+  // detail page. The previous design wrapped only individual cell
+  // contents in `<Link>`, so padding inside the cells was dead area.
+  const openProduct = useCallback(
+    (id: string) => navigate(`/tenant/products/${id}`),
+    [navigate],
+  );
+  const handleRowKey = useCallback(
+    (e: React.KeyboardEvent<HTMLTableRowElement>, id: string) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        openProduct(id);
+      }
+    },
+    [openProduct],
+  );
 
   // Create lookup maps for category and brand names
   const getCategoryName = useMemo(() => {
@@ -150,13 +169,14 @@ export default function ProductsPage() {
               {vm.products.map((product: Product) => (
                 <TableRow
                   key={product.id}
-                  className="hover:bg-gray-50 dark:hover:bg-white/[0.01] cursor-pointer"
+                  role="link"
+                  tabIndex={0}
+                  onClick={() => openProduct(product.id)}
+                  onKeyDown={(e) => handleRowKey(e, product.id)}
+                  className="cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.02] focus:outline-none focus:bg-brand-50/40 dark:focus:bg-brand-900/20"
                 >
                   <TableCell className="px-6 py-4">
-                    <Link
-                      to={`/tenant/products/${product.id}`}
-                      className="flex items-center gap-3"
-                    >
+                    <div className="flex items-center gap-3">
                       <div className="w-10 h-10 overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
                         {product.imageUrl ? (
                           <img
@@ -169,7 +189,7 @@ export default function ProductsPage() {
                         )}
                       </div>
                       <div>
-                        <div className="block font-medium text-gray-800 dark:text-white/90 text-theme-sm hover:text-brand-500 dark:hover:text-brand-400 transition-colors">
+                        <div className="block font-medium text-gray-800 dark:text-white/90 text-theme-sm">
                           {product.name}
                         </div>
                         <div className="flex items-center gap-2 mt-1">
@@ -182,59 +202,34 @@ export default function ProductsPage() {
                           </span>
                         </div>
                       </div>
-                    </Link>
+                    </div>
+                  </TableCell>
+                  <TableCell className="px-6 py-4 text-gray-500 dark:text-gray-400 text-theme-sm">
+                    {product.sku}
+                  </TableCell>
+                  <TableCell className="px-6 py-4 text-gray-500 dark:text-gray-400 text-theme-sm">
+                    {getCategoryName(product.categoryId)}
+                  </TableCell>
+                  <TableCell className="px-6 py-4 text-gray-800 dark:text-white/90 font-medium text-theme-sm">
+                    {formatPrice(product.unitPrice)}
+                  </TableCell>
+                  <TableCell className="px-6 py-4 text-gray-500 dark:text-gray-400 text-theme-sm">
+                    {product.currentStock}
                   </TableCell>
                   <TableCell className="px-6 py-4">
-                    <Link
-                      to={`/tenant/products/${product.id}`}
-                      className="text-gray-500 dark:text-gray-400 text-theme-sm"
+                    <Badge
+                      color={
+                        product.status === "in_stock"
+                          ? "success"
+                          : product.status === "low_stock"
+                            ? "warning"
+                            : "error"
+                      }
+                      variant="light"
+                      size="sm"
                     >
-                      {product.sku}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="px-6 py-4">
-                    <Link
-                      to={`/tenant/products/${product.id}`}
-                      className="text-gray-500 dark:text-gray-400 text-theme-sm"
-                    >
-                      {getCategoryName(product.categoryId)}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="px-6 py-4">
-                    <Link
-                      to={`/tenant/products/${product.id}`}
-                      className="text-gray-800 dark:text-white/90 font-medium text-theme-sm"
-                    >
-                      {formatPrice(product.unitPrice)}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="px-6 py-4">
-                    <Link
-                      to={`/tenant/products/${product.id}`}
-                      className="text-gray-500 dark:text-gray-400 text-theme-sm"
-                    >
-                      {product.currentStock}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="px-6 py-4">
-                    <Link
-                      to={`/tenant/products/${product.id}`}
-                      className="inline-block"
-                    >
-                      <Badge
-                        color={
-                          product.status === "in_stock"
-                            ? "success"
-                            : product.status === "low_stock"
-                              ? "warning"
-                              : "error"
-                        }
-                        variant="light"
-                        size="sm"
-                      >
-                        {product.status.replace("_", " ")}
-                      </Badge>
-                    </Link>
+                      {product.status.replace("_", " ")}
+                    </Badge>
                   </TableCell>
                   <TableCell className="px-6 py-4 text-end">
                     <div className="flex items-center justify-end gap-2">
