@@ -13,6 +13,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { productsApi, type CreateProductInput } from "../api/productsApi";
 import { catalogApi } from "@/modules/catalog/api/catalogApi";
+import { useVendorsFetch } from "@/modules/vendors";
 import { refetchProductListPage } from "../utils/productQueriesUtils";
 import { ITEMS_PER_PAGE } from "./useProductsScreen";
 import type { AsyncStatus } from "@/shared/types/api";
@@ -36,8 +37,12 @@ export function useAddProductScreen() {
     staleTime: 60000,
   });
 
+  // Fetch vendors so the owner can attach a primary supplier at create-time.
+  // Mirrors how categories + brands are loaded above.
+  const { data: vendorsData, isLoading: vendorsLoading } = useVendorsFetch();
+
   // Loading state
-  const isDataLoading = categoriesLoading || brandsLoading;
+  const isDataLoading = categoriesLoading || brandsLoading || vendorsLoading;
 
   // Form state
   const [formData, setFormData] = useState<CreateProductInput>({
@@ -45,12 +50,16 @@ export function useAddProductScreen() {
     sku: "",
     categoryId: "",
     brandId: "",
+    vendorId: "",
     unitPrice: 0,
     costPrice: 0,
     currentStock: 0,
     minimumStock: 5,
     description: "",
     imageUrl: "",
+    // Default to true so the books reconcile on every product create.
+    // User can uncheck on the form for services / in-house items.
+    recordOpeningInventory: true,
   });
 
   // SKU generation & Image Upload state
@@ -83,6 +92,7 @@ export function useAddProductScreen() {
     () => ({
       categories: categoriesData ?? [],
       brands: brandsData ?? [],
+      vendors: vendorsData ?? [],
       formData,
       isCreating: createMutation.isPending,
       isGeneratingSku,
@@ -92,6 +102,7 @@ export function useAddProductScreen() {
     [
       categoriesData,
       brandsData,
+      vendorsData,
       formData,
       createMutation.isPending,
       isGeneratingSku,
@@ -168,13 +179,17 @@ export function useAddProductScreen() {
 
     // Backend's product schema validates imageUrl with `z.string().url().optional()` —
     // an empty string fails .url(). Strip blank/whitespace values before sending so
-    // products can be created without an image. Same applies to description.
+    // products can be created without an image. Same applies to description and
+    // vendorId (an empty `""` would fail the FK lookup on the backend).
     const payload: CreateProductInput = { ...formData };
     if (!payload.imageUrl || !payload.imageUrl.trim()) {
       delete payload.imageUrl;
     }
     if (payload.description && !payload.description.trim()) {
       delete payload.description;
+    }
+    if (!payload.vendorId || !payload.vendorId.trim()) {
+      delete payload.vendorId;
     }
 
     createMutation.mutate(payload);

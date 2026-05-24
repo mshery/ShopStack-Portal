@@ -72,6 +72,14 @@ export default function AddPurchaseModal({
       costPrice: Number(product.costPrice),
     };
     setLineItems(updated);
+
+    // Pre-fill the vendor on the PO from the product's primary supplier
+    // (Product.vendorId). Only when the vendor isn't already chosen, so we
+    // don't surprise the cashier mid-edit by reassigning. Skips if the
+    // product has no primary supplier.
+    if (!vendorId && product.vendorId) {
+      setVendorId(product.vendorId);
+    }
   };
 
   const updateLineItem = (
