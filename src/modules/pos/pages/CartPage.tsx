@@ -19,6 +19,7 @@ import { SlidersHorizontal } from "lucide-react";
 import { POSPagination } from "@/modules/pos/components/POSPagination";
 import { FloatingCartButton } from "@/modules/pos/components/FloatingCartButton";
 import { CartModal } from "@/modules/pos/components/CartModal";
+import { CartSidebar } from "@/modules/pos/components/CartSidebar";
 import { HoldOrdersPanel } from "@/modules/pos/components/HoldOrdersPanel";
 import { ReceiptModal } from "@/modules/pos/components/ReceiptModal";
 import { AnimatePresence } from "motion/react";
@@ -229,19 +230,19 @@ export default function CartPage() {
   }, [filters]);
 
   return (
-    <div className="flex h-[100dvh] md:h-[calc(100vh-4rem)] flex-col bg-gray-50 dark:bg-gray-900 overflow-hidden">
-      {/* Header */}
-      <CartHeader
-        search={filters.search}
-        onSearchChange={productActions.setSearch}
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-      />
+    <div className="flex h-[100dvh] md:h-[calc(100vh-4rem)] bg-gray-50 dark:bg-gray-950 overflow-hidden">
+      {/* LEFT — product browse pane */}
+      <div className="flex flex-1 min-w-0 flex-col">
+        {/* Top search bar */}
+        <CartHeader
+          search={filters.search}
+          onSearchChange={productActions.setSearch}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+        />
 
-      {/* Control Bar - Floating card matching header */}
-      <div className="px-4 md:px-6 pt-3">
-        <div className="flex items-center gap-2 md:gap-3 p-2 md:p-3 bg-white dark:bg-gray-800 rounded-2xl shadow-sm">
-          {/* Categories */}
+        {/* Categories + sort + filter row — single thin strip, no card. */}
+        <div className="flex items-center gap-3 border-b border-gray-200 bg-white px-4 py-2.5 dark:border-gray-800 dark:bg-gray-900 md:px-6">
           <div className="flex-1 min-w-0">
             <CategoryFilter
               categories={categories}
@@ -250,9 +251,7 @@ export default function CartPage() {
             />
           </div>
 
-          {/* Right side controls */}
           <div className="flex items-center gap-2 flex-shrink-0">
-            {/* Sort Dropdown */}
             <Select
               value={filters.sortBy}
               onValueChange={(value) =>
@@ -266,7 +265,7 @@ export default function CartPage() {
                 )
               }
             >
-              <SelectTrigger className="w-[90px] md:w-[110px] h-9 text-sm bg-gray-50 dark:bg-gray-800 border-0 rounded-xl px-2">
+              <SelectTrigger className="w-[110px] h-9 text-sm bg-gray-50 border-gray-200 rounded-lg dark:bg-gray-800 dark:border-gray-700">
                 <SelectValue placeholder="Sort" />
               </SelectTrigger>
               <SelectContent>
@@ -278,58 +277,83 @@ export default function CartPage() {
               </SelectContent>
             </Select>
 
-            {/* Filter Button */}
             <button
+              type="button"
               onClick={() => setShowFiltersModal(true)}
-              className={`flex items-center justify-center gap-1.5 h-9 px-3.5 rounded-xl text-sm font-medium transition-all ${
+              className={`inline-flex items-center justify-center gap-1.5 h-9 px-3 rounded-lg text-sm font-medium transition-colors ${
                 activeFiltersCount > 0
-                  ? "bg-brand-500 text-white shadow-lg shadow-brand-500/25"
-                  : "bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  ? "bg-brand-600 text-white shadow-sm hover:bg-brand-700"
+                  : "bg-gray-50 text-gray-600 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
               }`}
+              aria-label="Filters"
             >
-              <SlidersHorizontal className="w-4 h-4" />
+              <SlidersHorizontal className="h-4 w-4" />
               {activeFiltersCount > 0 && (
-                <span className="flex items-center justify-center w-5 h-5 rounded-full bg-white/20 text-xs font-bold">
+                <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-white/25 px-1 text-[11px] font-semibold">
                   {activeFiltersCount}
                 </span>
               )}
             </button>
           </div>
         </div>
+
+        <ProductFiltersModal
+          open={showFiltersModal}
+          onOpenChange={setShowFiltersModal}
+          filters={modalFilters}
+          onApply={handleFiltersApply}
+          categories={categories}
+          brands={brands}
+          priceBounds={{ min: 0, max: 10000 }}
+        />
+
+        {/* Product grid */}
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <ProductGrid {...gridProps} />
+          <POSPagination
+            currentPage={pagination.currentPage}
+            totalPages={pagination.totalPages}
+            totalItems={pagination.totalItems}
+            itemsPerPage={pagination.itemsPerPage}
+            itemsPerPageOptions={[12, 24, 48, 96]}
+            onPageChange={productActions.setPage}
+            onItemsPerPageChange={productActions.setLimit}
+          />
+        </div>
       </div>
 
-      {/* Filters Modal */}
-      <ProductFiltersModal
-        open={showFiltersModal}
-        onOpenChange={setShowFiltersModal}
-        filters={modalFilters}
-        onApply={handleFiltersApply}
-        categories={categories}
-        brands={brands}
-        priceBounds={{ min: 0, max: 10000 }}
-      />
-
-      {/* Product Grid */}
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <ProductGrid {...gridProps} />
-        <POSPagination
-          currentPage={pagination.currentPage}
-          totalPages={pagination.totalPages}
-          totalItems={pagination.totalItems}
-          itemsPerPage={pagination.itemsPerPage}
-          itemsPerPageOptions={[12, 24, 48, 96]}
-          onPageChange={productActions.setPage}
-          onItemsPerPageChange={productActions.setLimit}
+      {/* RIGHT — persistent cart sidebar on xl+. Mobile/tablet keeps
+          the floating button + modal pattern below. */}
+      <div className="hidden xl:flex">
+        <CartSidebar
+          cart={vm.cart}
+          customers={vm.customers}
+          selectedCustomerId={vm.selectedCustomerId}
+          onCustomerChange={actions.setSelectedCustomerId}
+          totals={vm.totals}
+          discount={vm.discount}
+          onDiscountChange={actions.setDiscount}
+          onUpdateQuantity={actions.updateQuantity}
+          onRemoveItem={actions.removeFromCart}
+          onCheckout={handleCheckout}
+          onClearCart={actions.clearCart}
+          onHoldOrder={handleHoldOrder}
+          currencySymbol={currencySymbol}
+          taxRate={taxRate}
+          processingStatus={vm.processingStatus}
         />
       </div>
 
-      {/* Floating Cart Button */}
-      <FloatingCartButton
-        cartCount={vm.cart.length}
-        onClick={() => setShowCart(true)}
-      />
+      {/* Mobile / tablet floating cart button — hidden on xl+ where the
+          sidebar is already visible. */}
+      <div className="xl:hidden">
+        <FloatingCartButton
+          cartCount={vm.cart.length}
+          onClick={() => setShowCart(true)}
+        />
+      </div>
 
-      {/* Cart Modal */}
+      {/* Cart modal — only used on mobile/tablet. */}
       <CartModal
         isOpen={showCart}
         onClose={() => setShowCart(false)}

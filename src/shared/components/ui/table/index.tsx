@@ -8,7 +8,12 @@ interface TableProps {
 // Type aliases for specific components
 type TableHeaderProps = TableProps;
 type TableBodyProps = TableProps;
-type TableRowProps = TableProps;
+
+// TableRow extends the native <tr> attribute surface so callers can
+// make rows behave like links (role / tabIndex / onClick / onKeyDown
+// / aria-*). The native typing is broad enough that we don't need
+// any extra escape hatches.
+type TableRowProps = TableProps & Omit<React.HTMLAttributes<HTMLTableRowElement>, "className" | "children">;
 
 export const Table: React.FC<TableProps> = ({ children, className = "" }) => {
   return (
@@ -35,8 +40,16 @@ export const TableBody: React.FC<TableBodyProps> = ({
 };
 
 // TableRow Component
-export const TableRow: React.FC<TableRowProps> = ({ children, className }) => {
-  return <tr className={className}>{children}</tr>;
+export const TableRow: React.FC<TableRowProps> = ({
+  children,
+  className,
+  ...rest
+}) => {
+  return (
+    <tr className={className} {...rest}>
+      {children}
+    </tr>
+  );
 };
 
 interface TableCellProps {

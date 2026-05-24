@@ -16,15 +16,32 @@ import { EmptyState } from "@/shared/components/feedback/EmptyState";
 import { useState } from "react";
 import { formatDateTime } from "@/shared/utils/format";
 import AddPurchaseModal from "../components/AddPurchaseModal";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { useCallback } from "react";
 import { TableSkeleton } from "@/shared/components/skeletons/TableSkeleton";
 import PageBreadcrumb from "@/shared/components/feedback/PageBreadcrumb";
 import Pagination from "@/shared/components/feedback/Pagination";
 
 export default function PurchasesPage() {
+  const navigate = useNavigate();
   const { status, vm, actions } = usePurchasesScreen();
   const { formatPrice } = useTenantCurrency();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  // Whole-row navigation — see ProductsPage for the same pattern.
+  const openPurchase = useCallback(
+    (id: string) => navigate(`/tenant/purchases/${id}`),
+    [navigate],
+  );
+  const handleRowKey = useCallback(
+    (e: React.KeyboardEvent<HTMLTableRowElement>, id: string) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        openPurchase(id);
+      }
+    },
+    [openPurchase],
+  );
 
   // Helper to get vendor name (using store for now as it's likely cached/available,
   // or we could fetch efficiently. For list view, ideally the API returns vendor name)
@@ -164,63 +181,45 @@ export default function PurchasesPage() {
                     {vm.purchases.map((purchase) => (
                       <TableRow
                         key={purchase.id}
-                        className="hover:bg-gray-50/50 dark:hover:bg-white/[0.01] cursor-pointer"
+                        role="link"
+                        tabIndex={0}
+                        onClick={() => openPurchase(purchase.id)}
+                        onKeyDown={(e) => handleRowKey(e, purchase.id)}
+                        className="cursor-pointer transition-colors hover:bg-gray-50/50 dark:hover:bg-white/[0.02] focus:outline-none focus:bg-brand-50/40 dark:focus:bg-brand-900/20"
                       >
                         <TableCell className="px-6 py-4">
-                          <Link
-                            to={`/tenant/purchases/${purchase.id}`}
-                            className="flex items-center gap-2"
-                          >
+                          <div className="flex items-center gap-2">
                             <FileText className="h-4 w-4 text-gray-400" />
                             <span className="font-bold text-brand-600 dark:text-brand-400">
                               {purchase.purchaseNumber}
                             </span>
-                          </Link>
+                          </div>
                         </TableCell>
                         <TableCell className="px-6 py-4">
-                          <Link to={`/tenant/purchases/${purchase.id}`}>
-                            <span className="font-medium text-gray-900 dark:text-white">
-                              {(
-                                purchase as Purchase & {
-                                  vendor?: { name: string };
-                                }
-                              ).vendor?.name || "Unknown Vendor"}
-                            </span>
-                          </Link>
+                          <span className="font-medium text-gray-900 dark:text-white">
+                            {(
+                              purchase as Purchase & {
+                                vendor?: { name: string };
+                              }
+                            ).vendor?.name || "Unknown Vendor"}
+                          </span>
+                        </TableCell>
+                        <TableCell className="px-6 py-4 font-bold text-gray-900 dark:text-white">
+                          {formatPrice(purchase.totalCost)}
                         </TableCell>
                         <TableCell className="px-6 py-4">
-                          <Link
-                            to={`/tenant/purchases/${purchase.id}`}
-                            className="font-bold text-gray-900 dark:text-white"
-                          >
-                            {formatPrice(purchase.totalCost)}
-                          </Link>
+                          {getStatusBadge(purchase.status)}
                         </TableCell>
-                        <TableCell className="px-6 py-4">
-                          <Link
-                            to={`/tenant/purchases/${purchase.id}`}
-                            className="inline-block"
-                          >
-                            {getStatusBadge(purchase.status)}
-                          </Link>
-                        </TableCell>
-                        <TableCell className="px-6 py-4">
-                          <Link
-                            to={`/tenant/purchases/${purchase.id}`}
-                            className="text-xs text-gray-500"
-                          >
-                            <div className="flex flex-col">
-                              <span>
-                                {formatDateTime(purchase.purchaseDate)}
+                        <TableCell className="px-6 py-4 text-xs text-gray-500 dark:text-gray-400">
+                          <div className="flex flex-col">
+                            <span>{formatDateTime(purchase.purchaseDate)}</span>
+                            {purchase.receivedDate && (
+                              <span className="mt-0.5 text-[10px] text-green-600 dark:text-green-500 flex items-center gap-0.5">
+                                <CheckCircle2 className="h-2 w-2" /> Received:{" "}
+                                {formatDateTime(purchase.receivedDate)}
                               </span>
-                              {purchase.receivedDate && (
-                                <span className="text-[10px] text-green-600 dark:text-green-500 flex items-center gap-0.5">
-                                  <CheckCircle2 className="h-2 w-2" /> Received:{" "}
-                                  {formatDateTime(purchase.receivedDate)}
-                                </span>
-                              )}
-                            </div>
-                          </Link>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
