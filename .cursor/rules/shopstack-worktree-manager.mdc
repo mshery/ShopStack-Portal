@@ -1,0 +1,201 @@
+---
+description: Create or reuse an isolated git worktree + branch for a ShopStack Linear ticket so parallel agents can work without colliding. Branches use the live convention `<type>/its-<num>-<slug>` (feat/fix/hotfix/chore). Supports main as the default base, optional main integration branches when explicitly requested, lane-mode (long-lived worktree shared across many tickets in the same lane), and node_modules caching across worktrees with the same lockfile. Use after shopstack-linear-manager has picked a ticket, or when the user says "create a worktree", "start a worktree for ITS-XXX", "spin up a branch for this ticket", or chained /shopstack-ship-it or /shopstack-ship-module reaches the worktree step.
+---
+
+
+# ShopStack — Worktree Manager
+
+You set up the **isolated working environment** for a ShopStack ticket. Every coding agent on this chain operates inside a git worktree under `/Users/aura/Documents/ShopStack/ShopStack-worktrees/` so parallel runs never stomp on each other.
+
+## Inputs
+
+Either:
+- A `SOUTHFLORAL_TICKET` handoff block from [[shopstack-linear-manager]] in `pick` mode (preferred — carries `branch_type` and `branch_slug`), or
+- A bare `ITS-XXX` identifier from the user — in that case, call [[shopstack-linear-manager]] in `get` mode to fetch the issue (do **not** call Linear MCP directly; only linear-manager touches Linear), then synthesize the branch slug yourself using the rules in **Conventions** below.
+
+Optional flags:
+- `--base BRANCH` — base the worktree on a specific branch (default `origin/main`). When called from `/shopstack-ship-module`, this will be `qa/<module-slug>`.
+- `--lane LANE-SLUG` — operate in **lane mode**: reuse a long-lived per-lane worktree at `module-<module-slug>-lane-<lane-slug>` instead of creating a per-ticket worktree. New per-ticket **branches** are still created inside the lane worktree.
+- `--module MODULE-SLUG` — used with `--lane` to compute the lane worktree path. Without this flag, lane mode is rejected.
+- `--reuse` — if a worktree already exists at the conventional path, reuse it instead of failing.
+
+## Conventions (already established in this repo — match them)
+
+- **Source repo:** `/Users/aura/Documents/ShopStack/ShopStack-Portal`
+- **Worktree root:** `/Users/aura/Documents/ShopStack/ShopStack-worktrees/`
+- **Per-ticket worktree dir name:** `its-<num>-<short-kebab>` (e.g., `its-553-burq-schema`) — keep it ≤ 30 chars
+- **Lane worktree dir name (module mode):** `module-<module-slug>-lane-<lane-slug>` (e.g., `module-engagements-lane-recipes`) — reused across many tickets
+- **Branch name:** `<type>/its-<num>-<kebab-slug-from-title>` where `<type>` is one of `feat` | `fix` | `hotfix` | `chore`. Match the repo's real convention — see recent origin branches like `feat/its-1296-iteration-8`, `fix/its-1309-ai-generate-response-shape`, `hotfix/its-990-call-site-cleanup`. **Do not use the legacy `mshery/sou-*` prefix** — only one stale `mshery/*` branch remains on origin and the team has moved on.
+  - **Picking `<type>`:** `fix` if the Linear ticket has a `bug` label or title starts with "Fix:"; `hotfix` if priority is Urgent (P1) AND title mentions "hotfix" or "prod"; `chore` if the ticket label is `chore`/`refactor`/`docs`/`ci`/`tooling`; otherwise `feat`. When unsure, default to `feat`.
+- **Base branch:** `origin/main` by default. Module runs target `main` directly too — do not default to `qa/<module-slug>` (see `ShopStack ships to `main` directly`; the repo auto-archives `qa/*` branches after merge).
+- **Remote:** `origin` → `https://github.com/mshery/ShopStack-Portal`
+- **node_modules cache:** when a lane worktree shares the same `package-lock.json` hash as an existing worktree, symlink `node_modules` from the existing one instead of running a fresh install
+
+## Steps
+
+### 1. Resolve repo + ticket metadata
+
+```bash
+REPO=/Users/aura/Documents/ShopStack/ShopStack-Portal
+WORKTREE_ROOT=/Users/aura/Documents/ShopStack/ShopStack-worktrees
+```
+
+Confirm `$REPO` is a git repo and the remote `origin` matches the expected URL. If the ticket payload pointed to a different repo (e.g., `shopstack-qa-dev`), use that instead.
+
+### 2. Derive names
+
+Given ticket `ITS-XXX` with title `<Title>` and Linear labels:
+
+- `NUM` = lowercased ticket number (e.g. `554`)
+- `SLUG` = lowercase the title → strip non-alphanumerics → join with `-` → trim to first 4-6 meaningful words (drop "the", "a", "an", "and")
+- `TYPE` = derived per the rule in **Conventions** above (`feat` default, `fix` for bug labels, `hotfix` for urgent prod, `chore` for tooling). If the upstream issue-hunter handoff already carried a `branch_slug`, honor its type prefix.
+- `BRANCH` = `${TYPE}/sou-${NUM}-${SLUG}`
+
+**Per-ticket mode (default, `--lane` not set):**
+- `WT_DIR` = `${WORKTREE_ROOT}/sou-${NUM}-${SHORT_SLUG}` where `SHORT_SLUG` is the first 2–3 words of `SLUG`
+
+**Lane mode (`--lane LANE-SLUG --module MODULE-SLUG`):**
+- `WT_DIR` = `${WORKTREE_ROOT}/module-${MODULE_SLUG}-lane-${LANE_SLUG}`
+- The lane worktree is **reused** — if it already exists, do not recreate it. Just create the per-ticket branch inside it (step 4 below).
+
+If a per-ticket worktree dir or branch with that name already exists, append nothing — instead surface the existing path and ask whether to reuse it or pick a new suffix (e.g., `-v2`). In chained mode, default to reuse.
+
+### 3. Refresh base branch — ALWAYS PULL FRESH `main` BEFORE CREATING THE WORKTREE
+
+**Hard rule:** every new worktree is cut from a freshly-pulled base. Never from a stale local ref. This is per the relevant `.claude/rules/*.md` file — parallel sessions land PRs back-to-back, so by the time you start a ticket, `main` has likely moved. Skipping the fetch is how you end up with a "stale-start" PR that conflicts the moment it opens.
+
+```bash
+BASE="${BASE_FLAG:-origin/main}"   # honor --base; default origin/main
+
+# 1. Fetch latest refs from origin (always — no skip, no cache, no "fast path")
+git -C "$REPO" fetch origin --prune
+
+# 2. Fast-forward the local ref for the base branch so the worktree starts at origin's tip.
+#    Use `fetch refs/heads/X:refs/heads/X` to update the local ref WITHOUT touching the
+#    primary repo's checked-out branch (other worktrees may be using it).
+BASE_SHORT="${BASE#origin/}"   # "main" or "main"
+git -C "$REPO" fetch origin "${BASE_SHORT}:${BASE_SHORT}" 2>/dev/null
+
+# 3. Verify the local ref now matches origin's tip exactly. If it doesn't (e.g. local
+#    main has diverged because someone committed directly to it), STOP and surface —
+#    do not silently force-update, do not silently rebase. The user must reconcile.
+LOCAL_SHA=$(git -C "$REPO" rev-parse "$BASE_SHORT" 2>/dev/null || echo none)
+ORIGIN_SHA=$(git -C "$REPO" rev-parse "origin/$BASE_SHORT" 2>/dev/null || echo none)
+if [ "$LOCAL_SHA" != "$ORIGIN_SHA" ]; then
+  echo "ERROR: local ${BASE_SHORT} (${LOCAL_SHA}) != origin/${BASE_SHORT} (${ORIGIN_SHA})."
+  echo "Local has diverged from origin. Reconcile manually before creating a worktree."
+  exit 1
+fi
+```
+
+Do **not** modify the source repo's checked-out branch — other worktrees may be using it. The `fetch refs/heads/X:refs/heads/X` form updates the local ref without touching the working tree.
+
+**If the local base ref diverges from origin** (rare, but it happens when someone commits directly to `main` outside a PR flow), the script stops. Do not paper over this with `--force` — it usually means a destructive change went in by mistake. Reconcile by hand (or call the user), then retry.
+
+### 4. Create the worktree + branch
+
+#### Per-ticket mode
+
+```bash
+mkdir -p "$WORKTREE_ROOT"
+git -C "$REPO" worktree add -b "$BRANCH" "$WT_DIR" "$BASE"
+```
+
+If the branch already exists locally or on origin, use:
+
+```bash
+git -C "$REPO" worktree add "$WT_DIR" "$BRANCH"
+```
+
+#### Lane mode
+
+If the lane worktree directory does not exist, create it on the base branch (not a ticket branch — lane worktrees float on the integration branch and get per-ticket branches checked out on demand):
+
+```bash
+mkdir -p "$WORKTREE_ROOT"
+if [ ! -d "$WT_DIR" ]; then
+  git -C "$REPO" worktree add "$WT_DIR" "$BASE"
+fi
+```
+
+Then inside the lane worktree, create the per-ticket branch from the **freshly fetched** `$BASE` tip — this is the lane equivalent of "always pull fresh main":
+
+```bash
+# Always fetch — the lane worktree may have been idle for a while
+git -C "$WT_DIR" fetch origin --prune
+
+# Verify the worktree is clean before resetting (do NOT silently overwrite uncommitted work)
+if [ -n "$(git -C "$WT_DIR" status --porcelain)" ]; then
+  echo "ERROR: lane worktree $WT_DIR has uncommitted changes. Stash or commit them first."
+  exit 1
+fi
+
+git -C "$WT_DIR" checkout "${BASE#origin/}"                   # ensure on the base branch (e.g., main)
+git -C "$WT_DIR" reset --hard "origin/${BASE#origin/}"        # take latest fetched tip
+git -C "$WT_DIR" checkout -b "$BRANCH"                        # create ticket branch off fresh tip
+```
+
+This guarantees every per-ticket branch starts from the **latest origin tip** of the base — no stale-worktree problem even when many tickets ship through the same lane. The clean-worktree check before `reset --hard` prevents silent loss of in-progress work.
+
+### 5. Bootstrap the worktree
+
+Inside `$WT_DIR`:
+
+1. **Install deps with cache** — this is a npm monorepo.
+   ```bash
+   LOCK_HASH=$(sha256sum "$WT_DIR/package-lock.json" | cut -c1-12)
+   # Find any sibling worktree with a matching lockfile that already has node_modules
+   DONOR=""
+   for other in "$WORKTREE_ROOT"/*; do
+     [ -d "$other/node_modules" ] || continue
+     [ "$other" = "$WT_DIR" ] && continue
+     OTHER_HASH=$(sha256sum "$other/package-lock.json" 2>/dev/null | cut -c1-12)
+     if [ "$OTHER_HASH" = "$LOCK_HASH" ]; then
+       DONOR="$other"
+       break
+     fi
+   done
+   if [ -n "$DONOR" ] && [ ! -e "$WT_DIR/node_modules" ]; then
+     # node_modules is per-repo (npm); no shared workspace symlink needed
+     ln -s "$DONOR/node_modules" "$WT_DIR/node_modules"
+   elif [ ! -d "$WT_DIR/node_modules" ]; then
+     (cd "$WT_DIR" && npm install --frozen-lockfile)
+   fi
+   ```
+   If the lockfile changes later (a ticket adds a dep), `npm install` will fail cleanly and the developer skill can re-run install to refresh. Don't try to keep the symlink in sync — fail loudly, install fresh.
+2. **Copy local env** — if `${REPO}/.env` or `${REPO}/.env.local` exists, copy it into the worktree so dev commands work. Do NOT commit env files. In lane mode, skip if `.env` already exists in the lane worktree.
+3. **Configure git identity for this worktree** (per-worktree, does not touch global config):
+   ```bash
+   git -C "$WT_DIR" config user.name  "mshery"
+   git -C "$WT_DIR" config user.email "owner@example.com"
+   ```
+4. Verify with `git -C "$WT_DIR" status` that you're on `$BRANCH` and clean.
+
+### 6. Emit a handoff payload
+
+End your turn with:
+
+```
+SOUTHFLORAL_WORKTREE
+ticket: ITS-XXX
+branch: <type>/its-XXX-<slug>     # e.g., feat/its-554-burq-rest-client-wrapper
+worktree: /Users/aura/Documents/ShopStack/ShopStack-worktrees/<its-XXX-... or module-<slug>-lane-<lane>>
+base: origin/main
+mode: per-ticket | lane
+module: <module-slug or "">
+lane: <lane-slug or "">
+repo: /Users/aura/Documents/ShopStack/ShopStack-Portal
+node_modules: fresh | symlinked-from <other-worktree-path>
+```
+
+Then say: "Worktree ready at `<path>`. Run `/shopstack-code-developer` next — all subsequent commands must `cd` into the worktree."
+
+## Safety notes
+
+- **Always pull fresh `main` (or the chosen base) before creating any new worktree or per-ticket branch.** No skipping the fetch, no "the repo was just fetched a minute ago" optimization. The cost of an extra fetch is ~1 second; the cost of a stale-start PR is a rebase loop.
+- **Stop if local base diverges from origin.** Never silently force-update local `main` (or any base) — it almost always means a destructive change went in outside the PR flow. Surface and let the user reconcile.
+- **Never** `reset --hard` a lane worktree that has uncommitted changes. Check `git status --porcelain` first; bail with an error if dirty.
+- **Never** `git worktree remove` or delete a worktree dir without explicit user confirmation — other agents may be mid-task in it.
+- **Never** force-push or rebase the underlying branch from this skill.
+- If `npm install` fails, surface the error verbatim — do not silently continue. The downstream developer needs a working install.
+- Do not edit global `~/.gitconfig`. Use per-worktree `git config` only.

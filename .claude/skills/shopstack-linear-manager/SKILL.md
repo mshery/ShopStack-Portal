@@ -1,0 +1,328 @@
+---
+name: shopstack-linear-manager
+description: Full ticket lifecycle for ShopStack in Linear — create, edit, move state, comment, attach PRs, and pick the next ticket to work on. Every ticket this skill creates is automatically assigned to owner@example.com. Replaces the old issue-hunter (pick-only) skill. Use when the user has a SPECIFIC ticket operation in mind (move ITS-XXX, comment on ITS-XXX, create a ticket with a fully-written description, pick the next ticket, list tickets), or when chained /shopstack-ship-it / /shopstack-ship-module / /shopstack-autopilot needs ticket operations. For one-line bug reports or fuzzy "I need a ticket for X" requests, prefer /shopstack-ticket-shaper which infers the shape before calling this skill.
+---
+
+# ShopStack — Linear Manager
+
+You are the **single point of contact** for Linear in the ShopStack skill set. Everything that touches a ticket — picking, creating, editing, moving state, commenting, attaching PRs — flows through this skill. Other skills do not call Linear MCP tools directly; they call you.
+
+This replaces `shopstack-issue-hunter`, which only picked tickets.
+
+## Hard invariants
+
+- **Team:** the Linear team whose ticket prefix is `SOU` (display name typically "ShopStack" / "South Florals").
+- **Default assignee for new tickets:** `owner@example.com` (resolve to the user ID once and reuse). Never create a ticket unassigned. Never assign to anyone else unless the user explicitly names a different assignee in this turn.
+- **State machine for tickets the user works on:**
+  `Triage → Todo → In Progress → In Review → Done`
+  (Backlog / Cancelled / Duplicate are terminal-ish and handled explicitly.)
+- **Umbrella `[MODULE]` tickets** (e.g. `[POS] POS Module Fixes`) are **sticky in `In Progress`** — they never auto-transition. Sub-issues created under an umbrella start in `Todo`, are assigned to `owner@example.com`, and move through the normal lifecycle. (See `the linear-manager rules below` — the umbrella's own assignee may be `the module owner` per that memory; for sub-issues, assign to the ticket owner unless the user says otherwise.)
+- **The Linear MCP expects real newlines in markdown.** Never write literal `\n` into descriptions or comments.
+- **Never invent ticket data.** Every fact about a ticket must come from a current `get_issue` / `list_issues` call. Re-fetch before transitioning state.
+
+## Modes
+
+This skill is multi-mode. Parse the user's request and the caller's intent, then run the matching mode.
+
+| Mode | Trigger phrases / caller intent |
+|---|---|
+| `pick` | "pick the next ticket", "what should I work on", "find me an issue", or any chained `ship-it` / `ship-module` start |
+| `create` | "create a ticket for X", "log this bug", "open an issue about X", "add this to the <module> module" |
+| `edit` | "edit ITS-XXX", "update the description of ITS-XXX", "change ITS-XXX's title to ..." |
+| `move` | "move ITS-XXX to In Review", "mark ITS-XXX done", "send ITS-XXX back to Triage" |
+| `comment` | "comment on ITS-XXX: ...", "leave a note on ITS-XXX" |
+| `attach` | "attach PR #N to ITS-XXX", or chained from `ship-it` PR-open step |
+| `get` | "show me ITS-XXX", "what's the status of ITS-XXX" |
+| `list` | "list my open tickets", "what tickets are in flight in the POS module" |
+
+If the request is ambiguous (e.g. "deal with ITS-XXX"), surface the options and ask. The "no clarifying questions" override does NOT apply here — Linear writes are state changes and should not be guessed.
+
+## Shared bootstrap (run once per turn, cache for the rest)
+
+Before the first Linear call:
+
+1. **Resolve the team.** `mcp__linear__list_teams` → pick the team whose prefix is `SOU`. Capture `team_id`.
+2. **Resolve the user.** `mcp__linear__list_users` (or `get_user`) → find `owner@example.com`. Capture `user_id`.
+3. **Resolve statuses.** `mcp__linear__list_issue_statuses` for `team_id`. Build a map: `{ "Triage": <id>, "Todo": <id>, "In Progress": <id>, "In Review": <id>, "Done": <id>, "Cancelled": <id>, "Backlog": <id> }`. Match by name first, then by `type` (`triage`, `unstarted`, `started`, `completed`, `canceled`, `backlog`).
+
+Cache these IDs in working memory for the rest of the turn. Do not re-fetch.
+
+---
+
+## Mode: `pick`
+
+This is the old issue-hunter behavior, kept here as a sub-mode. Use this when the chain or user is asking "which ticket next?"
+
+### Optional flags
+
+- `--project NAME-OR-ID` — limit to one Linear project (module)
+- `--skip IDS` — comma-separated IDs to exclude (e.g. already-in-flight tickets from parallel chains)
+- `--batch N` — return the top N unblocked tickets across distinct lanes (one per lane label prefix). Default 1.
+- `--lane LANE-SLUG` — only return tickets whose primary domain label matches this lane
+- `--shipped IDS` — comma-separated IDs treated as Done for dependency-graph calculation
+
+### Steps
+
+1. **Pull candidate issues.** `mcp__linear__list_issues` filtered by `assignee = user_id` (or unassigned if the user explicitly broadened), `team = team_id`, `project = project_id` (if `--project`), and state in `{ Triage, Todo, Backlog }` types. Skip `In Progress` / `In Review` / `Done` / `Cancelled`.
+
+   In **module mode** (`--project` set), additionally pull `In Progress` and `In Review` tickets in that project for the dependency graph only — do not include them as pickable.
+
+2. **Hard filters.** Drop any candidate that:
+   - Has a label of `blocked`, `on-hold`, `needs-design`, `needs-product`, `waiting`
+   - Has any open PR by `mshery` on GitHub for this ticket (check `gh pr list --author mshery --state open`)
+   - Appears in `--skip`
+   - Is **not currently in `Todo`** (re-assert here even though step 1 should have filtered — per the relevant `.claude/rules/*.md` file, never claim tickets in any other state)
+   - Has a branch matching `(feat|fix|hotfix|chore)/its-<num>-*` **locally or on origin** in `/Users/aura/Documents/ShopStack/ShopStack-Portal` — that means someone has already started
+
+3. **Dependency-aware filter.** For each candidate, parse dependency identifiers from the description body using:
+
+   ```
+   (?im)^\s*[*\-]?\s*(?:blocked\s*by|depends\s*on|requires)\s*[:\-]?\s*((?:[A-Z]+-\d+(?:\s*,\s*)?)+)
+   ```
+
+   Build a `title_prefix → linear_identifier` map for the project (many modules use `[ENG-001]` in title but `ITS-597` as identifier). A dep is satisfied iff the referenced ticket's status is `Done`, `In Review`, OR its identifier is in `--shipped`. A candidate is **eligible** iff all deps satisfy; otherwise **deferred**.
+
+4. **Rank** in this order:
+   1. Priority (1 Urgent → 4 Low → 0 No priority last)
+   2. Active cycle preferred, then upcoming, then no-cycle
+   3. Project milestone due date (sooner first)
+   4. Dependency depth (more downstream unblocks → higher)
+   5. Updated-at (most recent first — signals "warm")
+
+5. **Present.** Show the top 3 in a compact table, highlight the recommendation with a one-liner "why this one". In autonomous chain mode, skip confirmation and pick top.
+
+   ```
+   Pick:  ITS-XXX  P1  Cycle 12   "Title here"
+          ITS-YYY  P2  Cycle 12   "..."
+          ITS-ZZZ  P2  —          "..."
+   ```
+
+6. **Re-fetch and claim.** Immediately before transitioning state:
+   - Re-fetch the chosen ticket with `get_issue`. If its state is no longer `Todo`, drop it and pick the next eligible. **Do not race-overwrite another agent's claim.**
+   - `save_issue` with `state = In Progress` status ID.
+   - Verify with `get_issue`.
+
+7. **Emit handoff.**
+
+   ```
+   SOUTHFLORAL_TICKET
+   identifier: ITS-XXX
+   title: <title>
+   url: <linear url>
+   priority: <1-4>
+   cycle: <cycle name or "none">
+   branch_type: feat | fix | hotfix | chore   # derived from labels/priority
+   branch_slug: its-XXX-<kebab-slug-from-title>
+   labels: [<comma-separated>]
+   lane: <lane-slug from primary domain label, e.g., recipes, client-portal>
+   project: <project name>
+   project_path: /Users/aura/Documents/ShopStack/ShopStack-Portal
+   deps_resolved: [<list of dep ticket IDs verified satisfied>]
+   ```
+
+   Then: "Ticket ITS-XXX moved to In Progress. Run `/shopstack-worktree-manager` next."
+
+### Batch mode (`--batch N`)
+
+Return N tickets across distinct lanes:
+
+1. Group eligible candidates by primary domain label (first label matching the project's lane namespace, e.g. `eng:*`, `mkt:*`, `pos:*`).
+2. From each lane, take the top-ranked candidate.
+3. Across lanes, sort by the rank above. Take the first N.
+4. If `--lane` is set, restrict to that lane.
+5. **Do NOT transition state in batch mode** — return candidates only; each chain will claim its own ticket via the single-pick `pick` flow when it actually starts.
+6. Emit `SOUTHFLORAL_TICKET_BATCH` with one entry per candidate, plus `count` and `partial_batch` flag.
+
+### Picking `branch_type`
+
+- `fix` if the ticket has a `bug` label OR title begins with "Fix:"
+- `hotfix` if priority is P1 (Urgent) AND title mentions "hotfix" / "prod" / "regression"
+- `chore` if a label of `chore`, `refactor`, `docs`, `ci`, or `tooling`
+- Otherwise `feat`
+
+---
+
+## Mode: `create`
+
+Use when the user wants a new ticket. Always assign to `user_id` (`owner@example.com`) unless they name someone else.
+
+### Inputs
+
+- **Title** — required. Keep ≤ 80 chars, action-oriented.
+- **Description** — required. Use real newlines, not `\n`.
+- **Project** — recommended; if the request is module-scoped ("add this to the POS module"), find the project and attach it.
+- **Labels** — derive from context where obvious (`bug` for a bug report, `feat` for a feature, the module's lane label if it fits).
+- **Priority** — derive (Urgent for prod-impacting, High for current-sprint, Medium default).
+- **Parent issue** — if the user said "add this to the <MODULE> umbrella" or "under ITS-XXX", set the parent.
+- **State** — default `Todo` (or `In Progress` if explicitly a sticky umbrella per `the linear-manager rules below`).
+
+### Steps
+
+1. **Resolve the project** (if specified) via `list_projects` + `get_project`.
+2. **Resolve the parent** (if specified) via `get_issue` to validate it exists.
+3. **Resolve labels** via `list_issue_labels` for the team or `list_project_labels` — only attach labels that exist; never invent.
+4. **Build the description** with real newlines. If the request was vague, expand into:
+
+   ```
+   ## What
+
+   <one-paragraph description>
+
+   ## Why
+
+   <motivation — what business outcome / pain it addresses>
+
+   ## Acceptance criteria
+
+   - [ ] criterion 1
+   - [ ] criterion 2
+   - [ ] criterion 3
+
+   ## Notes
+
+   <links, screenshots, related tickets — optional>
+   ```
+
+5. **Create** via `save_issue` (without an `id`, which creates) with: `team`, `title`, `description`, `assignee = user_id`, `state` (Todo by default), optional `project`, `parent`, `labels`, `priority`.
+6. **Verify** with `get_issue` on the returned ID.
+7. **Emit confirmation.**
+
+   ```
+   SOUTHFLORAL_TICKET_CREATED
+   identifier: ITS-XXX
+   url: <linear url>
+   title: <title>
+   assignee: owner@example.com
+   state: Todo
+   project: <project name or "none">
+   parent: <parent identifier or "none">
+   labels: [<list>]
+   ```
+
+### Umbrella special case
+
+If the user says "create a `[MODULE]` umbrella" or the title starts with `[MODULE]` for a tracker:
+
+- **State:** `In Progress` (sticky)
+- **Assignee:** `the module owner` per `the linear-manager rules below`. Resolve their user ID once and reuse.
+- **Do not** auto-transition umbrellas later. The user explicitly moves them.
+
+---
+
+## Mode: `edit`
+
+Use when the user wants to update an existing ticket's fields.
+
+### Steps
+
+1. `get_issue` on the identifier to capture current state.
+2. **Diff what changed:** title? description? priority? labels? parent? project?
+3. **Apply** via `save_issue` with `id = issue_id` and only the changed fields.
+4. **Verify** with `get_issue`.
+5. **Emit** a one-line confirmation of what changed.
+
+**Hard rules:**
+
+- Do **not** rewrite the description wholesale unless the user explicitly says so. If asked to "add a section" or "append", append; don't replace.
+- Do **not** change `state` in `edit` mode — that's `move` mode's job.
+- Do **not** change `assignee` to someone other than owner@example.com unless the user explicitly names a different assignee.
+
+---
+
+## Mode: `move`
+
+Use when the user wants to transition a ticket's state.
+
+### Steps
+
+1. `get_issue` to confirm current state.
+2. Validate the requested transition. Allowed paths:
+   - `Triage → Todo` ✓
+   - `Triage → In Progress` ✓ (rare; usually go via Todo)
+   - `Todo → In Progress` ✓
+   - `In Progress → In Review` ✓
+   - `In Progress → Triage` ✓ (when the ticket turned out to need clarification — leave a `comment` explaining)
+   - `In Review → Done` ✓ (the merge step does this)
+   - `In Review → In Progress` ✓ (review found issues; re-open)
+   - `Any → Cancelled` ✓ (with a comment explaining)
+   - `Done → anything` ✗ (must ask the user first — Done is normally terminal)
+   - **Umbrella tickets (`[MODULE] ...` titles + sticky In Progress):** never auto-transition. Confirm verbally before any state change.
+
+3. **Apply** via `save_issue` with `id = issue_id`, `state = target_status_id`.
+4. **If moving to `Triage`** because of a developer blocker (per the chain), post a `comment` first explaining the reason. The comment is the audit trail for why the chain dropped it.
+5. **Verify** with `get_issue`.
+6. **Emit** a one-liner confirming the move.
+
+---
+
+## Mode: `comment`
+
+Use when posting a note on a ticket.
+
+### Steps
+
+1. `save_comment` with `issue` = issue ID and the body (real newlines, no `\n`).
+2. Echo back the comment URL or a one-line confirmation.
+
+Common templates:
+
+- **Blocker note** (chain dropped the ticket):
+  ```
+  Chain auto-dropped this ticket — needs human input.
+
+  What I tried: …
+  What I found: …
+  Question: …
+  ```
+- **PR-open note** (from the chain's PR step):
+  ```
+  PR open: <url>
+
+  QA: <PASS | PASS_WITH_NOTES — short notes>
+  Branch: <branch>
+  ```
+
+---
+
+## Mode: `attach`
+
+Use to attach a GitHub PR (or any external link) to a ticket. Usually called from the chain's PR step.
+
+### Steps
+
+1. `create_attachment` with `issue` = issue ID, `url` = PR URL, `title` = `PR #<n>: <PR title>`.
+2. Confirm with one line.
+
+(Linear's GitHub integration also auto-links PRs that mention `ITS-XXX` in their title or branch — this is belt-and-suspenders for when the integration misses.)
+
+---
+
+## Mode: `get` and `list`
+
+Read-only. Pass-through to `get_issue` / `list_issues`. Format the output as a tight summary, not a dump. For `list`, always show identifier + title + state + priority + URL in a compact table.
+
+---
+
+## Output format consistency
+
+Every mode emits a single fenced block (the `SOUTHFLORAL_*` payload above) so callers can parse it. After the block, a single sentence telling the user (or the next skill) what to do next.
+
+## Hard rules
+
+- **Scope discipline (doctrine section 10):** never `move`, `edit`, `comment`, or `attach` on a ticket whose `assignee` is not `owner@example.com`. Reading (`get_issue`, `list_issues`) is fine — that's how dependency graphs get resolved. Mutations are not. The single carve-out is `[MODULE]` umbrellas owned by `the module owner` per `the linear-manager rules below`; we never mutate the umbrella itself, only create sub-issues under it.
+- **Pick mode hard-filters on assignee at the query level** — `list_issues` with `assignee = owner@example.com`. Never post-filter or fall back to "unassigned" without explicit user permission in this turn.
+- **Never** create a ticket without an assignee. Default: `owner@example.com`.
+- **Never** transition out of `Done` without explicit user confirmation.
+- **Never** transition an `[MODULE]` umbrella ticket — they are sticky `In Progress` per memory.
+- **Never** invent ticket data. Every assertion is from a current MCP call.
+- **Never** write literal `\n` into Linear text — use real newlines.
+- **Re-fetch state before transitioning.** Parallel agents may have raced you.
+- If the Linear MCP is not authenticated, surface the error and stop. Do not silently degrade.
+- If a caller asks you to mutate a ticket that isn't ours (a callee in another skill that hands you an identifier owned by another developer), **refuse and surface** — do not perform the mutation. The mistake is somewhere upstream and should be visible.
+
+## Related skills
+
+- [[shopstack-worktree-manager]] — runs immediately after a `pick`-mode claim
+- [[shopstack-ship-it]] — orchestrator that calls this skill in `pick`, `attach`, and `move` modes
+- [[shopstack-ship-module]] — module-level orchestrator that calls this skill in `pick --batch`, `attach`, and `move` modes
+- [[shopstack-conflict-resolver]] — calls this skill in `comment` mode to surface unresolvable conflicts

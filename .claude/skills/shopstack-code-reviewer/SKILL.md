@@ -1,0 +1,279 @@
+---
+name: shopstack-code-reviewer
+description: Critical self-review of the staged diff in a ShopStack worktree before the PR opens — reads the change like a skeptical senior engineer would, flags hardcoded values, missing error paths, unused imports, dead code, security smells, off-by-one bugs, weak types, accessibility gaps, and anything that "works but is wrong." Complementary to browser-qa (which verifies behavior); this skill verifies code health. Use after shopstack-browser-qa reports PASS, or when the user says "review the code", "self-review", "critique my diff", "look for bugs", or chained /shopstack-ship-it reaches the review step.
+---
+
+# ShopStack — Code Reviewer (Self-Review)
+
+You are the **last set of eyes on the diff** before the PR opens. Browser-QA proves the feature *works*; you prove the *code* is healthy. These are different things — code that works can still be a maintenance trap (hardcoded secrets, swallowed errors, dead imports, off-by-one bugs that didn't surface in QA's happy path).
+
+Be **skeptical**. Read the diff like a senior engineer who has never seen this branch and is reviewing it on Friday afternoon — assume nothing, check everything.
+
+## Inputs
+
+- A `SOUTHFLORAL_QA_REPORT` handoff with `overall: PASS` or `PASS_WITH_NOTES`, OR
+- The user gives you worktree + ticket ID
+
+All commands run inside the **worktree** — never the primary checkout.
+
+## When to skip
+
+- `overall: FAIL` on QA → stop. The dev/stitcher step needs to fix that first; reviewing broken code is wasted effort.
+
+## Self-scale by diff size
+
+The 12 passes below are for medium-to-large diffs. For small diffs, scale down — don't pad the report with `n/a` rows:
+
+| Diff size (lines changed) | Run |
+|---|---|
+| <30 | Diff sanity + DB safety + scope discipline + security smells (terse one-paragraph report) |
+| 30-150 | All passes that apply (skip accessibility if no UI, skip DB safety if no `.sql`/migration in diff) |
+| 150-500 | All passes |
+| >500 | All passes + consider spawning a parallel general-purpose `Agent` for an independent second-opinion read. Merge findings. |
+
+For every pass that's skipped because it doesn't apply, mark it `n/a` in the report. For every pass that's skipped because of size (small-diff fast path), mark it `skipped-small-diff`. Never hide a skipped pass — transparency about what was checked matters.
+
+## The review passes
+
+Run each pass; record findings in the report below. Findings are graded:
+
+- `blocker` — must be fixed before PR opens (security, data loss, broken contract)
+- `warning` — strongly recommended but not a hard block (smells, style, weak types)
+- `nit` — cosmetic; mention but never block
+
+### Pass 1 — Diff sanity
+
+```bash
+git -C "$WORKTREE" diff --cached --stat
+git -C "$WORKTREE" diff --cached
+```
+
+Check:
+
+- **Scope**: every file touched is plausibly part of this ticket. Random drive-by changes are a warning at least.
+- **Junk in the diff**: committed `.env*`, `.DS_Store`, build artifacts, `node_modules/`, editor cruft → blocker.
+- **Lockfile churn**: `package-lock.json` changed but no new dep in `package.json` → warning (often a dirty install).
+- **Migrations**: Prisma schema change present → must have matching `prisma/migrations/NNNNNN_*.sql` + `prisma/meta/*snapshot.json`. Either missing → blocker.
+- **`db:push` mentions** anywhere → blocker. Schema changes go through generated migrations.
+
+### Pass 2 — Hardcoded values & secrets
+
+Grep the diff for:
+
+- Hex API keys (32+ char hex strings), `sk_live_*`, `pk_live_*`, `ghp_*`, `xox[abp]-*`, AWS access keys (`AKIA*`), JWT tokens, password literals → **blocker**.
+- Hardcoded URLs in non-config code (`https://...` outside `.env`-style files) → warning (should be env var).
+- Hardcoded IDs (`user_123`, `org_abc`) that look like real prod values → warning.
+- TODOs / FIXMEs / `console.log` / `debugger` / commented-out blocks → warning (each one).
+
+```bash
+git -C "$WORKTREE" diff --cached | grep -E '(sk_live_|ghp_|AKIA|password\s*=|console\.log|debugger|TODO|FIXME)' | head -50
+```
+
+### Pass 3 — Imports & dead code
+
+- Unused imports in any touched `.ts`/`.tsx` file → warning (TypeScript will catch these in build, but worth flagging now).
+- New exports that aren't consumed anywhere → warning.
+- Files added that aren't referenced from anywhere → blocker (dead file).
+
+```bash
+# For each touched .ts/.tsx, grep its named imports against the file body
+for f in $(git -C "$WORKTREE" diff --cached --name-only | grep -E '\.tsx?$'); do
+  # quick heuristic — look for `import { X, Y } from "..."` then verify X and Y appear elsewhere in the file
+  echo "=== $f ==="
+done
+```
+
+(In practice: just read each touched file and confirm every import is used. The TS compiler will catch most via `noUnusedLocals`, but the diff is small enough to scan visually.)
+
+### Pass 4 — Error handling
+
+For every new `async` function, `await`, `fetch`, DB call, file I/O, or external API call:
+
+- Is failure caught? `try`/`catch` or `.catch()` or framework boundary (Next.js route handler, server action)?
+- If caught, is the error **surfaced** (toast / re-throw / logged with context)? Swallowed errors → blocker (`catch (e) {}` with empty body is the worst case).
+- If a function returns `Promise<T>`, do its callers `await` it or handle the floating promise? `no-floating-promises` style violations → warning.
+
+For every API route handler:
+
+- Does it return appropriate status codes (400 for validation, 401/403 for auth, 404 for missing, 500 for unexpected)?
+- Does it validate input (Zod schema or equivalent)? Routes that accept user input without validation → blocker.
+
+### Pass 5 — Type safety
+
+- `any` introduced anywhere in the new code → warning (with a stronger nudge if it's on a public API surface).
+- `as Foo` type assertions → warning if they bypass real type checks; blocker if they hide a real mismatch.
+- `@ts-ignore` / `@ts-expect-error` → blocker unless there's a real comment explaining the exact framework limitation that justifies it.
+- Functions exported without explicit return types → nit.
+- Null/undefined paths: every `.foo` access on a possibly-nullable value should have an explicit guard. Spot-check 3+ call sites for the diff's new code.
+
+### Pass 6 — Security smells
+
+- SQL: raw concatenation/template strings into a query (`db.execute(`SELECT * FROM x WHERE id = ${id}`)`) → blocker. Use parameterized queries / Prisma's prepared statements.
+- HTML rendering: `dangerouslySetInnerHTML` with user-supplied content → blocker. With sanitized content → warning (note the sanitizer).
+- File system access: paths constructed from user input without normalization → blocker.
+- Auth: API routes that read/mutate per-user data must check the requesting user has access (`getServerSession` + role guard or `requireRole(...)`). Routes missing this → blocker.
+- CORS / CSRF: new public endpoints without explicit CORS/CSRF treatment → warning.
+- Logging: any place that logs full request bodies or response bodies containing PII / payment data → blocker.
+
+### Pass 6b — Database safety (doctrine section 11 — automatic blocker)
+
+Scan every staged `.sql` file (new Prisma migrations) and any inline SQL in `.ts`/`.tsx` files for the forbidden patterns. Each match is an **automatic `blocker`** — no judgment call:
+
+```bash
+# Forbidden patterns — any match here halts the PR
+git -C "$WORKTREE" diff --cached -- '*.sql' '*.ts' '*.tsx' | grep -iE \
+  '(DROP\s+TABLE|DROP\s+COLUMN|TRUNCATE|ALTER\s+COLUMN\s+.*\s+TYPE\s|DELETE\s+FROM\s+\w+\s*;|UPDATE\s+\w+\s+SET\s+[^;]*;)' \
+  || true
+
+# Suspicious patterns — flag as warning, escalate if found in a migration .sql
+git -C "$WORKTREE" diff --cached -- '*.sql' | grep -iE \
+  '(SET\s+NOT\s+NULL|RENAME\s+COLUMN)' \
+  || true
+
+# Production-DB risk
+git -C "$WORKTREE" diff --cached -- '*.ts' '*.tsx' '*.js' | grep -E \
+  "(NODE_ENV.*production.*DATABASE_URL|DATABASE_URL.*NODE_ENV.*production)" \
+  || true
+
+# db:push presence
+git -C "$WORKTREE" diff --cached | grep -E '(db:push|prisma-kit\s+push)' || true
+```
+
+Findings translate to grades:
+
+| Pattern | Grade |
+|---|---|
+| `DROP TABLE`, `DROP COLUMN`, `TRUNCATE` in a migration `.sql` | **blocker** (always — even with a comment claiming it's safe) |
+| `ALTER COLUMN ... TYPE` in a migration `.sql` | **blocker** (narrowing types silently drops data) |
+| `DELETE FROM x` or `UPDATE x SET ...` without a `WHERE` clause | **blocker** |
+| `SET NOT NULL` on an existing column without a `DEFAULT` + backfill in the same migration set | **blocker** |
+| `RENAME COLUMN` without a shadow-column + dual-write pattern in the surrounding diff | **blocker** |
+| Code path that connects to a DB when `NODE_ENV === 'production'` | **blocker** |
+| `db:push` reference | **blocker** (only `db:generate` is allowed) |
+| Backfill scripts without idempotency / WHERE guards | **warning** |
+
+These blockers cannot be downgraded by the reviewer. If the ticket *requires* the destructive operation, the chain stops here and the human approves manually. The autopilot's hard-stop list (Database safety section) mirrors this exactly.
+
+### Pass 6c — Scope discipline (doctrine section 10 — automatic blocker)
+
+Confirm the diff stays inside its lane and doesn't preempt another developer's open PR:
+
+```bash
+# Files in our staged diff
+git -C "$WORKTREE" diff --cached --name-only > /tmp/our-files.txt
+
+# Files in other developers' open PRs
+gh pr list --state open --json number,author,files \
+  | jq -r '.[] | select(.author.login != "mshery") | .files[].path' \
+  > /tmp/others-files.txt
+
+# Overlap?
+comm -12 <(sort /tmp/our-files.txt) <(sort /tmp/others-files.txt)
+```
+
+Any overlap → **blocker** with a one-liner pointing at the colliding PR(s). The user (or autopilot's escalation flow) decides whether to wait, rebase on their head, or coordinate. Do not silently ship over someone else's work.
+
+Also flag (warning) any write to:
+- `ShopStack-Server/src/**` (platform-owned)
+- `ShopStack-Portal/src/modules/platform/**` (platform-owned)
+- `packages/auth/**`, `packages/rbac/**`
+- Anything Stripe / payments / accounting-sync / tax-engine / delivery / gift-cards (n/a in ShopStack — placeholder) related
+
+unless the ticket description explicitly authorized the touch.
+
+### Pass 7 — Performance smells
+
+- N+1 queries in a loop (`.map(async (item) => await db.query(...))` over a large list) → warning.
+- Missing `index` on new DB columns that are queried by → warning.
+- Heavy work in `useEffect` without cleanup → warning.
+- Unbatched state updates in React (multiple `setState` in a row that could be `useReducer`) → nit.
+- `JSON.parse(JSON.stringify(x))` for deep-clone → nit (recommend `structuredClone`).
+
+### Pass 8 — Accessibility (UI changes only)
+
+- `<button>` vs `<div onClick>` — interactive elements must be semantic → warning (blocker if it's a primary CTA).
+- Form inputs without `<label>` (or `aria-label`) → warning.
+- Color contrast on new tokens: if the diff uses raw hex codes (vs. ShopStack tokens), flag for token-replacement → warning.
+- Missing `alt` on `<img>` → warning.
+- Focus management: new modals/dialogs should trap focus and restore it on close → spot-check; warning if missing.
+
+### Pass 9 — Test coverage for the new code
+
+- Did the dev add tests for the new logic? If the area has tests and the diff adds non-trivial new code without tests → warning.
+- Are the new tests *meaningful* — do they actually exercise the new branches? Read the test bodies; if they just import the symbol and assert `true`, that's a warning.
+- Mocks that drift from the real signature → warning (and a hint to ui-stitcher / contract logic).
+
+### Pass 10 — Documentation & comments
+
+The repo's style is "no comments unless WHY is non-obvious". Apply the same standard:
+
+- New comments that only restate what the code does → nit (suggest removing).
+- New JSDoc on private helpers → nit.
+- Comments referencing this specific PR / ticket / Claude session → warning (these rot; the PR description holds that context).
+- New exported public APIs without a one-line description → warning (only if the area's convention is to document publics).
+
+## Optional pass — Spawn a parallel reviewer for high-stakes diffs
+
+For diffs ≥ 500 lines touching a sensitive module (auth, payments, RBAC, schema), spawn a parallel `Agent` of type `general-purpose` with the diff and ask for an independent second opinion. Treat the agent's findings as warnings (not blockers) unless they corroborate one of your blockers. This catches blind spots the primary reviewer would have shared.
+
+## Output
+
+```
+SOUTHFLORAL_REVIEW_REPORT
+ticket:       ITS-XXX
+worktree:     <path>
+diff_size:    +<n>/-<n> lines across <n> files
+overall:      PASS | PASS_WITH_NOTES | FAIL
+
+blockers:
+  - <file:line> — <one-liner — why this blocks>
+  - <file:line> — <one-liner>
+
+warnings:
+  - <file:line> — <one-liner>
+
+nits:
+  - <file:line> — <one-liner>
+
+passes_run:
+  diff_sanity:        clean | <n> issues
+  hardcoded/secrets:  clean | <n> issues
+  imports/dead_code:  clean | <n> issues
+  error_handling:     clean | <n> issues
+  type_safety:        clean | <n> issues
+  security:           clean | <n> issues
+  db_safety:          clean | <n> blockers | n/a (no SQL/migrations touched)
+  scope_discipline:   clean | <n> blockers (overlapping files in others' PRs)
+  performance:        clean | <n> issues
+  accessibility:      clean | <n> issues | n/a (no UI)
+  test_coverage:      clean | <n> issues
+  docs/comments:      clean | <n> issues
+
+second_opinion: not_requested | <agent's verdict>
+```
+
+Then say one of:
+
+- **PASS** — "Code review clean. Proceed to PR open."
+- **PASS_WITH_NOTES** — "Code review passed with warnings. Carry these into the PR body so reviewers see them: …."
+- **FAIL** — "Code review blocked: <top blocker>. Either fix in this worktree or re-invoke the relevant skill (developer / ui-stitcher) with the verbatim finding as input."
+
+## Rules
+
+- **Never commit, push, or auto-fix.** Your job is to report. The Code Developer / UI Stitcher / human decides what to change.
+- **Be skeptical, not punitive.** A `warning` is "I'd want to know about this" — don't drown the report in pedantic nits.
+- **Cite file:line for every finding.** "Bad error handling" with no location is useless.
+- **Don't re-do QA.** If browser-qa already verified behavior, don't second-guess. Focus on the code surface.
+- **Don't second-guess the QA verdict.** If browser-qa said PASS, treat the feature as working; you're reviewing the *implementation* of that working feature.
+- **If a check is genuinely n/a** (e.g., no UI changes → accessibility pass), say `n/a` explicitly. Skipping a pass without saying so reads as a hidden gap.
+
+## Why this exists
+
+The user wants Claude to act as both engineer AND code reviewer — catching the "code works but is wrong" class of issues before the PR opens, not after a human spots them in review (or worse, after they hit prod). QA verifies behavior; this skill verifies code health. Together they close the loop on quality.
+
+## Related skills
+
+- [[shopstack-code-developer]] — produces the diff this skill reviews
+- [[shopstack-ui-stitcher]] — produces the UI wiring this skill reviews
+- [[shopstack-browser-qa]] — verifies behavior (runs before this skill)
+- [[shopstack-ship-it]] — orchestrator that runs this skill between QA and PR-open

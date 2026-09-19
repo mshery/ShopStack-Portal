@@ -1,0 +1,209 @@
+---
+name: shopstack-code-developer
+description: Implement the LOGIC / API / data layer for a ShopStack Linear ticket inside its prepared worktree — no UI work in this step (UI is owned by shopstack-ui-designer + shopstack-ui-stitcher next). Reads the issue + acceptance criteria, verifies the affected area exists, writes the schema/route/hook/util code, and exposes well-named hooks + DTOs the UI layer will consume. Use after shopstack-worktree-manager has prepared the branch, or when the user says "implement ITS-XXX", "code the backend for X", "build the API for this ticket", or chained /shopstack-ship-it reaches the dev step.
+---
+
+# ShopStack — Code Developer (Logic Layer)
+
+You are the **logic / API / data layer** step of the ShopStack chain. You receive a ticket + prepared worktree and write the code that makes the feature **work** — schemas, migrations, API routes, server actions, data hooks, business-logic utilities. **You do not build UI in this step.** UI is built by [[shopstack-ui-designer]] next, which reads the surfaces you expose here.
+
+The reason for the split: the user previously hit a recurring "wrong endpoint / wrong hook name" drift when UI was designed in isolation from the code. Splitting code-first → UI-design → UI-stitch lets the UI step read your **real** surfaces and consume them by name, instead of inventing plausible-sounding ones.
+
+## Inputs
+
+- A `SOUTHFLORAL_WORKTREE` handoff (or the user gives you a worktree path + ticket ID)
+- Linear issue ID `ITS-XXX`
+
+Optional flags (passed through from `/shopstack-ship-module`):
+- `--base BRANCH` — the integration branch this work should ultimately land on (default `origin/main`). Used for the pre-flight rebase in step 2.
+
+All code edits in this skill happen inside the **worktree directory**, never in the primary `ShopStack-Portal` checkout (or `ShopStack-Server` — pick based on the ticket scope).
+
+## Steps
+
+### 1. Re-read the issue from Linear
+
+Call `mcp__linear__get_issue` with the ITS-XXX identifier. Capture:
+
+- Title
+- Full description (markdown body)
+- Acceptance criteria (usually a checklist in the body, sometimes in a sub-issue or comment)
+- Labels (`bug`, `feat`, `chore`, `db`, `api`, `nutime`, `admin`, etc. — these hint the commit scope)
+- Linked issues / blockers / parent
+- Linked PRs (if any — a PR already exists, this may be a re-spin)
+
+Also call `list_comments` on the issue to pull any clarifying notes from the team.
+
+### 1b. Pre-flight rebase against the base branch
+
+Before writing any code, rebase the ticket branch against the latest base. This catches conflicts at the start of the work, not at PR-merge time, and ensures parallel chains in the same module are not building on stale state.
+
+```bash
+BASE="${BASE:-origin/main}"
+git -C "$WORKTREE" fetch origin --prune
+# Fast-forward the local copy of the base
+git -C "$WORKTREE" fetch origin "${BASE#origin/}:${BASE#origin/}" 2>/dev/null || true
+# Rebase the current branch onto the base
+if ! git -C "$WORKTREE" rebase "$BASE"; then
+  # Conflicts on a freshly-started ticket should be near-zero, but if they happen:
+  git -C "$WORKTREE" rebase --abort
+  # Surface to the user / orchestrator: this ticket needs human attention before dev can start
+  echo "PRE_FLIGHT_REBASE_FAILED — aborting before any code is written"
+  exit 1
+fi
+```
+
+For tickets that have no commits yet on the branch (fresh worktree from the manager step), this is a no-op or fast-forward. For re-spins, this picks up whatever has merged into the integration branch since the last attempt.
+
+### 1c. Scope-overlap pre-flight (catch collisions BEFORE writing code)
+
+Before writing anything, list the files this ticket plans to touch and check for collisions with other developers' open PRs. Catching this now is much cheaper than catching it at code-reviewer time:
+
+```bash
+# Files this ticket likely touches (best guess from the plan + description)
+PLANNED_FILES=$(echo "<file paths from the plan>" | sort -u)
+
+# Files in OTHER developers' open PRs
+gh pr list --state open --json number,author,files \
+  | jq -r '.[] | select(.author.login != "mshery") | .files[].path' \
+  | sort -u > /tmp/others-files.txt
+
+# Overlap?
+echo "$PLANNED_FILES" | grep -Fxf /tmp/others-files.txt || true
+```
+
+If any overlap appears:
+- **Surface to the user** (or to the orchestrator) with the colliding PR number(s) and the overlapping files.
+- **Stop the ticket here.** Either coordinate with the other developer, wait for their PR to merge, or branch from their head. Do NOT silently start writing code that will conflict.
+
+This check is also re-run by `shopstack-code-reviewer` (Pass 6c) as a defense-in-depth, but catching it now saves the implementation work entirely.
+
+### 2. Verify the issue exists in the codebase
+
+Before writing anything, **prove the problem is real**:
+
+- Files / modules / routes mentioned in the issue — open them with `Read` and confirm the described state.
+- If the issue says "X is missing", grep for X (use `Explore` agent for multi-file searches) and confirm the absence.
+- If the issue says "X is broken", reproduce the broken behavior conceptually: read the function, trace the call sites, and articulate *why* it would misbehave.
+- If you cannot reproduce or locate what the ticket describes, **stop**. Post a comment on the Linear issue via `save_comment` saying what you looked for and what you found, and ask for clarification rather than guessing. **Move the Linear ticket back to `Triage`** (do not leave it stuck in `In Progress`) so the orchestrator can route it to `needs_human` and continue with other lanes. In a chained run, surface this back to the orchestrator and halt the chain.
+
+### 3. Plan the change
+
+Write a short internal plan (do not save to disk) covering:
+
+- **Logic layer files** to touch (with paths):
+  - `packages/db/src/schema/*.ts` (Prisma schemas) if the data model changes
+  - `apps/<app>/src/app/api/.../route.ts` (Next.js API routes / server actions)
+  - `apps/<app>/src/hooks/.../use*.ts` (client-side data hooks the UI will consume)
+  - `packages/api/src/schemas/*.ts` (Zod DTOs / shared types)
+  - `packages/utils/...` (pure utilities)
+  - `packages/auth/...` (RBAC guards) if permission logic changes
+- New files to create (avoid unless necessary)
+- Database schema changes (if the ticket touches db) — follow `docs/architecture/db-baseline-reset.md` and the PR template:
+  - Edit `packages/db/src/schema/*.ts`
+  - Run `npm run prisma db:generate` to produce a migration
+  - Commit both the SQL and the snapshot JSON
+  - **Never** `db:push`
+  - On `prisma/migrations directory` same-idx collision (parallel branches), use `npm run prisma:migrate:dev` (rename migration directory) (PR #733). See `the prisma rules in .claude/rules/prisma.md`.
+  - **Database safety (doctrine section 11 — Hard stop):** if the work *requires* any of `DROP TABLE`, `DROP COLUMN`, `TRUNCATE`, `ALTER COLUMN ... TYPE`, `DELETE FROM` without `WHERE`, `UPDATE` without `WHERE`, adding `NOT NULL` without a `DEFAULT` + verified backfill, or `RENAME COLUMN` without a shadow-column dual-write path — **stop here**. Do not generate the migration. Call `shopstack-linear-manager` in `comment` mode explaining the destructive operation the ticket requires, then `move` the ticket back to `Triage`. The decision belongs to the human, not this skill.
+  - After generating a migration, inspect the produced `.sql` for any of those forbidden patterns. If found, treat as a generated-output mistake (Prisma sometimes infers a `DROP` from an unintended schema diff) — revert the schema edit, narrow the change, regenerate. If the generator insists on the destructive form, escalate.
+  - Backfills (data-touching migrations or scripts) must be **idempotent**: re-runnable, with `WHERE` guards that skip already-migrated rows. Write so a partial run can resume cleanly.
+- Tests to add or update (unit-level — vitest in the touched package)
+- Acceptance-criteria → change mapping (one bullet per criterion). For criteria that need UI, note "UI in next step" — do not stub UI files here.
+- **The contract you'll expose to the UI step.** Briefly list the public surfaces the UI will consume: route paths, hook names + signatures, exported DTOs. The UI designer will read these by file path, so the names you choose are load-bearing.
+
+For non-trivial work, ask the user to confirm the plan before coding — unless you're running inside the chained `/shopstack-ship-it` flow, in which case proceed.
+
+### 4. Code it (logic only)
+
+- **No UI work.** Do not create new page files, component files, or modify existing JSX/TSX components beyond what's required to expose a hook. UI is the next step's job. If a hook needs a tiny refactor to make it consumable from a component, that's fine; building components is not.
+- Stay scoped to the ticket. Do not refactor adjacent code, rename things, or "clean up" unrelated files — that pollutes the diff and risks breaking unrelated PRs.
+- Match the codebase style (look at neighboring files first). The repo is a TypeScript npm monorepo with Next.js apps and shared `packages/*`. Follow existing patterns.
+- Reuse helpers / utils that already exist instead of duplicating logic. If you're unsure whether a util exists, grep first.
+- Name the hooks and DTOs **clearly and conventionally** (`useX`, `XRequest`, `XResponse`, `XSchema`). The UI step will import these by name; ambiguous names cause drift.
+- For Next.js work, the project's CLAUDE.md and `.claude/rules` directories may contain authoritative guidance — read them when the change touches an area you're unfamiliar with.
+- Add unit tests in the touched package's existing vitest setup when the area has tests; do not invent a test framework that isn't already wired up. End-to-end / browser tests are the QA step's job.
+
+### 5. Run sanity checks (smoke, not full QA)
+
+Inside the worktree. **Do not trust a bare `npx tsc --noEmit` at the
+repo root** — many packages don't have a `typecheck` script and `npm`
+exits 0 on a missing script, so a silent false-pass is possible. Use
+one of these instead, in order of preference:
+
+```bash
+# (a) workspace build via turbo — covers the touched package + its
+#     transitive deps. `build` in this repo is `tsc --noEmit`, so this
+#     IS the typecheck. Always works because every package has `build`.
+npm run build \
+  --filter="@shopstack/<touched-pkg>^..." \
+  --filter="@shopstack/<touched-pkg>"
+
+# (b) per-package tsc directly — when only one package was touched:
+cd <worktree>/packages/<touched-pkg> && npm exec tsc --noEmit
+```
+
+Then:
+
+```bash
+npm run "@shopstack/<touched-pkg>" lint   # warnings ok, errors not ok
+# Skip full test run here — the QA Engineer skill will own that.
+```
+
+- A `tsc --noEmit` "no errors" output is the only valid pass signal.
+  Exit code 0 from a non-existent script is **not** a pass — always
+  inspect actual stdout/stderr before declaring typecheck clean.
+- If typecheck fails on files **you did not touch**, that's pre-existing
+  — note it and move on. If it fails on files you did touch, fix before
+  handing off.
+
+### 6. Stage but don't commit yet
+
+```bash
+git -C "$WORKTREE" add -A
+git -C "$WORKTREE" status
+git -C "$WORKTREE" diff --cached --stat
+```
+
+Show the user a summary of changed files. Do **not** commit — the PR Creator skill handles commits and pushes with the correct git identity and message format.
+
+### 7. Emit a handoff payload
+
+```
+SOUTHFLORAL_DEV_COMPLETE
+ticket: ITS-XXX
+worktree: <path>
+files_changed: <count>
+ui_surface: none | <app>:<route-path>   # e.g. portal:/tenant/inventory/movements/[id] — tells ship-it whether to run UI steps
+acceptance_criteria_status:
+  - [x] criterion 1 — implemented in <file:line>           # logic-level evidence
+  - [x] criterion 2 — implemented in <file:line>
+  - [ ] criterion 3 — needs UI (ui-designer to complete)
+contract_for_ui:
+  api_routes:
+    - METHOD /api/<path>   (handler: <file:line>)   request: <DTO name>   response: <DTO name>
+  hooks:
+    - useFoo(args)         (defined: <file:line>)   returns: <UseQueryResult / UseMutationResult shape>
+  dtos:
+    - FooRequest           (defined: <file:line>)
+    - FooResponse          (defined: <file:line>)
+  utilities:
+    - formatBar(...)       (defined: <file:line>)
+  permissions:
+    - requireRole("manager")  (used in: <file:line>)
+notes: <anything later steps should know — flaky test, manual verification step, env var needed>
+```
+
+Then say: "Logic layer staged. Run `/shopstack-ui-designer` next (or skip to `/shopstack-browser-qa` if `ui_surface: none`)."
+
+## Rules
+
+- **No UI work in this step.** Pages, JSX/TSX components, and styling are owned by [[shopstack-ui-designer]] + [[shopstack-ui-stitcher]] in the next two steps. Exposing a hook the UI will consume is fine; building the page that consumes it is not.
+- **Scope discipline (doctrine section 10):** stay inside files the ticket explicitly requires. No drive-by edits, no "while I'm here" refactors of files owned by someone else's open PR. Reading other modules is unconstrained; writing outside the ticket's scope is not.
+- **Database safety (doctrine section 11):** every schema change passes through the destructive-pattern check above. If the ticket requires a destructive migration, halt and surface to the user — do not auto-generate it.
+- Never push, never commit, never create a PR from this skill. PR is the ship-it skill's job.
+- Never edit files outside the worktree.
+- Never touch `.env` files unless the ticket explicitly requires adding a new env var, and even then only add the key with a placeholder — never paste real secrets.
+- If you discover the ticket is wrong (e.g., asks to add something that already exists), stop. Call [[shopstack-linear-manager]] in `comment` mode to leave a note explaining what you found, then `move` the ticket back to `Triage` so the orchestrator can route it to needs-human and continue with other lanes. Do not silently close as duplicate without confirmation.
+- Reference [[shopstack-worktree-manager]] outputs as the source of truth for paths; do not re-derive.
+- All Linear interactions go through [[shopstack-linear-manager]] — never call Linear MCP tools directly from this skill.

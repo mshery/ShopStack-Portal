@@ -1,0 +1,355 @@
+---
+description: End-to-end ShopStack ticket shipping chain — picks the ticket via linear-manager, creates a worktree, implements the logic, designs the UI in the ShopStack system, stitches UI to real code, runs browser QA, opens the PR (inline — no separate skill), moves Linear to In Review, and optionally resolves conflicts on other open PRs. Use when the user says "ship the next ticket", "ship it", "run the full chain", "pick and ship", or "do the whole flow". Orchestrates linear-manager (pick) → worktree-manager → code-developer (logic only) → ui-designer → ui-stitcher → browser-qa → PR step → linear-manager (move + attach).
+---
+
+
+# ShopStack — Ship It (Per-Ticket Orchestrator)
+
+You are the **top-level conductor** for a single ShopStack ticket. You don't write code, design UI, or call Linear directly — you call each step's skill in order, pass the handoff payload forward, and decide what to do when a step fails. The PR-open step is **inlined** in this skill (it's small enough that a dedicated skill was redundant).
+
+## The chain
+
+```
+1. /shopstack-linear-manager  (mode: pick)          → SOUTHFLORAL_TICKET
+2. /shopstack-worktree-manager                      → SOUTHFLORAL_WORKTREE
+3. /shopstack-code-developer  (logic / API only)    → SOUTHFLORAL_DEV_COMPLETE
+4. /shopstack-ui-designer                           → SOUTHFLORAL_UI_DESIGN
+5. /shopstack-ui-stitcher                           → SOUTHFLORAL_UI_STITCH_COMPLETE
+6. /shopstack-browser-qa                            → SOUTHFLORAL_QA_REPORT
+7. /shopstack-code-reviewer  (self-review)          → SOUTHFLORAL_REVIEW_REPORT
+8. PR step (inline — commit, push, gh pr create)      → SOUTHFLORAL_PR_OPEN
+9. /shopstack-linear-manager  (mode: move + attach)  → ticket → In Review, PR attached
+10. /shopstack-conflict-resolver (conditional)       → SOUTHFLORAL_CONFLICT_REPORT
+```
+
+Steps 4 + 5 are the user's "code first, then design UI, then stitch" workflow. Step 6 is exhaustive (per-criterion evidence-required) — see [[shopstack-browser-qa]]. Step 7 is the self-review pass that catches "code works but is wrong" issues QA can't see — see [[shopstack-code-reviewer]].
+
+This chain operates under the **autonomous engineering doctrine** (`the autopilot doctrine inside this skill`): act as engineer + PM, default to maximum parallelization, treat PR-open as the completion signal, self-review every diff, minimize user interaction, never risk data loss, never bypass guardrails.
+
+## When to use ship-it vs ship-module
+
+**`/shopstack-ship-it` (this skill) — one ticket end-to-end:**
+- A specific ticket the user named.
+- "Ship the next ticket" — picks via linear-manager, ships one.
+- Lightweight, single-chain, no phase planning.
+
+**`/shopstack-ship-module <name>` — many tickets across a whole module:**
+- Drive an entire Linear project (POS, Reports, Inventory, Purchases, etc.).
+- Dependency-aware phase plan, parallel lane chains, status dashboard.
+- Uses this skill as the per-lane runner.
+
+## Inputs
+
+Accept one of:
+
+- **No argument** → run the whole chain starting from `pick` (auto-pick top candidate, no confirmation prompts).
+- A specific ticket ID (`ITS-554`) → skip the ranking step; ensure the ticket is in `Todo` and assigned to the ticket owner, then transition to `In Progress` and continue from worktree.
+- A specific worktree path → skip steps 1–2; start at code-developer.
+
+Optional flags (passed through to sub-skills):
+
+- `--base BRANCH` — base branch for the PR. Default `main` for this repo.
+- `--worktree PATH` — use an existing (likely lane-mode) worktree instead of creating one.
+- `--auto-merge` — opt-in: request `gh pr merge --squash --auto` after the PR opens. Default off.
+- `--skip-ui` — skip the UI designer and stitcher steps (use when the ticket is backend-only with no UI surface).
+- `--parallel-ui` — opt-in fast-path: dispatch code-developer and ui-designer **in parallel** when the UI is genuinely independent of the new server data (static page, marketing-style copy change, pure styling). Default off because most tickets need the dev's hooks/types as input to the UI. Only safe when the ticket description explicitly mentions "static page", "no new API needed", or "frontend only". The ship-it orchestrator will fall back to sequential if the ui-stitcher later finds the UI references real names that should have come from the dev — that's the safety net.
+- `--qa-mode strict|degraded` — passed through to browser-qa. `strict` (default) requires Claude in Chrome. `degraded` skips the browser walk-through and badges the PR for human review. Autopilot may pass this; manual runs almost always want `strict`.
+
+## How to run
+
+Invoke each step in sequence by calling its skill via the `Skill` tool. After each step:
+
+1. **Read the handoff payload** the step printed.
+2. **Decide** based on its outcome:
+   - Success → proceed to the next step.
+   - Soft warning (`PASS_WITH_NOTES`) → proceed but carry the notes into the PR body.
+   - Hard failure → stop the chain, surface the error, do **not** push partial work.
+3. **Checkpoint to disk** — after every step's success, append the step name + payload digest to `<worktree>/.shopstack-chain-state.json` (gitignored). Schema:
+
+   ```jsonc
+   {
+     "ticket": "ITS-XXX",
+     "branch": "<type>/its-XXX-<slug>",
+     "steps": [
+       { "step": 1, "name": "linear-manager.pick",    "status": "passed", "at": "ISO" },
+       { "step": 2, "name": "worktree-manager",       "status": "passed", "at": "ISO" },
+       { "step": 6, "name": "browser-qa",             "status": "passed", "at": "ISO" },
+       { "step": 7, "name": "code-reviewer",          "status": "passed", "at": "ISO" }
+       // step 8 (PR step) in progress / failed / passed
+     ],
+     "last_payload": { /* the most recent SOUTHFLORAL_* block, for resume context */ }
+   }
+   ```
+
+   If the chain restarts (manual re-invocation, autopilot wake-up after a partial run), read this file first and skip already-passed steps. Re-running a passed step is wasteful and may produce inconsistent results (re-claiming a Linear ticket, re-creating a worktree branch, etc.).
+4. **Update progress** — use TaskCreate / TaskUpdate to track which steps are done, in_progress, pending, or failed.
+
+## Step-by-step orchestration
+
+### Step 1 — Pick the ticket (linear-manager)
+
+Invoke `/shopstack-linear-manager` in `pick` mode. Tell it this is a chained run so it auto-picks the top candidate without confirming. Wait for `SOUTHFLORAL_TICKET`. Extract `identifier`, `branch_type`, `branch_slug`, `project_path`.
+
+If zero candidates: stop with a clear message — there's nothing to ship.
+
+If a specific ticket was passed as an argument, still call linear-manager in `pick` mode but with the explicit identifier so the standard `Todo → In Progress` transition + collision-avoidance happens.
+
+### Step 2 — Create the worktree (worktree-manager)
+
+Invoke `/shopstack-worktree-manager` with the ticket payload. Wait for `SOUTHFLORAL_WORKTREE`. Extract `worktree`, `branch`.
+
+If worktree creation fails (dependency install, lockfile conflict, etc.): stop. Comment back on the Linear ticket via `linear-manager comment` mode summarizing the failure, then move the ticket back to `Triage` via `linear-manager move` so it's not stuck in In Progress.
+
+### Step 3 — Implement the logic (code-developer)
+
+Invoke `/shopstack-code-developer` with the ticket + worktree payloads. **This step covers logic / API / data layer only** — no UI work yet. The dev skill knows to defer UI to step 4.
+
+Wait for `SOUTHFLORAL_DEV_COMPLETE`. Capture `files_changed` and the acceptance-criteria mapping.
+
+If the developer reports the ticket is invalid (already done, blocked, can't reproduce): stop. The dev skill will have moved the ticket back to `Triage` with a comment via linear-manager.
+
+### Step 4 — Design the UI (ui-designer)
+
+**Skip this step if `--skip-ui` was passed or if the dev handoff says `ui_surface: none`.**
+
+Invoke `/shopstack-ui-designer` with the dev handoff. The designer uses the ShopStack design system already encoded in its skill text (tokens, primitives, page skeleton) and reads the dev's files first so it consumes real hooks/types.
+
+Wait for `SOUTHFLORAL_UI_DESIGN`. Capture `ui_files_added_or_changed`, `primitives_used`, `real_hooks_consumed`.
+
+### Step 5 — Stitch the UI to the code (ui-stitcher)
+
+**Skip this step if step 4 was skipped.**
+
+Invoke `/shopstack-ui-stitcher` with the dev + design handoffs. The stitcher builds an explicit endpoint/hook/type contract by reading the real code, then rewires any UI references that drifted.
+
+Wait for `SOUTHFLORAL_UI_STITCH_COMPLETE`. If `unresolved_drift` is non-empty, stop the chain — the QA step will fail anyway. Surface the unresolved items.
+
+### Step 6 — Browser QA (browser-qa)
+
+Invoke `/shopstack-browser-qa`. This runs the static gate (typecheck / lint / vitest) AND the exhaustive Claude-in-Chrome walk-through of every acceptance criterion.
+
+Wait for `SOUTHFLORAL_QA_REPORT`.
+
+- `overall: PASS` → proceed.
+- `overall: PASS_WITH_NOTES` → proceed; pass notes through to the PR body.
+- `overall: FAIL` → re-invoke the most likely culprit skill ONCE with the QA blockers as input:
+  - If blockers are about wrong endpoints / hook names / DTO shapes → re-run **ui-stitcher**.
+  - If blockers are about missing UI / wrong layout → re-run **ui-designer**.
+  - If blockers are about logic / API behavior → re-run **code-developer**.
+  - Then re-run **browser-qa**. If it fails again, stop and hand off to the human.
+
+### Step 7 — Code review (self-review)
+
+Invoke `/shopstack-code-reviewer`. This is the "code health" pass that complements QA's "behavior health" pass — it catches hardcoded values, missing error paths, unused imports, security smells, weak types, and "works but is wrong" issues that QA's user-flow walk-through won't see.
+
+Wait for `SOUTHFLORAL_REVIEW_REPORT`.
+
+- `overall: PASS` → proceed to PR-open.
+- `overall: PASS_WITH_NOTES` → proceed; surface warnings in the PR body's "Known minor issues" section so reviewers see them.
+- `overall: FAIL` → re-invoke the most likely culprit skill ONCE with the verbatim blocker as input (developer for logic blockers, ui-stitcher for UI-wiring blockers), then re-run **code-reviewer**. If it fails again, stop and hand off.
+
+### Step 8 — Open the PR (inlined)
+
+PR opening is small enough that it lives here. Run inside `$WORKTREE`.
+
+#### 8a — Verify git identity (HARD PREFLIGHT)
+
+```bash
+git -C "$WORKTREE" config user.name   # must be exactly: mshery
+git -C "$WORKTREE" config user.email  # must be exactly: owner@example.com
+```
+
+Set per-worktree if wrong (never global):
+
+```bash
+git -C "$WORKTREE" config user.name  "mshery"
+git -C "$WORKTREE" config user.email "owner@example.com"
+```
+
+Verify GitHub CLI is `mshery`:
+
+```bash
+gh auth status
+```
+
+If it's not, surface and stop. Do not switch accounts on your own.
+
+#### 8b — Build the commit message
+
+Follow the repo style — look at `git log --oneline -10` in the worktree to confirm.
+
+```
+<type>(<scope>): ITS-XXX <imperative summary, ≤72 chars>
+
+<optional body — wrap at 72>
+
+Refs: ITS-XXX
+```
+
+- `<type>`: `feat` | `fix` | `chore` | `refactor` | `docs` | `test` | `perf` | `ci`. Match the `branch_type` from the ticket payload by default; override only when the commit scope clearly differs.
+- `<scope>`: lowercase area — match existing commits (`api`, `db`, `admin`, `hub`, `categories`, `pos`, `scheduling`, etc.). Multiple scopes allowed: `feat(api,db): ...`.
+- **Do NOT add a `Co-Authored-By: Claude` trailer.** The ShopStack repo's commit style omits it. Match the existing log.
+
+Commit:
+
+```bash
+git -C "$WORKTREE" commit -m "$(cat <<'EOF'
+<message>
+EOF
+)"
+```
+
+If a pre-commit hook fails: fix the underlying issue and create a NEW commit. Never `--no-verify`. Never `--amend` unless the user explicitly asked.
+
+#### 8c — Pre-push gate (HARD; NEVER SKIP)
+
+Run inside the worktree, stopping at the first non-zero exit:
+
+```bash
+npm run build \
+  --filter="@shopstack/<touched-pkg>^..." \
+  --filter="@shopstack/<touched-pkg>"
+
+npm run "@shopstack/<touched-pkg>" exec vitest run
+
+npm run "@shopstack/<touched-pkg>" lint
+```
+
+A "no such script" exit-0 is **not** a pass. Always inspect actual stdout/stderr. Use the `turbo build` form because every package has a `build` script that runs `tsc --noEmit`.
+
+If any command fails: re-invoke `shopstack-code-developer` (or `ui-stitcher` if it's a typecheck on UI wiring) ONCE with the verbatim error as the fix prompt. Re-run this gate. Two consecutive failures → escalate.
+
+#### 8d — Push
+
+```bash
+git -C "$WORKTREE" push -u origin "<branch>"
+```
+
+If the branch already exists on the remote, plain push (no force). Force-push requires explicit user approval; never force-push `main`.
+
+#### 8e — Open the PR
+
+Title — match the commit subject:
+
+```
+<type>(<scope>): ITS-XXX <summary>
+```
+
+Body — use `.github/pull_request_template.md` from the repo as the skeleton, filled with real content. Always include:
+
+```markdown
+## What does this PR do?
+
+<2–4 sentences. What changed and why. Link the Linear issue.>
+
+## How to test
+
+1. <Concrete step on the preview deploy>
+2. <Concrete step>
+3. <Edge case / negative path>
+
+<Include the browser-qa report's `manual_steps_for_pr` items here verbatim.>
+
+## Checklist
+
+- [x] TypeScript compiles (`turbo build` filtered to touched packages)
+- [x] Touched-package vitest passes
+- [ ] Tested on Vercel preview deployment   (human verifies)
+- [x] No console errors or warnings
+- [x] Mobile responsive (tested at 375px width — browser-qa screenshot in matrix)   (only if UI changed)
+- [x] Existing features still work (regression sweep in QA matrix)
+- [x] No secrets or credentials in the diff
+```
+
+Open:
+
+```bash
+BASE_BRANCH="${BASE:-main}"
+gh pr create \
+  --title "<title>" \
+  --body "$(cat <<'EOF'
+<body>
+EOF
+)" \
+  --base "$BASE_BRANCH" \
+  --head "<branch>"
+```
+
+**Never add reviewers or request review.** No `--reviewer`, no `--assignee`, no `--label`, no follow-up `gh pr edit --add-reviewer` / `gh api ...requested_reviewers`. The PR opens unreviewed — the team pulls from their own queue. (Per the relevant `.claude/rules/*.md` file.)
+
+Capture the PR URL and number.
+
+#### 8f — Post-create mergeable check
+
+GitHub computes `mergeable` asynchronously. Poll briefly (per the relevant `.claude/rules/*.md` file):
+
+```bash
+for i in {1..6}; do
+  STATE=$(gh pr view "$PR_NUM" --json mergeable,mergeStateStatus | jq -r '.mergeable')
+  [ "$STATE" != "UNKNOWN" ] && break
+  sleep 5
+done
+```
+
+- `MERGEABLE` → proceed.
+- `CONFLICTING` (or `mergeStateStatus = DIRTY`) → invoke `/shopstack-conflict-resolver` immediately, targeting this PR only. Resolve inside this worktree, push, and re-check. If the resolution is non-trivial or touches a protected module, stop and surface — do not silent-overwrite.
+- `UNKNOWN` after 6 polls → leave a note in the handoff and move on. The standalone conflict-resolver run later (step 9) will catch it.
+
+#### 8g — Auto-merge (only if `--auto-merge`)
+
+```bash
+gh pr merge "$PR_NUM" --squash --auto
+```
+
+Never run `gh pr merge --squash` without `--auto` — direct merge bypasses CI. Only target the `--base` you opened against (defaults to `main` here).
+
+### Step 9 — Move Linear to In Review + attach PR (linear-manager)
+
+Invoke `/shopstack-linear-manager` in `move` mode (target `In Review`) and then `attach` mode (PR URL). Optionally `comment` mode with the QA + review summaries.
+
+This is the chain's completion signal. Per the relevant `.claude/rules/*.md` file, do **not** wait for the PR to merge — opening it + moving Linear is "done" from this skill's perspective.
+
+### Step 10 — Conflict resolver (conditional)
+
+After opening this PR, advancing `main` may collide with other open mshery PRs.
+
+- Skip if the user passed a specific ticket and wants only this PR's flow.
+- Skip if there are fewer than 2 other open mshery PRs.
+- Otherwise run `/shopstack-conflict-resolver` (scans all open mshery PRs, not just this module's).
+
+## Final report
+
+When the chain ends (success or stop), print one summary:
+
+```
+SOUTHFLORAL_SHIP_SUMMARY
+ticket:        ITS-XXX — <title>
+status:        SHIPPED | STOPPED_AT_<STEP>
+worktree:      <path>
+branch:        <branch>
+pr:            <url or "not opened">
+linear:        In Review | In Progress | Triage | (status)
+auto_merge:    enabled | disabled
+qa_summary:    PASS | PASS_WITH_NOTES | FAIL — <n criteria>
+conflict_pass: <n resolved> / <n needs_human> / <n skipped>
+notes:         <anything the human should know>
+```
+
+## Hard rules
+
+- One ticket per run unless the user explicitly says "ship N tickets".
+- Never skip QA. Never push from the developer step. Never resolve conflicts inside the developer / designer / stitcher step.
+- Each sub-skill enforces its own invariants — trust them. Don't second-guess QA blockers or override git identity checks.
+- Worktrees are not cleaned up by this skill. The user (or auto-cleanup hook) prunes them later.
+- All Linear interactions go through `shopstack-linear-manager` — never call Linear MCP tools directly from this skill.
+
+## Related skills
+
+- [[shopstack-linear-manager]] — ticket lifecycle (replaces old issue-hunter)
+- [[shopstack-worktree-manager]]
+- [[shopstack-code-developer]]
+- [[shopstack-ui-designer]]
+- [[shopstack-ui-stitcher]]
+- [[shopstack-browser-qa]]
+- [[shopstack-conflict-resolver]]
+- [[shopstack-ship-module]] — module-level orchestrator that uses this skill as its per-lane runner

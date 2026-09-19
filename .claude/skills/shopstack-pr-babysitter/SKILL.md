@@ -1,0 +1,148 @@
+---
+name: shopstack-pr-babysitter
+description: Lightweight mid-day watcher for mshery's open ShopStack PRs — polls each one's CI status and mergeable state, auto-fixes mechanical failures (rebase against main, Prisma migration timestamp collision, force-push-with-lease), and surfaces non-mechanical failures for human review. Cheaper than running the full autopilot when you just want a passive babysitter while you do other work. Use when the user says "babysit my PRs", "watch my PRs", "check on the PRs", "are my PRs healthy", "auto-resolve CI on my PRs", or sets up a recurring poll via /loop or /schedule.
+---
+
+# ShopStack — PR Babysitter
+
+You are the **lightweight PR watcher**. Unlike the autopilot (which ships new tickets too), you only watch existing open PRs by mshery: poll CI, poll mergeable, auto-fix the mechanical failures, surface everything else. Designed to run on a short interval (every 5–15 min) without burning much context.
+
+This skill is **not** for shipping new tickets. If you find yourself wanting to claim a Linear ticket, the user wanted the autopilot, not the babysitter.
+
+## When to use
+
+- "Watch / babysit my PRs" / "check on the PRs" — one-shot
+- "Babysit every 10 min" — combine with `/loop` or `/schedule`
+- As a low-overhead alternative to running the autopilot when you're around but want background watching
+
+## Inputs
+
+Optional flags:
+- `--max-fixes N` — cap how many mechanical fixes to apply this tick (default 3 — keeps a single bad pattern from burning the whole poll budget)
+- `--quiet` — skip the summary output if nothing changed (good for tight `/loop` cycles)
+
+## What it watches
+
+```bash
+gh pr list \
+  --repo mshery/ShopStack-Portal \
+  --author mshery \
+  --state open \
+  --json number,title,headRefName,baseRefName,mergeable,mergeStateStatus,statusCheckRollup,reviewDecision,updatedAt,isDraft,url \
+  --limit 50
+```
+
+For each PR, decide:
+
+| Observed state | Babysitter action |
+|---|---|
+| `mergeable: MERGEABLE` + CI green | Leave alone (already healthy). If `--auto-merge` is enabled on the PR, GitHub handles it. |
+| `mergeable: MERGEABLE` + CI pending | Leave alone — wait for CI. |
+| `mergeable: MERGEABLE` + CI failed (mechanical) | **Auto-fix** — see "Mechanical fixes" below. Counts against `--max-fixes`. |
+| `mergeable: CONFLICTING` | Dispatch [[shopstack-conflict-resolver]] targeting this PR only. |
+| `mergeable: UNKNOWN` | Re-poll once (GitHub is async). If still UNKNOWN after 30s, move on — next tick will catch it. |
+| `reviewDecision: CHANGES_REQUESTED` | Surface in the report — human needs to address. Babysitter does not attempt to address reviewer feedback. |
+| `isDraft: true` | Skip — drafts are intentional WIP. |
+| `mergeStateStatus: DIRTY` (mergeable behind base) | Rebase against `origin/main` inside the PR's worktree; force-push-with-lease. |
+| `mergeStateStatus: BLOCKED` (required checks not all green) | If CI failure is mechanical → auto-fix. If review-blocked → surface. |
+
+## Mechanical fixes the babysitter handles (without escalating)
+
+Same self-problem-solving table as [[shopstack-autopilot]], but only for **CI/merge-related** failures, never for new code changes:
+
+| Failure signal | Fix |
+|---|---|
+| `prisma/migrations directory` conflict / same-idx | `npm run prisma:migrate:dev` (rename migration directory) in the worktree, commit, push |
+| `package-lock.json` conflict | `npm install` in the worktree, commit lockfile, push |
+| `Cannot find name 'X'` (missing import after rebase) | Add the import — only if the symbol is in scope of an existing imported module |
+| `Property 'getTime' does not exist on type 'string'` | Replace `instanceof Date` with `typeof x === 'string'` |
+| Mock signature drift (vitest "Expected … received …" on a mock) | Update the mock to match the real signature — only if the real signature was the recently-changed one |
+| Supabase migration timestamp collision | Bump the colliding migration's timestamp by 1 minute, commit, push |
+
+Each auto-fix consumes one `--max-fixes` slot. Append the outcome to `~/.claude/data/shopstack-autopilot/lessons.jsonl` (same file the autopilot uses — they share learnings) with `{ kind: "fix_worked" | "fix_failed", context.phase: "ci_failure" | "merge_conflict", ... }`.
+
+## Self-problem-solving — consult lessons first
+
+Before applying any auto-fix:
+
+1. Extract the failure signal (first error line, CI step name).
+2. Grep `~/.claude/data/shopstack-autopilot/lessons.jsonl` for matches on `{phase, signal}`.
+3. If ≥3 prior `outcome: passed` for the same action → apply without checking other options.
+4. If ≥2 prior `outcome: failed` → skip the obvious retry, surface as "known-bad fix, needs human".
+5. Otherwise → apply the mechanical fix and append the outcome.
+
+## Surface (never auto-fix) — escalate to user
+
+| Pattern | Why |
+|---|---|
+| 3+ consecutive CI failures on same PR with the same signal | Mechanical fix isn't working; needs human |
+| Test failure that isn't a mock-signature drift | Real regression possibility — human must look |
+| Linter error in `ShopStack-Server/src`, `ShopStack-Portal/src/modules/platform`, or another platform-owned area | Not the babysitter's turf |
+| Reviewer requested changes (`reviewDecision: CHANGES_REQUESTED`) | Human owns the response |
+| `mergeable: CONFLICTING` AND conflict-resolver returned `needs-human` | Complex 3-way merge needs intent |
+| Any database-safety blocker (per doctrine section 11) | **Hard stop** — never auto-fix DB destructive operations |
+| Branch protection / auth issue (push rejected) | Config problem, not a PR problem |
+
+For each surface, append one entry to the babysitter's report (don't pause — keep watching the other PRs).
+
+## Output
+
+After every tick:
+
+```
+SOUTHFLORAL_BABYSITTER_REPORT
+scanned:  <n> open PRs
+healthy:  <n>  (mergeable + CI green or pending)
+fixed:    <n>  (auto-fix applied)
+surfaced: <n>  (need human attention)
+
+healthy:
+  - PR #1234 (ITS-XXX) — CI pending, mergeable
+  - PR #1235 (ITS-YYY) — CI green, auto-merge armed
+
+fixed_this_tick:
+  - PR #1240 (ITS-AAA) — Prisma migration timestamp collisioned (idx 67→68); pushed
+  - PR #1241 (ITS-BBB) — rebased onto main; force-push-with-lease
+
+surfaced (needs you):
+  - PR #1245 (ITS-CCC) — vitest failure on inventory.adjustments.test.ts:42
+                          "expected cycle order [1,2,3] received [2,1,3]"
+                          (3 consecutive failures; likely real regression)
+  - PR #1247 (ITS-DDD) — reviewer requested changes by @teammate
+
+lessons_appended: <n>
+next_check_in:    <how long until next tick if scheduled>
+```
+
+In `--quiet` mode, suppress this block entirely when `fixed_this_tick` and `surfaced` are both empty.
+
+## Hard rules
+
+- **Never** touch a PR that isn't `--author mshery`. Skip non-mshery PRs entirely.
+- **Never** open new tickets, create new worktrees, or ship new code. That's the autopilot's job. The babysitter only touches existing PRs.
+- **Never** force-push without `--force-with-lease`. Never force-push `main`.
+- **Never** auto-fix a database-safety blocker. Always surface.
+- **Never** override a `reviewDecision: CHANGES_REQUESTED` — leave for the human to read the comments.
+- Cap `--max-fixes` (default 3) so a single broken pattern doesn't burn the whole tick budget.
+- Share `~/.claude/data/shopstack-autopilot/lessons.jsonl` with the autopilot — they learn from each other.
+
+## Running it on a schedule
+
+Pair this skill with `/loop` for in-session polling, or `/schedule` for cron-style remote agents:
+
+```
+/loop 10m /shopstack-pr-babysitter --quiet
+```
+
+Or:
+
+```
+/schedule create "babysit my PRs" "*/10 * * * *" /shopstack-pr-babysitter --quiet
+```
+
+## Related skills
+
+- [[shopstack-autopilot]] — the heavy version that also ships new tickets; reuses the same lessons file
+- [[shopstack-conflict-resolver]] — invoked when a PR is `CONFLICTING`
+- [[shopstack-linear-manager]] — used only to update Linear state on a PR you fixed (move Done, etc.)
+- [[shopstack-eod-report]] — reads the same `gh pr list` data this skill polls

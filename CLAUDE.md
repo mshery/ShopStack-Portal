@@ -110,4 +110,51 @@ Keep this list in sync whenever `.claude/rules/` files are added, renamed, or re
 
 Keep this list in sync whenever `.claude/skills/` folders are added, renamed, or removed.
 
-_None currently installed._
+> ShopStack is **two repos** (`ShopStack-Server` + `ShopStack-Portal`), not a monorepo. Most skills below were adapted from a single-monorepo source; many "the primary repo" mentions default to `ShopStack-Portal`. When the ticket clearly touches the API surface, point the skill at `ShopStack-Server` instead.
+
+### Orchestrators (drive multi-step delivery)
+
+- `.claude/skills/dev-pipeline/` — End-to-end feature delivery pipeline. Reads codebase → files tickets → worktrees → parallel agents → merge → browser QA → mark Done.
+- `.claude/skills/shopstack-ship-it/` — Pick the next ticket via `shopstack-linear-manager`, create a worktree, implement logic, design UI, stitch, run browser QA, open the PR, move Linear to In Review.
+- `.claude/skills/shopstack-ship-module/` — Module-wide shipping orchestrator. Given a Linear project (POS / Reports / Inventory / Purchases), builds a dependency-aware phase plan and runs lane-based parallel agents.
+- `.claude/skills/shopstack-autopilot/` — Autonomous AI engineer that runs the full ticket pipeline end-to-end with self-problem-solving and self-learning via a `lessons.jsonl` file. Use for overnight / hands-off runs.
+
+### Ticket lifecycle (Linear)
+
+- `.claude/skills/linear-ticket/` — Files structured Linear tickets (parent + sub-tickets) from any feature idea.
+- `.claude/skills/shopstack-ticket-shaper/` — Turns a one-line description into a fully-shaped Linear ticket (module, lane, priority, label, acceptance criteria).
+- `.claude/skills/shopstack-linear-manager/` — Full ticket lifecycle in Linear (create, edit, transition state, comment, attach PRs, pick the next ticket).
+- `.claude/skills/shopstack-ticket-status/` — Composite status report for one ticket: Linear state + open PR + CI/mergeable + worktree state + dependencies.
+- `.claude/skills/shopstack-eod-report/` — Casual end-of-day status update: mshery's PRs merged today (DONE), still open (InReview), and any blockers.
+- `.claude/skills/shopstack-module-status/` — Live module-status dashboard file for a `shopstack-ship-module` run; single source of truth that survives interruption.
+
+### Implementation
+
+- `.claude/skills/shopstack-code-developer/` — Implement the logic / API / data layer for a ticket inside its worktree. No UI in this step.
+- `.claude/skills/shopstack-ui-designer/` — Design and produce the UI for a ticket using ShopStack's Radix + Tailwind v4 design tokens (see `.claude/rules/design-principles.md`).
+- `.claude/skills/shopstack-ui-stitcher/` — Wire the freshly-designed UI to the real API hooks / types / endpoints — never invents endpoints or hook signatures.
+
+### Review & QA
+
+- `.claude/skills/shopstack-code-reviewer/` — Critical self-review of the staged diff before the PR opens (DB safety, scope discipline, design tokens, repo conventions).
+- `.claude/skills/shopstack-teammate-pr-reviewer/` — Same doctrine applied to a teammate's PR. Output is a single structured GitHub comment.
+- `.claude/skills/shopstack-browser-qa/` — Exhaustive browser-driven QA via Chrome MCP. Static gate + acceptance-criteria matrix + adjacent-feature regression sweep.
+- `.claude/skills/shopstack-smoke-tester/` — ~60-second smoke test: typecheck + build + app boot health check. Catches main-branch regressions early.
+
+### Git ops
+
+- `.claude/skills/shopstack-worktree-manager/` — Create or reuse an isolated git worktree + branch for a ticket so parallel agents don't collide.
+- `.claude/skills/shopstack-cleanup/` — List and delete local branches + worktrees whose PRs are already merged on GitHub.
+- `.claude/skills/shopstack-conflict-resolver/` — Find mshery's open PRs that have conflicts and resolve them inside each PR's worktree without breaking intent.
+- `.claude/skills/shopstack-rollback/` — Cleanly roll back a merged PR with a revert PR that itself passes the full ship-it gate.
+
+### CI / PR watchers
+
+- `.claude/skills/shopstack-pr-babysitter/` — Mid-day watcher for open PRs: polls CI + mergeable state, auto-fixes mechanical failures (rebase against main, Prisma migration timestamp collisions), force-pushes-with-lease.
+- `.claude/skills/shopstack-main-watcher/` — Recurring smoke test against the latest `origin/main`; on failure, identifies the suspect commit(s) from the last N merged PRs and alerts.
+
+### Incident & autopilot infrastructure
+
+- `.claude/skills/shopstack-incident-response/` — One-command orchestrator for prod incidents: assess severity → identify culprit via main-watcher → decide rollback vs forward-fix → execute → communicate.
+- `.claude/skills/shopstack-lessons-curator/` — Periodic reflective pass over the autopilot's `lessons.jsonl`: promotes proven fixes to defaults, retires known-bad patterns.
+- `.claude/skills/shopstack-docs-writer/` — Drafts or updates docs when a ticket introduces a new module, API, schema migration, RBAC rule, or significant feature.

@@ -1,0 +1,167 @@
+---
+name: shopstack-cleanup
+description: Clean up local ShopStack branches and worktrees whose PRs are already merged on GitHub. Lists candidates first, then deletes the local branch and removes the worktree directory once confirmed. Use when the user says "cleanup branches", "remove old worktrees", "clean up merged stuff", "prune branches", "free up disk space", or after a busy merge day. Also runs automatically after every Claude turn via the Stop hook (safe-only mode).
+---
+
+# ShopStack — Cleanup
+
+You reclaim local disk and tame `git branch` output by removing **fully-merged** branches and their worktrees. The trick is doing this safely — never delete in-progress work, never touch protected branches, never silently drop uncommitted changes.
+
+## Automatic mode (default since 2026-05-18)
+
+A safe-only variant runs **automatically** on every Claude `Stop` hook, fired from
+`~/.claude/scripts/shopstack-auto-cleanup.sh`. It:
+
+- Self-detaches via `setsid nohup`, so Claude never blocks on it.
+- Throttles itself to once per 5 minutes (via the mtime on `~/.claude/logs/.sf-auto-cleanup-last-run`).
+- Only deletes branches that pass **every** safety check below — exactly the SAFE-TO-REMOVE
+  bucket described in the manual flow below. Anything dirty or unverified is left alone.
+- Logs to `~/.claude/logs/shopstack-cleanup.log`.
+
+Disable per-shell with `export SF_AUTO_CLEANUP=0` if you want to pause it
+(e.g. while debugging a worktree). Re-enable by unsetting that var.
+
+The manual interactive flow described below remains available — invoke the skill
+explicitly when you want the human-confirm UX or when something needs review
+(dirty worktrees the auto hook will never touch).
+
+## Targets
+
+- Primary repo: `/Users/aura/Documents/ShopStack/ShopStack-Portal`
+- Worktree root: `/Users/aura/Documents/ShopStack/ShopStack-worktrees/`
+- Branch patterns to clean: `feat/sou-*`, `fix/sou-*`, `hotfix/sou-*`, `chore/sou-*` (the live convention), plus the legacy `mshery/sou-*` and `mshery/<module>-*` for older worktrees. Only deletes when there's an associated mshery PR that's merged.
+
+## Protected — never touch
+
+- `main`, `master`, `develop`, `qa/integration`, `staging`, `production`, anything matching `release/*`
+- The branch currently checked out in the **primary** repo (`git -C $REPO branch --show-current`)
+- Any branch whose worktree has uncommitted changes, untracked files you didn't expect, or in-progress rebase/merge state
+- Any branch whose PR is `OPEN` or `CLOSED-without-merge` (closed PRs may represent abandoned work the user wants to revisit)
+
+## Steps
+
+### 1. Gather state in parallel
+
+Run these together:
+
+```bash
+REPO=/Users/aura/Documents/ShopStack/ShopStack-Portal
+WORKTREE_ROOT=/Users/aura/Documents/ShopStack/ShopStack-worktrees
+
+git -C "$REPO" fetch origin --prune
+
+git -C "$REPO" branch --list 'feat/sou-*' 'fix/sou-*' 'hotfix/sou-*' 'chore/sou-*' 'mshery/*'
+git -C "$REPO" worktree list --porcelain
+gh pr list --repo mshery/ShopStack-Portal \
+  --author mshery --state merged \
+  --search "merged:>=$(date -v-30d +%Y-%m-%d)" \
+  --json number,title,url,headRefName,mergedAt \
+  --limit 100
+```
+
+(macOS date syntax shown; on Linux use `date -d '30 days ago' +%Y-%m-%d`. 30 days is a generous lookback for "recently merged".)
+
+### 2. Build the cleanup list
+
+A branch is a **cleanup candidate** when:
+
+1. It exists locally, AND
+2. There is a PR on GitHub whose `headRefName` matches the branch name, AND
+3. That PR's state is `MERGED`, AND
+4. The branch isn't protected (see list above), AND
+5. The branch isn't currently checked out in the primary repo
+
+For each candidate, also identify its worktree (if any) by walking `git worktree list --porcelain` and matching the branch.
+
+A branch can also be a candidate if it's **gone on origin** (origin/<branch> no longer exists after the prune) AND has no associated open PR — but flag these as "origin-gone, no merge record found" so the user can double-check before deleting.
+
+### 3. Pre-flight each candidate's worktree
+
+For every candidate worktree:
+
+```bash
+git -C "<wt>" status --porcelain
+git -C "<wt>" stash list
+ls -la "<wt>" 2>/dev/null   # spot stray files outside git's view
+```
+
+If **any** of these turn up something unexpected — uncommitted changes, untracked files that aren't `.env*` or `node_modules`, a non-empty stash, an in-progress rebase/merge (`.git/rebase-*`, `.git/MERGE_HEAD`) — **demote the candidate from "safe to delete" to "needs review"** and explain why.
+
+### 4. Show the plan, then confirm
+
+Print three lists:
+
+```
+SAFE TO REMOVE (PR merged, worktree clean):
+  - mshery/its-554-burq-rest-client-wrapper   PR #934  worktree: its-554-burq-rest
+  - mshery/its-553-...                        PR #930  worktree: (none)
+
+NEEDS REVIEW (PR merged but worktree not clean):
+  - mshery/its-557-...   PR #927   reason: 2 uncommitted files in worktree
+                                    files: <list>
+
+LEFT ALONE:
+  - mshery/its-628-...   PR #941 still OPEN
+  - mshery/its-689-...   no PR found
+  - main, qa/integration  (protected)
+```
+
+If running interactively, ask the user to confirm before any deletion. In autonomous/chained mode, proceed with **SAFE TO REMOVE** only — never auto-delete from **NEEDS REVIEW**.
+
+### 5. Delete safely
+
+For each confirmed candidate:
+
+```bash
+# Remove the worktree first (if one exists). This also detaches the branch from it.
+git -C "$REPO" worktree remove "<wt-path>"
+# If worktree remove fails because the dir was already deleted by hand:
+git -C "$REPO" worktree prune
+
+# Then delete the local branch. Use -d (safe) first; only fall back to -D if
+# git reports the branch is fully merged into main per the upstream.
+git -C "$REPO" branch -d "<branch>"
+# If -d refuses because the branch isn't merged into the *local* main (common
+# when squash-merge was used on GitHub), verify the PR was squash-merged and
+# the commits exist on main as a single squash commit, then:
+git -C "$REPO" branch -D "<branch>"
+```
+
+**Never** force-delete (`-D`) without first confirming the PR was merged on GitHub. A squash-merge legitimately leaves the local branch's commits as "unmerged" from git's POV, but the work is in `main` — that's the one safe case for `-D`.
+
+### 6. Optional — remove stale local tracking refs
+
+After branch deletion, the remote-tracking ref `origin/<branch>` may linger if `fetch --prune` didn't catch it. Re-run prune:
+
+```bash
+git -C "$REPO" remote prune origin
+```
+
+### 7. Report
+
+```
+SOUTHFLORAL_CLEANUP_REPORT
+removed_branches: <n>
+removed_worktrees: <n>
+freed_disk: ~<estimate from `du -sh` on each worktree before deletion>
+skipped_needs_review: <n>
+skipped_protected:    <n>
+still_open_prs:       <n>
+```
+
+End with a one-line human summary: "Cleaned up N branches and M worktrees. K need review (see above)."
+
+## Hard rules
+
+- **Never** delete the currently checked-out branch in the primary repo. Switch is not your job.
+- **Never** `rm -rf` a worktree directory directly — always use `git worktree remove`. If that fails, surface the error and stop. The user can then decide whether to `git worktree remove --force` or investigate by hand.
+- **Never** delete a branch that doesn't have a matching merged PR, even if it looks abandoned. The user keeps stale branches around for reasons (revival, reference). The only exception is "origin gone, no PR record at all" — and even then, ask first.
+- **Never** touch `~/.gitconfig` or global state.
+- **Never** delete other developers' branches — only `feat/sou-*`, `fix/sou-*`, `hotfix/sou-*`, `chore/sou-*`, and the legacy `mshery/*` patterns. Filter by checking `git log <branch> --format='%ae' | head -1` if you're unsure whether a branch belongs to mshery (`owner@example.com`).
+- If the worktree has a running dev server or process holding a file lock, `worktree remove` will fail with a clear error — surface it, don't try to kill processes.
+- This skill is **destructive**. Default to interactive confirmation. Only run silently when chained from an orchestrator that explicitly authorizes autonomous cleanup.
+
+## Related
+
+- Worktree creation lives in [[shopstack-worktree-manager]]; this skill is its inverse.
+- PR/merge state comes from the same `gh pr list --author mshery` flow used by [[shopstack-conflict-resolver]] and [[shopstack-eod-report]].

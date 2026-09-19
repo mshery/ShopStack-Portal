@@ -1,0 +1,238 @@
+---
+description: One-command orchestrator for ShopStack prod incidents — assesses severity, identifies the responsible PR/commit via main-watcher, decides between rollback and forward-fix, executes the chosen path, communicates to the team via Slack/Linear umbrella comment, and writes an incident log. Use when the user says "prod is on fire", "incident", "page", "users can't <X>", "main is broken — fix it", "sev 1/2/3 — <description>", or anything that signals a production-affecting issue.
+---
+
+
+# ShopStack — Incident Response
+
+You are the **prod-incident orchestrator**. When production is degraded or down, this skill coordinates the response: figure out what broke, decide whether to roll back or forward-fix, execute, communicate. Same skills as the rest of the toolset (main-watcher, rollback, ticket-shaper, linear-manager), but with crisis-mode defaults: faster cadence, broader alerting, mandatory incident log.
+
+## When to use
+
+- "Prod is on fire" / "users can't <X>" / "page"
+- "Incident" / "sev 1" / "sev 2"
+- "Main is broken — fix it now"
+- main-watcher fires a `level: block` alert and the user accepts triage
+
+## Inputs
+
+Required (or asked once at start — this is a legitimate non-skip pause):
+- `--sev 1|2|3` — severity. Drives cadence and broadcast level.
+  - **Sev 1:** users blocked, money at risk, data integrity. Broadcast to all team channels, page on-call, mandatory rollback consideration.
+  - **Sev 2:** significant degradation but workaround exists. Broadcast to dev channel, rollback is option-A.
+  - **Sev 3:** minor impact, not customer-facing. Internal log only, forward-fix preferred.
+- `--symptom TEXT` — what the user is seeing. One sentence.
+
+Optional:
+- `--suspect-pr #N` — if the user already knows which PR caused it, skip the detection step.
+- `--auto-rollback` — if a single clear suspect is found, auto-execute rollback (per `shopstack-rollback`). Sev-1 default.
+
+## The response flow
+
+### Step 0 — Open the incident log
+
+Immediately create `~/.claude/data/shopstack-incidents/incident-YYYY-MM-DD-HHMM.md`:
+
+```markdown
+# Incident — YYYY-MM-DD HH:MM
+
+**Severity:** <1/2/3>
+**Reported by:** <user>
+**Symptom:** <as given>
+**Started:** <ISO datetime when this skill was invoked>
+**Status:** Investigating
+
+## Timeline
+
+- HH:MM — Incident opened.
+```
+
+Every subsequent step appends to the Timeline with a real timestamp. The log is the chain of custody.
+
+### Step 1 — Confirm the symptom
+
+If `--symptom` was just a vague phrase, drill once for specifics: which URL, which feature, which user role, since when. (One question — incidents need facts.)
+
+For Sev 1 + 2: kick off a parallel `shopstack-main-watcher` run **without** waiting for its scheduled cadence — get a fresh smoke result against `origin/main`. If smoke fails, that's the technical confirmation.
+
+For Sev 3: skip the smoke — the user already saw something specific; trust their report.
+
+Log:
+```
+- HH:MM — Confirmed: <smoke result OR user-described symptom>
+```
+
+### Step 2 — Identify the suspect
+
+Look at the last 10 merges to `main`:
+
+```bash
+git -C /Users/aura/Documents/ShopStack/ShopStack-Portal fetch origin --prune
+git -C /Users/aura/Documents/ShopStack/ShopStack-Portal log \
+  --first-parent --merges origin/main -10 \
+  --format='%h %ai %s'
+```
+
+Cross-reference each with the symptom — `gh pr view <num>` to see what the PR changed; does it touch the area the user reported broken?
+
+- **Clear single suspect** (1 PR touches the affected area, merged in the last 2 hours) → high confidence.
+- **Multiple candidates** → mid confidence; investigate top 2 in parallel.
+- **No recent suspect** (symptom may pre-date the last merge) → low confidence; this might be an environment / infra issue, not code.
+
+Log:
+```
+- HH:MM — Suspect: PR #1234 (ITS-XXX) — <PR title>
+          Last merged 23m ago, touches ShopStack-Portal/src/src/app/api/scheduling/...
+          Confidence: high
+```
+
+If `--suspect-pr` was passed, skip the detection and trust the user.
+
+### Step 3 — Decide the path
+
+| Severity | Confidence | Action |
+|---|---|---|
+| Sev 1 | High | **Rollback now.** Dispatch `/shopstack-rollback #N --reason "<symptom>"`. Forward-fix later. |
+| Sev 1 | Low | **Pause prod.** Broadcast immediately. If feasible, revert the last N merges (the user decides). Do NOT guess — wrong rollback compounds the incident. |
+| Sev 2 | High | **Rollback** if revert is non-destructive (no schema), OR **forward-fix** if the fix is < 30 min of work. Surface both options to the user, pick one. |
+| Sev 2 | Low | **Investigate first.** Do not auto-rollback without confirming the suspect. |
+| Sev 3 | Any | **Forward-fix.** Create a `hotfix/its-XXX-*` ticket via ticket-shaper, dispatch ship-it. |
+
+Log the decision:
+```
+- HH:MM — Decision: ROLLBACK PR #1234.
+          Rationale: single clear suspect + Sev 1 = no forward-fix tolerance.
+```
+
+### Step 4 — Execute
+
+#### Path A — Rollback
+
+Dispatch `/shopstack-rollback #N --reason "incident YYYY-MM-DD: <symptom>"`. The rollback skill handles the full revert flow (browser-qa + code-reviewer on the revert + open revert PR + re-open Linear ticket).
+
+Watch the rollback report. If rollback fails (DB-safety blocker because the original PR added a column), surface to the user — the rollback is now itself a destructive operation, and the path may need to flip to forward-fix.
+
+Log:
+```
+- HH:MM — Rollback dispatched.
+- HH:MM — Rollback PR #1250 opened: <url>
+- HH:MM — Auto-merge requested (Sev 1 — bypass review).
+- HH:MM — Rollback merged. Smoke re-running.
+- HH:MM — Smoke result: PASS. Main green at <sha>.
+```
+
+For Sev 1 with `--auto-rollback`, the rollback PR auto-merges. The user owns the call to merge for Sev 2.
+
+#### Path B — Forward-fix
+
+Use `shopstack-ticket-shaper` to log a new ticket (priority 1, `hotfix` type), then dispatch `/shopstack-ship-it <new-ticket>` with the failing PR as context. The ship-it chain runs at full speed; auto-merge is opt-in per the user's call.
+
+Log the new ticket ID, the PR when it opens, the merge when it happens.
+
+### Step 5 — Communicate
+
+Broadcast to channels based on severity:
+
+| Severity | Broadcast |
+|---|---|
+| Sev 1 | Slack (#engineering + #incidents if MCP wired) + Linear comment on affected umbrella + mobile push to user |
+| Sev 2 | Slack (#engineering) + Linear comment on affected umbrella |
+| Sev 3 | Linear comment on affected ticket; no broadcast |
+
+The broadcast message template:
+
+```
+🚨 INCIDENT — Sev <N>
+
+Symptom: <as reported>
+Detected: <HH:MM>
+Affected: <area / route / module>
+
+Action taken: <ROLLBACK PR #N | FORWARD-FIX in PR #M>
+Status: <Investigating | Rollback in flight | Merged — recovering | Resolved>
+
+Owner: @mshery (autopilot-coordinated)
+Log: ~/.claude/data/shopstack-incidents/incident-<file>.md
+```
+
+If no external MCP is wired (no Slack), surface the message to the user with a "paste this into #engineering" line.
+
+### Step 6 — Verify recovery
+
+After rollback merges or forward-fix merges:
+
+1. Re-run `shopstack-main-watcher` against `origin/main` — confirm smoke passes.
+2. If the symptom was user-facing (UI broken), navigate to the affected route via Claude in Chrome (if connected) and confirm visually.
+3. Update the incident log with a `Resolved` timestamp.
+
+Log:
+```
+- HH:MM — Smoke: PASS at <sha>.
+- HH:MM — UI spot-check: <route> renders correctly.
+- HH:MM — Resolved.
+```
+
+### Step 7 — Post-incident actions
+
+Always create a follow-up ticket:
+
+- **For rollbacks:** A "root-cause ITS-XXX failure" ticket assigned to owner@example.com, via `shopstack-ticket-shaper`. Investigates *why* the original PR broke and what should change in the doctrine / tests / review to prevent the same class of issue.
+- **For forward-fixes:** A "post-mortem on incident YYYY-MM-DD" ticket with the same intent.
+
+Log:
+```
+- HH:MM — Follow-up ticket created: ITS-XXXX (root-cause investigation).
+```
+
+Append a `lessons.jsonl` entry under the autopilot's lessons file with `kind: "anomaly"` and the full failure pattern so future similar incidents are detected faster.
+
+### Step 8 — Close the log
+
+Update the incident log's header:
+
+```markdown
+**Status:** Resolved
+**Resolved:** <ISO datetime>
+**Duration:** <Xm Ys>
+**Path:** Rollback PR #N | Forward-fix PR #M
+**Follow-up:** ITS-XXXX
+```
+
+Tell the user the log path and offer to open it.
+
+## Output
+
+```
+SOUTHFLORAL_INCIDENT_REPORT
+severity:       1 | 2 | 3
+symptom:        <one line>
+opened_at:      <ISO>
+resolved_at:    <ISO or "in progress">
+duration:       <Xm Ys>
+path_taken:     rollback | forward-fix | none-needed
+suspect_pr:     #1234 (ITS-XXX)
+action_pr:      #1250 (revert) | #1251 (forward-fix)
+follow_up:      ITS-XXXX
+broadcast:      slack-engineering + linear-comment + mobile-push  (or "manual — paste this:")
+log:            ~/.claude/data/shopstack-incidents/incident-YYYY-MM-DD-HHMM.md
+```
+
+## Hard rules
+
+- **Severity decides everything.** Auto-rollback default is Sev-1-only; Sev-2 always asks; Sev-3 forward-fix.
+- **No silent rollbacks.** The incident log is mandatory. Every action gets a timestamp.
+- **DB-safety blockers stop the rollback path.** If the original PR added a column, the revert drops it — that's a destructive operation per doctrine section 11. Pause and surface; don't auto-execute.
+- **Never blame in the broadcast.** Even if a teammate's PR caused the incident, the broadcast is neutral. The follow-up ticket handles the root-cause investigation factually.
+- **Recovery verification is required.** Don't close the incident without a passing smoke + a UI spot-check (when applicable).
+- **Always create the follow-up ticket.** No incident closes without "why did this happen and what changes" being logged.
+- **For Sev 1, broadcast first, then act.** The team needs to know within the first minute. Acting first and broadcasting after is the pattern that compounds incidents.
+- **Time is the resource.** Don't wait for confirmations on Sev 1 — apply the doctrine's "decide yourself" rules aggressively.
+
+## Related skills
+
+- [[shopstack-main-watcher]] — fires the alert that often starts an incident; this skill takes over from there
+- [[shopstack-rollback]] — executes the revert path
+- [[shopstack-ship-it]] — executes the forward-fix path
+- [[shopstack-ticket-shaper]] — logs the follow-up + root-cause ticket
+- [[shopstack-linear-manager]] — posts incident comments on affected Linear tickets / umbrellas
+- [[shopstack-autopilot]] — pauses itself when an incident-response is in flight (the incident takes priority over the autopilot's queue)

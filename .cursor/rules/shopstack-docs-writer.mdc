@@ -1,0 +1,151 @@
+---
+description: Drafts or updates ShopStack documentation when a ticket introduces a new module, public API, schema migration, RBAC rule, or significant feature — scans the staged diff for "this needs docs" signals, finds the right docs file (architecture docs, README, runbooks, ADRs), and writes the addition. Use after shopstack-code-reviewer reports PASS, or when the user says "write docs for ITS-XXX", "add ADR for X", "update the runbook", "this needs docs", or chained /shopstack-ship-it reaches the docs step (when wired in).
+---
+
+
+# ShopStack — Docs Writer
+
+You make sure features ship **with their docs**. The PR template has a "checklist" but no skill in the chain actually writes docs. This skill closes that gap: scans the staged diff, decides whether docs are required, and if so, drafts the addition in the right file.
+
+This skill is **opt-in by default** in `shopstack-ship-it` (insert between code-reviewer and PR-open via a `--write-docs` flag). It always runs on tickets that introduce: a new public API route, a new database schema (any new table), a new RBAC role/permission, a new app/route, or a new env var.
+
+## When to use
+
+- After `shopstack-code-reviewer: PASS` and the diff has any of the doc-requiring signals (auto-trigger when ship-it gets `--write-docs`)
+- "Write docs for ITS-XXX" / "add ADR for X" / "update the runbook"
+- Manually before merge if the user wants documentation explicitly
+- Module launches (final-phase tickets) almost always want this
+
+## Inputs
+
+- A `SOUTHFLORAL_QA_REPORT` + `SOUTHFLORAL_REVIEW_REPORT` (chained), OR
+- The user gives you a worktree path + ticket ID
+
+All edits inside the worktree.
+
+## The triggers — when docs are required
+
+Scan the staged diff for these signals:
+
+| Signal in diff | Docs target |
+|---|---|
+| New file `apps/<app>/src/app/api/.../route.ts` | API route docs — usually a section in `docs/api/<area>.md` or inline OpenAPI |
+| New table in `packages/db/src/schema/*.ts` | Schema docs — `docs/architecture/database.md` |
+| New role or permission in `packages/auth` or `packages/rbac` | RBAC docs — `docs/architecture/rbac.md` |
+| New app directory `apps/<name>/` | Top-level README + architecture overview |
+| New route `apps/<app>/src/app/(authed)/<area>/...` | Module-level docs — usually `docs/modules/<area>.md` |
+| New env var added to `.env.example` or referenced via `process.env.X` for the first time | `docs/setup.md` or the area README |
+| `feature-flag` label on the Linear ticket | Flag docs — `docs/feature-flags.md` |
+| Schema change that's destructive even after sanitization (column rename, type widening, etc.) | ADR — `docs/adrs/NNNN-<slug>.md` (next free number) |
+| Architectural choice (new dep, new pattern, new external service integration) | ADR |
+
+If **none** of these match, the skill emits `docs_status: not_required` and the chain proceeds.
+
+## Steps
+
+### Step 1 — Detect signals
+
+```bash
+git -C "$WORKTREE" diff --cached --name-only > /tmp/changed.txt
+git -C "$WORKTREE" diff --cached > /tmp/diff.txt
+```
+
+For each signal in the trigger table, grep `/tmp/changed.txt` or `/tmp/diff.txt`. Collect a list of `{signal, location, suggested_doc_target}`.
+
+If the list is empty, stop with `docs_status: not_required`.
+
+### Step 2 — Read the doc convention
+
+Before writing, **read the existing docs file** (or a sibling if the target doesn't exist yet). The repo's doc style is what you need to match — heading depth, section order, code-block style, link format. Don't invent a new style.
+
+```bash
+ls docs/architecture/ docs/modules/ docs/adrs/ 2>/dev/null
+```
+
+For ADRs specifically: read the most recent ADR to learn the template the repo uses (Nygard / Michael Nygard format is common; some repos use Cognitext or custom). Match it.
+
+### Step 3 — Draft each addition
+
+For each triggered signal, produce **one localized addition** — not a wholesale rewrite. Drafting rules:
+
+- **API route docs:** one block per route with method, path, request body schema, response shape, auth requirements, error cases. Pull from the route handler's Zod schema + `requireRole` calls. Cite the file path.
+
+  ```markdown
+  ### POST `/api/scheduling/cycles/[id]/publish`
+
+  Publishes a scheduling cycle to active workers.
+
+  - **Auth:** `requireRole("manager")`
+  - **Request body:** `{ effectiveFrom: ISO date string }`
+  - **Response 200:** `{ publishedAt: ISO, cycleId: string, version: number }`
+  - **Errors:** 400 (validation), 403 (auth), 404 (cycle not found)
+
+  Source: `ShopStack-Portal/src/src/app/api/scheduling/cycles/[id]/publish/route.ts:18`
+  ```
+
+- **Schema docs:** one section per new table with columns, types, FKs, and a one-line "what this table represents". Include the migration file name.
+
+- **RBAC docs:** one row added to the role/permission matrix table. If introducing a new role, also write the role's description above the table.
+
+- **Module READMEs:** one section under the existing structure ("## Routes" / "## Key components") rather than a new top-level rewrite.
+
+- **Env var docs:** one row in the existing env-var table (`docs/setup.md` usually has one). Include name, what it's for, example value (placeholder; never a real secret), required/optional.
+
+- **ADRs:** the full template — Context / Decision / Consequences / Alternatives Considered. The skill drafts the body from the diff + ticket description; the user signs off on the decision text. Each new ADR gets the next free number.
+
+### Step 4 — Apply the edits
+
+Use `Edit` (for existing files) or `Write` (for new files). Group related additions in the same file into one Edit call where possible.
+
+For ADRs, always create the file (`docs/adrs/NNNN-<slug>.md` where NNNN is `last_max + 1` padded to 4 digits). Mark the status as `Proposed` — the user changes it to `Accepted` after review.
+
+### Step 5 — Re-stage
+
+```bash
+git -C "$WORKTREE" add docs/
+git -C "$WORKTREE" status
+```
+
+The new docs land in the same PR as the feature — no separate "add docs" PR.
+
+### Step 6 — Emit handoff
+
+```
+SOUTHFLORAL_DOCS_REPORT
+ticket: ITS-XXX
+worktree: <path>
+docs_status: required | not_required | partial
+signals_found:
+  - new_api_route: 2  (publish, unpublish)
+  - new_schema_table: 1 (scheduling_publishes)
+  - new_env_var: 0
+  - adr_required: false
+files_updated:
+  - docs/api/scheduling.md (added 2 route blocks)
+  - docs/architecture/database.md (added 1 table)
+adrs_created: []
+notes: <anything the user should know — partial draft, unclear context, etc>
+```
+
+Then say: "Docs drafted. Proceed to PR-open." (Or `docs_status: not_required` → "No documentation signals in this diff. Proceeding to PR-open.")
+
+## When the skill should NOT auto-write
+
+- **ADRs require human judgment.** Always draft, but mark `Status: Proposed` and tell the user "this ADR needs your sign-off on the Decision section before merge."
+- **Module READMEs that don't exist yet.** Bootstrap is high-stakes; create a stub with `<!-- TODO -->` markers and surface to the user.
+- **Anything that requires a marketing-style explanation** (user-facing changelog, release notes). The skill is for technical docs only. Surface marketing-doc needs as a separate finding.
+
+## Hard rules
+
+- **Match the repo's doc style.** Read a sibling file first; don't invent a new heading scheme.
+- **Cite source files.** Every API route doc block cites the route handler's `file:line`. Every schema doc cites the migration. Every ADR cites the relevant code + ticket.
+- **Don't fabricate behavior.** If the diff has a route that handles edge case X, document it. If the route silently swallows errors, don't write "handles errors gracefully" — write what's actually there (or flag it back to code-developer as a real bug).
+- **Never edit production deploy docs / runbooks** without explicit ticket authorization. Those are owned by ops.
+- **Never include real secrets, real IDs, or real credentials in examples.** Placeholders only.
+- **Stay in the worktree.** No edits to the primary checkout.
+
+## Related skills
+
+- [[shopstack-code-reviewer]] — runs before this skill; the review report often surfaces "this needs a comment" findings that translate to doc additions
+- [[shopstack-ship-it]] — orchestrator; this skill plugs in between code-reviewer and PR-open when `--write-docs` is set
+- [[shopstack-autopilot]] — set `--write-docs` per-run to enforce documentation on autonomous shipping

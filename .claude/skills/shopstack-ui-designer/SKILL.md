@@ -1,0 +1,476 @@
+---
+name: shopstack-ui-designer
+description: Design and produce the UI for a ShopStack ticket directly inside its worktree, using the existing ShopStack design system (colors, fonts, spacing, primitives, layout patterns from POS, Inventory, and Products). Skip the round-trip to Claude Design — this skill already knows the system. Use after shopstack-code-developer has shipped the logic/API layer, or when the user says "design the UI for ITS-XXX", "build the UI", "make the page for this ticket", or chained /shopstack-ship-it reaches the design step.
+---
+
+# ShopStack — UI Designer
+
+You design and produce UI **for** a ShopStack ticket using the **existing ShopStack design system** that powers the POS, Inventory, and Products apps. The user previously had to round-trip to Claude Design to draft the UI in isolation, then stitch it back — this skill exists to skip that round-trip by encoding the design system here.
+
+Two things make this work:
+
+1. **You already know the design system** (encoded below — tokens, primitives, layout patterns, UX conventions).
+2. **You always read the implemented code first** (the dev step's output) so the UI uses real types and is built to consume the real data shapes — no inventing.
+
+## Inputs
+
+- A `SOUTHFLORAL_DEV_COMPLETE` handoff (worktree + ticket ID + files touched in the logic step), OR
+- The user gives you worktree path + ITS-XXX directly
+
+All work happens inside the **worktree** — never the primary checkout.
+
+## The flow
+
+### Step 1 — Re-load context
+
+Call `mcp__linear__get_issue` on the ITS-XXX. Capture:
+
+- Title, full description, acceptance criteria
+- Any attached design references (Figma links, screenshots — note the URL only; do not assume from the URL what's inside)
+- Linked tickets (parent often has the umbrella feature spec)
+
+Re-read the files the developer touched (from the dev handoff) so you know:
+
+- The data types / DTOs the UI will render (cite file paths)
+- The hooks / API routes / server actions that already exist (the UI must consume these by name)
+- The existing UI files in the touched area (if any — match their structure)
+
+### Step 2 — Identify the right app + route
+
+Pick the app the UI lives in:
+
+- **`apps/pos`** — point of sale (transactions, returns, reconciliation, shift management, kiosk-style)
+- **`ShopStack-Portal/src`** — back-office hub. Most admin UI lives under `ShopStack-Portal/src/src/app/hq/<area>/...`. Includes:
+  - Scheduling: `ShopStack-Portal/src/src/app/hq/scheduling/...`
+  - Tasks (customer storefront sub-brand): `ShopStack-Portal/src/src/app/hq/tasks/...`
+  - Engagements: `ShopStack-Portal/src/src/app/hq/engagements/...`
+  - Team/Users: `ShopStack-Portal/src/src/app/hq/team/...`
+  - Insights: `ShopStack-Portal/src/src/app/hq/insights/...`
+- **`ShopStack-Portal/src/modules/platform`** — root-level admin / superuser (rare)
+- **`ShopStack-Server/src`** — public-facing storefront (platform-owned; don't touch unless ticket explicitly says so)
+- **`apps/driver`** — driver app (delivery)
+
+If the ticket doesn't specify, infer from the data the dev added (API route paths usually give it away: `/api/scheduling/*` → scheduling area).
+
+### Step 3 — Pick the design layer
+
+There are three brand layers in this codebase. Pick the right one for your area:
+
+- **ShopStack default** (primary-blue primary `#0F172A`) — hub, admin, scheduling, engagements, team, insights, POS most surfaces
+- **admin kiosk** (teal primary `#13898A`) — `ShopStack-Portal/src/src/app/hq/time/kiosk/**` ONLY. Used on physical kiosk hardware.
+- **customer storefront** (warm secondary `#2C4566`, Fraunces serif headings) — `ShopStack-Portal/src/src/app/hq/tasks/**` ONLY. Scoped by the `.tasks-route` class on the route's root layout.
+
+Tokens are switched by CSS class scoping. You don't pick colors — you pick the right area and the tokens apply.
+
+### Step 4 — Build the page skeleton from the canonical template
+
+Every standard back-office page in this repo follows this skeleton. Use it as your starting point and only deviate when the ticket requires.
+
+```tsx
+"use client";
+
+import * as React from "react";
+import { Plus, ChevronDown } from "lucide-react";
+import { toast } from "sonner";
+
+// Stores (Zustand) — most pages need at least these two
+import { useAuthStore } from "@/stores/auth-store";
+import { useLocationStore } from "@/stores/location-store";
+
+// Layout chrome
+import { PageHeader } from "@/components/page-header";
+import { PagePermissionGate } from "@/components/page-permission-gate";
+
+// UI primitives
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
+import { DataTable } from "@/components/data-table";
+
+// Real data hook(s) the dev shipped — IMPORT BY THE REAL NAME, not a placeholder
+import { useFoo } from "@/hooks/foo/useFoo";
+
+export default function FooPage() {
+  const currentLocationId = useLocationStore((s) => s.currentLocationId);
+  const [tab, setTab] = React.useState<"list" | "grid">("list");
+  const [search, setSearch] = React.useState("");
+
+  const { data, isLoading, error, refetch } = useFoo(currentLocationId);
+
+  const rows = React.useMemo(
+    () => (data ?? []).filter((r) => r.name.toLowerCase().includes(search.toLowerCase())),
+    [data, search],
+  );
+
+  return (
+    <PagePermissionGate permissions={["foo:read"]} roles={["owner", "admin", "manager"]}>
+      <div className="space-y-6">
+        <PageHeader
+          title="Foo"
+          description="Manage your foos"
+          actions={
+            <Button>
+              <Plus className="size-4" />
+              Add foo
+            </Button>
+          }
+        />
+
+        <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
+          <TabsList>
+            <TabsTrigger value="list">List</TabsTrigger>
+            <TabsTrigger value="grid">Grid</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="list" className="mt-6 space-y-4">
+            <Input
+              placeholder="Search foos…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+
+            {isLoading ? (
+              <div className="space-y-2">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+              </div>
+            ) : error ? (
+              <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+                Failed to load foos.{" "}
+                <button onClick={() => refetch()} className="underline">
+                  Try again
+                </button>
+              </div>
+            ) : rows.length === 0 ? (
+              <EmptyState />
+            ) : (
+              <DataTable columns={columns} data={rows} searchKey="name" />
+            )}
+          </TabsContent>
+        </Tabs>
+      </div>
+    </PagePermissionGate>
+  );
+}
+```
+
+### Step 5 — Compose the UI from real primitives
+
+**Never invent a component.** The repo already has the primitives you need. Import them from these locations:
+
+#### From `@/components/ui/` (per-app overrides — most common)
+
+| Primitive | Path | Notes |
+|---|---|---|
+| `Button` | `@/components/ui/button` | Variants: `default` (primary), `outline`, `secondary`, `ghost`, `destructive`, `link`. Sizes: `xs`, `sm`, `default`, `lg`, `icon`, `icon-xs`, `icon-sm`, `icon-lg`. |
+| `Input` | `@/components/ui/input` | Built on `@base-ui/react`. Use `aria-invalid` to show error state. |
+| `Label` | `@/components/ui/label` | Semantic form label. |
+| `Card`, `CardHeader`, `CardTitle`, `CardDescription`, `CardContent`, `CardFooter`, `CardAction` | `@/components/ui/card` | Standard card surface. |
+| `Dialog`, `DialogContent`, `DialogHeader`, `DialogTitle`, `DialogDescription`, `DialogFooter` | `@/components/ui/dialog` | Built on `@base-ui/react/dialog`. |
+| `AlertDialog`, …Action, …Cancel | `@/components/ui/alert-dialog` | Confirmations / destructive prompts. |
+| `Tabs`, `TabsList`, `TabsTrigger`, `TabsContent` | `@/components/ui/tabs` | Tab nav for multi-view pages. |
+| `Table`, `TableHeader`, `TableBody`, `TableRow`, `TableHead`, `TableCell` | `@/components/ui/table` | Low-level table; usually wrapped by `DataTable`. |
+| `Select`, `SelectTrigger`, `SelectValue`, `SelectContent`, `SelectItem` | `@/components/ui/select` | Dropdown select. |
+| `Checkbox` | `@/components/ui/checkbox` | |
+| `Switch` | `@/components/ui/switch` | Toggle. |
+| `Skeleton` | `@/components/ui/skeleton` | Animated pulse placeholder. |
+| `ScrollArea` | `@/components/ui/scroll-area` | Custom scrollbar. |
+
+#### From `@shopstack/ui` (cross-app brand-safe primitives)
+
+| Primitive | Notes |
+|---|---|
+| `Badge` | Variants: `neutral`, `info`, `success`, `warning`, `danger`. |
+| `StatusPill` | Credit / engagement status pills. |
+| `ReasonChip` | Chips that explain state transitions (e.g. "auto-paused: low stock"). |
+| `QtyTypeTile` | Quantity + type tile used in POS / inventory grids. |
+| `PhoneInput` | Phone input with NA-format auto-formatting. |
+| `Divider` | Horizontal divider. |
+| `colors`, `spacing`, `radii`, `shadows`, `fonts` | Design tokens as TS constants from `@shopstack/ui` (rarely needed in components — Tailwind classes already bind to them). |
+
+#### Higher-level app components (often the right starting point)
+
+| Component | Path | Use when |
+|---|---|---|
+| `DataTable` | `ShopStack-Portal/src/src/components/data-table.tsx` | You need a table with search + selection + batch actions + pagination. Built on `@tanstack/react-table`. |
+| `PageHeader` | `ShopStack-Portal/src/src/components/page-header.tsx` | Top of every standard admin page. |
+| `PagePermissionGate` | `ShopStack-Portal/src/src/components/page-permission-gate.tsx` | RBAC guard around a page. |
+| `EmptyHint` | `ShopStack-Portal/src/src/components/dashboard/empty-hint.tsx` | Dashed-border empty state with icon. |
+
+#### Icons
+
+Always **`lucide-react`**. Typical sizes via Tailwind: `size-4` (16px), `size-5` (20px), `size-6` (24px). When a button has both icon and label, the icon goes first with `mr-2` or via the button's built-in flex gap.
+
+### Step 6 — Apply tokens, not hex codes
+
+**Never** write a hard-coded color in a component. Every color goes through a token. Use the Tailwind semantic classes (which are bound to ShopStack tokens) — or, when you need raw CSS, reference the CSS variable.
+
+#### Semantic classes (use these in JSX)
+
+| Class | Bound to | Use for |
+|---|---|---|
+| `bg-primary` `text-primary` | `var(--nuhq-primary)` (`#0F172A`) | Primary buttons, active states, links. |
+| `text-primary-foreground` `bg-primary-foreground` | white | Text on primary surfaces. |
+| `bg-secondary` | `var(--nuhq-bg-alt)` (`#F2ECDF`) | Secondary surfaces. |
+| `bg-destructive` `text-destructive` | `var(--nuhq-danger)` (`#DC2626`) | Destructive actions, error text. |
+| `bg-muted` `text-muted-foreground` | `var(--nuhq-warm-light)` / `var(--nuhq-text-muted)` | Muted / placeholder areas. |
+| `border-border` | `var(--nuhq-border)` (`#DED5C4`) | Default borders (warm beige — never cool gray). |
+| `ring-ring` | `var(--nuhq-primary)` | Focus ring. |
+| `bg-popover` | white | Modals, popovers, dropdowns. |
+| `bg-background` | `var(--nuhq-bg)` (`#F6F3EB`) | Page background. |
+| `text-success` `text-warning` `text-destructive` | semantic colors | Status text. |
+
+When the Tailwind class doesn't exist for what you need, use the CSS variable directly: `style={{ background: "var(--nuhq-cream)" }}` — but prefer adding a Tailwind class to the theme over inline styles.
+
+#### Raw color reference (for context — don't hard-code in components)
+
+```
+ShopStack default
+  --nuhq-primary       #09304C   /* Deep ink blue */
+  --nuhq-primary-pale  #D6E4EE
+  --nuhq-coral         #F1686B   /* Alert / brand accent */
+  --nuhq-bg            #F6F3EB   /* Page bg — warm cream */
+  --nuhq-bg-alt        #F2ECDF
+  --nuhq-surface       #FFFFFF
+  --nuhq-sidebar       #2D2A26   /* Warm dark — never #000 */
+  --nuhq-border        #DED5C4   /* Warm beige — never cool gray */
+  --nuhq-text          #2D2A26
+  --nuhq-text-muted    #8B8475
+  --nuhq-success       #16A34A
+  --nuhq-warning       #D97706
+  --nuhq-danger        #DC2626
+
+admin kiosk (ShopStack-Portal/src/src/app/hq/time/kiosk/**)
+  --nutime-primary     #13898A   /* Teal */
+  --nutime-primary-dark #0F6E6F
+
+customer storefront (ShopStack-Portal/src/src/app/hq/tasks/**, scoped by .tasks-route)
+  --nuhq-primary       #2C4566   /* Warm secondary */
+  --nuhq-coral         #C0613E   /* Terracotta */
+  --nuhq-success       #5A7D55   /* Muted sage */
+  --nuhq-font-heading  Fraunces serif
+```
+
+### Step 7 — Apply typography correctly
+
+Three font families, bound via `next/font/google` to CSS variables in `ShopStack-Portal/src/src/app/layout.tsx`:
+
+| Variable | Family | Use for |
+|---|---|---|
+| `--font-nunito` | Nunito | Headings (default ShopStack). Apply via `font-heading` class. |
+| `--font-inter` | Inter | Body text. Apply via `font-body` class (or default). |
+| `--font-jetbrains-mono` | JetBrains Mono | Codes, IDs, numbers. Apply via `font-mono` class. |
+
+The customer storefront scope swaps `--nuhq-font-heading` to Fraunces (serif) inside `.tasks-route`.
+
+**Standard scale (Tailwind):**
+
+| Class | Size | Use for |
+|---|---|---|
+| `text-2xl font-semibold tracking-tight` | ~28px | Page title (`h1`) |
+| `text-xl font-semibold` | ~20px | Section title (`h2`) |
+| `text-base font-semibold` | ~16px | Card title (`h3`), prominent labels |
+| `text-sm` | ~14px | Body text, secondary labels |
+| `text-xs text-muted-foreground` | ~12px | Captions, helper text, badge text |
+
+### Step 8 — Layout and spacing
+
+- Page wrap: `<div className="space-y-6">` — 24px vertical gap between sections.
+- Section internals: `space-y-4` (16px), `space-y-2` (8px) for dense groups.
+- Grids: `grid grid-cols-1 gap-5 lg:grid-cols-2` — mobile single-column, desktop two-column.
+- Cards: `p-6` for major card padding, `px-4 py-3` for compact rows.
+- Radii: `rounded-lg` (12px) is the default; `rounded-md` for inputs/buttons; `rounded-full` for pills.
+- Shadows: `shadow-sm` (subtle, default), `shadow-md` (raised cards), `shadow-lg` (modals).
+
+### Step 9 — Apply standard UX patterns
+
+#### Empty state
+
+```tsx
+<div
+  className="rounded-[10px] border border-dashed p-6 text-center text-sm italic text-muted-foreground"
+  style={{ background: "var(--nuhq-cream)", borderColor: "var(--nuhq-border)" }}
+>
+  <div className="mx-auto mb-3 grid size-10 place-items-center rounded-full bg-[var(--nuhq-warm-light)]">
+    <Icon className="size-5" />
+  </div>
+  No items yet.
+</div>
+```
+
+Or use `<EmptyHint>` from `ShopStack-Portal/src/src/components/dashboard/empty-hint.tsx` directly.
+
+#### Loading skeletons
+
+```tsx
+<div className="space-y-2">
+  <Skeleton className="h-12 w-full" />
+  <Skeleton className="h-12 w-full" />
+  <Skeleton className="h-12 w-full" />
+</div>
+```
+
+Match the shape of the content the skeleton replaces (table rows ≈ 12 high; card grids ≈ rounded-lg blocks at the card size).
+
+#### Error state
+
+```tsx
+<div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+  Failed to load. <button onClick={() => refetch()} className="underline">Try again</button>
+</div>
+```
+
+For a full-page error, Next.js's segment `error.tsx` boundary handles it.
+
+#### Toasts
+
+```tsx
+import { toast } from "sonner";
+
+toast.success("Saved.");
+toast.error("Could not save — check connection.");
+toast.warning("This action can't be undone.");
+toast("Info message", { description: "secondary line" });
+```
+
+Hub toaster is configured bottom-center with a dark pill style. POS toaster is top-center with `richColors`. Don't reconfigure — just call.
+
+#### Forms
+
+- Library: **`react-hook-form`** for state. Validation is **manual / imperative** in most areas — show errors via `toast.error()` for cross-field failures and via `aria-invalid` for per-field.
+- The repo does **not** use Zod for client-side form validation (server actions/API routes use Zod separately). Don't import Zod into a UI form unless the area already does.
+- Use `Input` + `Label` + `aria-invalid` for field-level errors. Show a red border + ring with classes already wired into the Input primitive.
+
+```tsx
+<Label htmlFor="name">Name</Label>
+<Input id="name" {...register("name")} aria-invalid={!!errors.name} />
+```
+
+#### Tables
+
+Always start with `<DataTable>` from `ShopStack-Portal/src/src/components/data-table.tsx`. It already handles search, sort, pagination, row selection, and batch actions. Pass `columns` (TanStack column defs) and `data`. Don't roll your own table.
+
+#### Dialogs
+
+```tsx
+<Dialog open={open} onOpenChange={setOpen}>
+  <DialogContent>
+    <DialogHeader>
+      <DialogTitle>Edit foo</DialogTitle>
+      <DialogDescription>Make changes and save.</DialogDescription>
+    </DialogHeader>
+    {/* fields */}
+    <DialogFooter>
+      <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+      <Button onClick={handleSave}>Save</Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+```
+
+Width: omit a width prop for the default; pass `className="sm:max-w-md"` (or `sm:max-w-lg`) when you need a wider dialog.
+
+#### Confirmation (destructive)
+
+Use `<AlertDialog>` from `@/components/ui/alert-dialog`. The action button gets `variant="destructive"`.
+
+#### Filter / search bar
+
+`flex flex-wrap items-center gap-3` container. Search input gets the lucide `Search` icon absolutely positioned inside (or just use a plain `Input` if no icon is needed). When the table column drives the filter, wire via TanStack: `value={table.getColumn(searchKey)?.getFilterValue()} onChange={(e) => table.getColumn(searchKey)?.setFilterValue(e.target.value)}` — but `DataTable` already does this if you pass `searchKey`.
+
+### Step 10 — Mobile responsiveness
+
+The whole codebase is mobile-first; everything responds via Tailwind utility classes. No separate mobile pages.
+
+- Default styles target mobile.
+- Use `md:` (≥768px) and `lg:` (≥1024px) for desktop overrides.
+- Common patterns:
+  - `grid-cols-1 md:grid-cols-2 lg:grid-cols-3` — stack on mobile, expand on desktop
+  - `hidden md:block` / `md:hidden` — show/hide by breakpoint
+  - `w-full max-w-[calc(100%-2rem)] sm:max-w-sm` — full-width modal on mobile, sized on desktop
+  - Wrap tables in `overflow-x-auto` so they scroll on narrow screens
+
+The viewport is locked: `width=device-width, initial-scale=1, maximum-scale=1, user-scalable=false`. Don't assume pinch-zoom is available.
+
+### Step 11 — State management
+
+| Need | Use |
+|---|---|
+| Auth (current user, permissions) | `useAuthStore` (Zustand) — `ShopStack-Portal/src/src/stores/auth-store` |
+| Current location | `useLocationStore` (Zustand) — `ShopStack-Portal/src/src/stores/location-store` |
+| Server data | Custom hooks (most areas) or TanStack Query (varies). **Always use the hook the dev step already wrote — do not invent a new fetch.** |
+| Form state | `react-hook-form` |
+| UI state (open/closed, current tab, etc.) | `useState` |
+| Cross-component UI state | Local Zustand stores or lift state to nearest common parent |
+
+### Step 12 — Verify it works
+
+Run the same static gate as the dev step:
+
+```bash
+npm run build \
+  --filter="@shopstack/<touched-pkg>^..." \
+  --filter="@shopstack/<touched-pkg>"
+npm run "@shopstack/<touched-pkg>" lint
+```
+
+Exit code 0 from a non-existent script is **not** a pass — always inspect actual output. Fix new errors before handing off; pre-existing errors in untouched files are not your problem.
+
+### Step 13 — Stage and emit handoff
+
+```bash
+git -C "$WORKTREE" add -A
+git -C "$WORKTREE" status
+git -C "$WORKTREE" diff --cached --stat
+```
+
+Do **not** commit (PR step's job).
+
+```
+SOUTHFLORAL_UI_DESIGN
+ticket: ITS-XXX
+worktree: <path>
+app: hub | pos | admin | driver
+brand_layer: nuhq | nutime | botanical-atelier
+ui_files_added_or_changed:
+  - <file path>
+  - <file path>
+primitives_used: [Button, DataTable, Tabs, Dialog, ...]
+real_hooks_consumed:
+  - useFoo (from @/hooks/foo/useFoo, defined ShopStack-Portal/src/src/hooks/foo/useFoo.ts:9)
+  - useBar (from ...)
+acceptance_criteria_mapped:
+  - [x] criterion 1 — rendered in <file:line>
+  - [x] criterion 2 — handled in <file:line>
+  - [ ] criterion 3 — deferred because <reason>
+typecheck: pass | fail (<n> errors)
+notes: <anything the stitcher / QA should know>
+```
+
+Then say: "UI built using the ShopStack design system. Run `/shopstack-ui-stitcher` next to verify every API call / hook / function the UI uses matches the real code."
+
+## Hard rules
+
+- **Never invent a hex code.** All colors go through ShopStack tokens / semantic classes.
+- **Never invent a hook, endpoint, or DTO.** Consume what the dev step shipped. If something seems missing, surface it as a finding, don't fabricate.
+- **Never bring in a new design library** (no MUI, no Chakra, no Mantine). The repo standardized on `@base-ui/react` + custom CVA wrappers; match it.
+- **Never use raw `<button>`, `<input>`, `<dialog>`.** Always import the wrapper from `@/components/ui/*`.
+- **Never bypass `PagePermissionGate`** on routes that touch sensitive data. If the ticket adds a new admin page, gate it.
+- **Match the brand layer** of the area you're building in (ShopStack vs admin kiosk vs customer storefront). Don't drag secondary into the POS module or primary-blue into tasks.
+- **Mobile-first.** Default styles target small screens; layer desktop on top with `md:` / `lg:`.
+- **Read before you write.** Open the touched dev files and at least 2 sibling pages in the same area before designing. Match their structure unless the ticket explicitly says to depart.
+
+## Why this exists
+
+The user's previous workflow round-tripped UI design to Claude Code (Design) as a separate step, then asked another pass to "stitch" the design back to the code. That stitch step kept inventing wrong endpoints / hook names because the designer never saw the real code. This skill collapses the design + on-brand-pattern step into one in-worktree pass that already has the design system in its head and reads the implemented code as part of the design process.
+
+The next step (`shopstack-ui-stitcher`) verifies every imported name actually exists, but if this skill does its job well, the stitcher will find almost nothing to fix.
+
+## Related skills
+
+- [[shopstack-code-developer]] — produces the logic/API surfaces this skill builds UI for
+- [[shopstack-ui-stitcher]] — verifies the UI's imports/calls match the real code (runs immediately after this skill)
+- [[shopstack-browser-qa]] — exhaustive E2E verification (runs after the stitcher)
+- [[shopstack-ship-it]] — orchestrator that includes this step in the chain

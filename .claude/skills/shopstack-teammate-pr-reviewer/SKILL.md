@@ -1,0 +1,167 @@
+---
+name: shopstack-teammate-pr-reviewer
+description: Apply the ShopStack code-review doctrine (DB safety, scope discipline, ShopStack design tokens, repo conventions) to a teammate's PR — not just our own. Reads the PR diff, runs the same passes as shopstack-code-reviewer but against someone else's branch, and posts the findings as a single structured GitHub comment. Use when a teammate asks you to review their PR or when the user says "review PR #N", "code review #1234", "look at a teammate's PR", "what do you think of #N".
+---
+
+# ShopStack — Teammate PR Reviewer
+
+You review **someone else's** ShopStack PR with the same rigor `shopstack-code-reviewer` applies to ours. Same passes (DB safety, scope discipline, security, error handling, etc.), but against a teammate's diff — and the output is posted as a structured **comment on the PR**, not a console report.
+
+This skill is **read-only on code**. It never modifies their branch, never approves/rejects via `gh pr review`, never force-pushes. It writes a single comment.
+
+## When to use
+
+- "Review PR #1234" / "code review #1234" / "look at a teammate's PR #N"
+- A teammate `@`s the user on a PR and they want a thorough review before responding
+- Before approving a teammate's PR that touches a sensitive area (auth, payments, schema)
+
+## Inputs
+
+Required:
+- A PR number (`#1234`) or full URL — extracted from the user's phrase.
+
+Optional:
+- `--silent` — produce the report locally but don't post the comment. Useful for a private read-through.
+- `--focus AREA` — restrict the review to one area: `db_safety`, `security`, `nuhq_design`, `scope`, `error_handling`. Useful for "is this DB-safe?" quick checks.
+
+## What it does
+
+### Step 1 — Pull the PR
+
+```bash
+gh pr view "$PR" --json number,title,author,baseRefName,headRefName,files,additions,deletions
+gh pr diff "$PR" > /tmp/teammate-pr.diff
+```
+
+Refuse to review:
+- Our own PRs — use `shopstack-code-reviewer` instead.
+- Draft PRs — unless the user explicitly asked.
+- PRs already merged.
+- PRs that touch zero files (empty PR).
+
+### Step 2 — Run the same passes as code-reviewer
+
+Same 12 passes from `shopstack-code-reviewer`, applied to `/tmp/teammate-pr.diff`:
+
+1. Diff sanity (junk in diff, migration files match schema, no `db:push`)
+2. Hardcoded values & secrets
+3. Imports & dead code
+4. Error handling
+5. Type safety
+6. Security smells
+6b. **DB safety** (the doctrine section 11 patterns — automatic blockers)
+6c. **Scope discipline** — does this PR touch files in another open PR (besides ours)? Less useful for a teammate's PR — they're reviewing their own scope. Run this pass but skip the "blocker" grade; just note overlaps as informational.
+7. Performance
+8. Accessibility (UI changes only)
+9. Test coverage
+10. Documentation / comments
+
+**One added pass for teammate PRs:**
+
+11. **ShopStack design tokens** — if the diff touches `.tsx` files, check for hardcoded hex codes, raw font-family strings, raw spacing values that should be Tailwind classes binding to ShopStack tokens. Flag with the right token path so the teammate can replace.
+
+### Step 3 — Self-scale by diff size
+
+(Per the same logic in code-reviewer's self-scaling — passes that don't apply get skipped with `n/a` rather than padding the report.)
+
+- Tiny diffs (<30 lines): run only diff-sanity + the focus pass if `--focus` was passed. One-paragraph comment.
+- Medium diffs (30-500 lines): all applicable passes.
+- Large diffs (>500 lines): consider spawning a parallel general-purpose `Agent` for an independent second-opinion read; merge findings.
+
+### Step 4 — Format the comment
+
+The comment is a single Markdown block. Keep it readable on GitHub:
+
+```markdown
+## Review notes from @mshery
+
+Read through PR #N (+M/-K across F files). Findings below — graded `blocker` (must fix), `warning` (please address), `nit` (cosmetic).
+
+<!-- only include sections that have findings -->
+
+### 🚫 Blockers
+
+- **`path/to/file.ts:42`** — <one-liner with rationale + suggested fix>
+- ...
+
+### ⚠️ Warnings
+
+- **`path/to/other.tsx:88`** — <one-liner>
+- ...
+
+### 💭 Nits
+
+- **`path/to/x.ts:5`** — <one-liner>
+- ...
+
+### What I checked
+
+| Pass | Result |
+|---|---|
+| Diff sanity | clean |
+| Secrets / hardcoded | clean |
+| Error handling | 1 warning |
+| Type safety | clean |
+| Security | clean |
+| **DB safety** | clean |
+| Scope discipline | n/a (no open-PR overlap) |
+| Performance | clean |
+| Accessibility | n/a (no UI) |
+| Test coverage | 2 warnings |
+| Docs / comments | clean |
+| ShopStack design tokens | n/a (no UI) |
+
+LMK if any of these need clarification — happy to chat through the rationale.
+```
+
+The comment is friendly, specific, and cites file paths + lines. No drive-by approvals/rejections in this skill — just the comment. The teammate (or the user, after reading) decides on approve/request-changes.
+
+### Step 5 — Post the comment
+
+```bash
+gh pr comment "$PR" --body-file /tmp/teammate-review-comment.md
+```
+
+Unless `--silent` was passed, in which case write the comment to `/tmp/teammate-review-$PR.md` and tell the user where to find it.
+
+### Step 6 — Emit handoff
+
+```
+SOUTHFLORAL_TEAMMATE_REVIEW_REPORT
+pr:           #1234
+author:       @<github-login>
+verdict:      LGTM | LGTM_WITH_NOTES | CHANGES_REQUESTED | BLOCKERS_FOUND
+blockers:     <n>
+warnings:     <n>
+nits:         <n>
+comment_posted: true | false (--silent)
+comment_url:  <url to the comment, when posted>
+focus_mode:   <focus area or "all">
+```
+
+`verdict` mapping:
+- `LGTM` — zero blockers, zero warnings, no security/DB concerns
+- `LGTM_WITH_NOTES` — zero blockers, warnings only
+- `CHANGES_REQUESTED` — blockers in non-critical areas (style, type safety, docs)
+- `BLOCKERS_FOUND` — DB safety, security, or scope blockers — the teammate should not merge until addressed
+
+## Hard rules
+
+- **Never `gh pr review --approve`, `gh pr review --request-changes`, or `gh pr merge` on a teammate's PR.** Only `gh pr comment`. The user owns the formal review decision.
+- **Never push, never edit, never branch from their branch.** Strictly read-only on code.
+- **Never tag other teammates** in the comment unless the user explicitly asked. No "cc @bob".
+- **DB-safety findings always go in the comment**, never quietly omitted. The team needs to see them even if the PR is otherwise small.
+- **Match the teammate's tone.** Read 1-2 of their previous PR comments to get a sense of formality. Don't condescend, don't be overly chatty.
+- **Cite file:line for every finding.** GitHub auto-renders `path/to/file.ts:42` as a link when the PR is being viewed — make use of that.
+- **Don't write reviews longer than ~40 lines.** A bullet-heavy review is signal; a wall of text is noise. If you have more findings than fit, surface the top 5 and link to a local file with the rest.
+- **One comment per review.** Don't chain follow-up comments — produce a single, complete review.
+
+## Why this exists
+
+The code-reviewer skill is for the user's own PRs (before opening). When a teammate asks "can you review PR #N", that's a different surface — the doctrine still applies (DB safety, scope discipline, ShopStack tokens) but the output is a GitHub comment, not a console report. This skill closes that gap while reusing the same review logic.
+
+## Related skills
+
+- [[shopstack-code-reviewer]] — the sibling skill for our own PRs; shares the 12-pass logic
+- [[shopstack-rollback]] — if the teammate's PR turns out to have a problem and needs to be reverted after merge
+- The global `/review` skill — generic PR review; this skill is the ShopStack-doctrine-aware version

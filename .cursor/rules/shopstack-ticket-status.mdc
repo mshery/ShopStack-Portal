@@ -1,0 +1,103 @@
+---
+description: Quick composite status report for a ShopStack ticket — pulls Linear state, open PR + CI/mergeable, worktree state, recent commits, dependencies, and any open lessons-jsonl escalations into one short report. Use when the user says "status of ITS-XXX", "where is ITS-XXX at", "check ITS-XXX", "what's blocking ITS-XXX", or wants a daily quick-glance at a ticket without typing out three separate commands.
+---
+
+
+# ShopStack — Ticket Status
+
+You produce a **one-screen composite status** for a single ticket. Cheap to run, useful constantly. Bundles together what the user would otherwise pull from Linear + GitHub + git + lessons manually.
+
+## When to use
+
+- "Status of ITS-XXX" / "where is ITS-XXX at" / "check ITS-XXX"
+- "What's blocking ITS-XXX"
+- Daily glance before resuming work on a ticket
+- Quick lookup from another skill (autopilot, main-watcher) that needs to know the full picture
+
+## Inputs
+
+Required:
+- A ticket identifier (`ITS-XXX`) — or extract from the user's phrase.
+
+Optional:
+- `--brief` — one-line summary only, skip the long sections.
+
+## What it pulls
+
+Run all of these **in parallel** (single message, multiple tool calls):
+
+1. **Linear:** `/shopstack-linear-manager get ITS-XXX` → title, state, assignee, labels, project, parent, last comment.
+2. **GitHub PR:** `gh search prs --author mshery --label-or-search "ITS-XXX" --json number,state,title,url,mergeable,mergeStateStatus,statusCheckRollup,updatedAt,headRefName,reviewDecision` — there can be zero or one open PR for a ticket.
+3. **Local worktree:** scan `/Users/aura/Documents/ShopStack/ShopStack-worktrees/` for any worktree whose branch ends in `-XXX-*` or contains `its-XXX`. Capture: path, current branch, `git status --porcelain` summary (clean/dirty/N modified files), last commit subject + date.
+4. **Local branches on origin:** `git -C $REPO branch -a --list "*/its-XXX-*"` — sometimes a branch exists with no worktree.
+5. **Dependencies (from description):** if the Linear body has "Blocked by ENG-XXX, ENG-YYY" lines, fetch each via linear-manager and capture their state.
+6. **Lessons hits:** `grep "ITS-XXX" ~/.claude/data/shopstack-autopilot/lessons.jsonl | tail -20` — recent autopilot lessons that mention this ticket (failures, escalations, fixes that worked).
+
+## Output
+
+```
+SOUTHFLORAL_TICKET_STATUS
+─────────────────────────
+Ticket:   ITS-XXX — <title>
+Linear:   <state> · assignee <email> · cycle <name> · last_updated <relative time>
+Labels:   [<comma-separated>]
+Project:  <module>  (parent: <umbrella id or "none">)
+
+PR:       #1234 OPEN   mergeable: MERGEABLE   CI: ✅ green   review: pending
+          https://github.com/.../pull/1234
+          (or "no open PR" / "merged in #1230 at <time>" / "closed without merge")
+
+Worktree: /Users/aura/.../ShopStack-worktrees/its-XXX-foo  (clean)
+          branch: feat/its-XXX-foo
+          HEAD:   <short-sha> "<commit subject>" (2h ago)
+          (or "no worktree" / "dirty — 3 modified files")
+
+Deps:     ✓ ENG-100 Done
+          ✗ ENG-101 In Progress (you're blocked on this)
+          (or "none")
+
+Recent lessons (this ticket):
+  - 2026-05-20: fix_worked    schema_collision → db:renumber
+  - 2026-05-20: escalation    ci_failure → cycle ordering test (3rd fail)
+
+⚠ Attention: <one-liner if anything needs your eye — CI failed, blocked dep, CHANGES_REQUESTED, etc>
+```
+
+In `--brief` mode, collapse to one line:
+
+```
+ITS-XXX  [In Review]  PR #1234 green  worktree clean  ✓ ready to merge
+ITS-YYY  [In Progress]  no PR yet  worktree dirty (3 files)  — keep working
+ITS-ZZZ  [Triage]  ⚠ blocked by ENG-101
+```
+
+## Composite "Attention" rules
+
+The `⚠ Attention` line is computed from the gathered data — surface the most important one signal:
+
+| Condition | Attention line |
+|---|---|
+| Open PR has `mergeable: CONFLICTING` | "PR has conflicts — run /shopstack-conflict-resolver" |
+| Open PR has `reviewDecision: CHANGES_REQUESTED` | "Reviewer requested changes — address before merging" |
+| Open PR has CI failed | "CI failed on step <name> — check the run" |
+| Open PR has been open >7 days with no activity | "PR stale (>7d) — bump or rebase" |
+| Worktree is dirty AND last commit is >24h old | "Worktree has uncommitted changes from yesterday" |
+| Ticket is In Progress but no worktree exists | "Linear says In Progress but no local worktree — orphan claim?" |
+| Ticket has unresolved dep in `Triage` | "Blocked by <dep> still in Triage" |
+| Lessons has ≥3 recent escalations on this ticket | "Repeated escalations — may be structural" |
+| None of the above | (omit the line) |
+
+## Hard rules
+
+- **Read-only.** This skill makes no mutations — no Linear state changes, no git commits, no PR edits.
+- **Run pulls in parallel.** The point of this skill is to be fast; do not serialize the 6 data sources.
+- **Cite sources.** Linear state from Linear, PR state from GitHub, worktree from local filesystem. Don't paraphrase one as another.
+- **If the ticket isn't ours** (assignee ≠ owner@example.com), surface that in the header but still produce the report — it's read-only.
+- **No invented data.** If a section has no data (e.g., no PR), say so explicitly. Don't fabricate "PR pending."
+
+## Related skills
+
+- [[shopstack-linear-manager]] — single-source-of-truth for Linear fields
+- [[shopstack-pr-babysitter]] — uses similar GitHub queries; this skill is the single-ticket version
+- [[shopstack-autopilot]] — calls this skill to assess a ticket before deciding actions
+- [[shopstack-eod-report]] — uses this skill's data shape when summarizing the day

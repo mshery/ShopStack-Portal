@@ -1,0 +1,142 @@
+---
+name: shopstack-eod-report
+description: Generate a casual end-of-day status update for the ShopStack team — lists mshery's PRs merged today (DONE) and still open (InReview), plus any blockers. Use when the user says "eod report", "end of day", "daily standup", "what did I ship today", "send my update", or "wrap up the day".
+---
+
+# ShopStack — End-of-Day Report
+
+You write a **friendly, casual** end-of-day status the user can paste straight into Slack / Discord / Linear / wherever. Not a formal report — the kind of thing a teammate posts at 6pm.
+
+## Tone
+
+Warm, brief, first-person, lowercase-friendly. Avoid corporate phrasing ("synced with stakeholders", "delivered value", "executed initiative"). Avoid emojis unless the user has used them in past reports. Vary the opener so it doesn't feel like a bot wrote it. Examples to rotate (pick one, or write something similar):
+
+- "hey team, on my end i worked on the following tickets and here is the status:"
+- "today i worked on these issues and fixed the following:"
+- "wrapping up the day — here's where things landed:"
+- "quick eod from me:"
+- "end of day update 👇" *(only add the emoji if the user typically uses them)*
+
+## Data to gather
+
+Pull all of these in parallel — don't go sequentially.
+
+### 0. Autonomous-run context (if autopilot ran today)
+
+Check for `~/.claude/data/shopstack-autopilot/morning-report-YYYY-MM-DD.md` for today's date. If it exists:
+
+- Read it for: cycles completed, tickets shipped during the run, escalations, lessons learned.
+- These tickets are already in the data from sections 1–2 (they ended up as PRs), so don't double-count. But surface "🌙 N PRs shipped while you slept" as a separate line in the post.
+
+Also peek at `~/.claude/data/shopstack-autopilot/state.json` if it exists and has `status: active` or `paused`:
+
+- If `active` → the autopilot is still running; add a footer line "🚦 autopilot still running (status: active, N PRs in flight)".
+- If `paused` → add a blocker line: "⏸ autopilot paused at <reason from latest alert>".
+
+### 1. PRs merged today
+
+```bash
+TODAY=$(date +%Y-%m-%d)
+gh pr list \
+  --repo mshery/ShopStack-Portal \
+  --author mshery \
+  --state merged \
+  --search "merged:>=${TODAY}" \
+  --json number,title,url,mergedAt,headRefName \
+  --limit 50
+```
+
+These go in **DONE**. The `mergedAt` timestamp must fall on today's local date — `gh` returns ISO timestamps in UTC, so cross-check if it's late/early in the day. When in doubt include it; the user can prune.
+
+### 2. PRs still open
+
+```bash
+gh pr list \
+  --repo mshery/ShopStack-Portal \
+  --author mshery \
+  --state open \
+  --json number,title,url,headRefName,isDraft,mergeable,mergeStateStatus,reviewDecision,updatedAt \
+  --limit 50
+```
+
+These go in **InReview**. Skip drafts unless the user said to include them. Note `mergeable: CONFLICTING` PRs — those go in **Blockers**, not InReview.
+
+### 3. Linear context (optional but helpful)
+
+For each PR's ITS-XXX (parse from branch name or title), the **minor description** in the report should be a short human-readable phrase — not the full Linear title and not the commit subject. Aim for 3–8 words.
+
+If a Linear ticket number can't be extracted from the PR title/branch, omit the ticket prefix and just use a short phrase from the PR title.
+
+### 3b. Module umbrella progress (optional, valuable for team standups)
+
+If today's PRs touched a module (Engagements, POS, Inventory, etc.), check the corresponding module umbrella for progress. Via `shopstack-linear-manager` in `get` mode, fetch the umbrella ticket's sub-issue counts:
+
+- Total sub-issues
+- Done count (after today's merges)
+- In Review (open PRs)
+- Todo (still queued)
+
+Add a one-liner per touched module to the report's footer:
+
+```
+📊 modules touched today:
+  • Scheduling — 38/42 done (90%) — 3 InReview
+  • POS — 12/15 done (80%) — 1 InReview, 2 Todo
+```
+
+Skip this block if no module data is available or no umbrella exists.
+
+### 4. Blockers
+
+A blocker is anything that's keeping work from moving forward today:
+
+- An open PR with `mergeable: CONFLICTING` → "merge conflict on #N"
+- An open PR with `reviewDecision: CHANGES_REQUESTED` that's been sitting > 2 days → "waiting on review feedback on #N"
+- A Linear ticket assigned to owner@example.com with the label `blocked`, `waiting`, or `needs-design`/`needs-product` (query via `mcp__linear__list_issues` with assignee filter and label filter)
+- Anything the user mentions in the invocation as a blocker
+
+If there's nothing genuinely blocking, write **"None"** — don't pad.
+
+## Output format
+
+Render the report ready-to-paste. No preamble, no closing meta-commentary like "let me know if you'd like to adjust" — just the post itself.
+
+```
+<casual opener>
+
+DONE:
+ITS-XXX : <minor description> > [#NNN](<pr url>)
+ITS-YYY : <minor description> > [#NNN](<pr url>)
+
+InReview:
+ITS-ZZZ : <minor description> > [#NNN](<pr url>)
+ITS-AAA : <minor description> > [#NNN](<pr url>)
+
+Blocker:
+- <one-line blocker> (or write "None")
+```
+
+Rules for the body:
+
+- Strip the noisy `feat(scope):` prefix from PR titles when building the minor description. "feat(api): ITS-554 Burq REST client wrapper" → "Burq REST client wrapper".
+- Order each list by **most recent first** (merged → most recently merged on top; open → most recently updated on top).
+- If a section is empty, write "—" or omit it; don't show a stale heading with nothing under it.
+- Render each PR as a markdown hyperlink: `[#NNN](https://github.com/...)`. The `#NNN` is the PR number from the `number` field. Slack, Linear, Discord, and GitHub all render this as a clickable link, and it reads cleaner than a full URL.
+- When referencing PRs in the Blocker section (or anywhere else outside the main list), also use the hyperlink form: `[#965](url)` instead of bare `#965`.
+- Keep ticket descriptions short (≤ 60 chars). If a PR has no ITS- number, format as `<short description> > [#NNN](<url>)` (no colon, no prefix).
+- Cap the report at ~15 line items total. If there are more, group the smallest ones as "+ N more small fixes" at the end of DONE.
+
+## After printing
+
+End your turn with the report itself, then a short suffix line below the post (separated by a blank line) that says where the data came from, e.g.:
+
+> *(merged today: 3 · open: 5 · scanned at 2026-05-12 18:14 local)*
+
+That meta line is for the user, not for pasting — they can delete it.
+
+## Rules
+
+- Never invent PRs, tickets, or merge dates. If `gh` returns nothing, say so honestly: "nothing merged today, here's what's still in flight:" and just list InReview + Blockers.
+- Don't speculate about what was "almost done" or "blocked on me" — only report what the data shows.
+- Don't include other people's PRs even if they touched the same tickets.
+- This skill is **read-only** — no commits, no Linear status changes, no comments posted anywhere. Just generate the message.
